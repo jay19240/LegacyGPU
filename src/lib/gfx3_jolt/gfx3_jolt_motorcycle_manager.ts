@@ -56,6 +56,9 @@ export interface Gfx3JoltMotorcycle extends Required<Gfx3JoltMotorcycleOptions>,
   inputHandBrake: boolean;
 }
 
+/**
+ * A motorcycle manager powered by Jolt.
+ */
 export class Gfx3JoltMotorcycleManager {
   system: Jolt.PhysicsSystem;
   inter: Jolt.JoltInterface;
@@ -75,6 +78,11 @@ export class Gfx3JoltMotorcycleManager {
     this.motorcycles = [];
   }
 
+  /**
+   * Add a motorcycle to the manager.
+   * 
+   * @param {Gfx3JoltMotorcycleOptions} options - The options to create a motorcycle.
+   */
   add(options: Gfx3JoltMotorcycleOptions): Gfx3JoltMotorcycle {
     const o: Required<Gfx3JoltMotorcycleOptions> = {
       x: options.x ?? 0,
@@ -162,10 +170,20 @@ export class Gfx3JoltMotorcycleManager {
     return m;
   }
 
+  /**
+   * Returns the motorcycle entity from the given identifier.
+   * 
+   * @param {number} bodyId - The body identifier.
+   */
   get(bodyId: number): Gfx3JoltMotorcycle | undefined {
     return this.motorcyclesMap.get(bodyId);
   }
 
+  /**
+   * Returns motorcycle metadata from the given body identifier.
+   * 
+   * @param {number} bodyId - The body identifier.
+   */
   getMeta(bodyId: number): any {
     const m = this.motorcyclesMap.get(bodyId);
     if (!m) {
@@ -175,6 +193,11 @@ export class Gfx3JoltMotorcycleManager {
     return m.meta;
   }
 
+  /**
+   * Remove a motorcycle from the given identifier.
+   * 
+   * @param {number} bodyId - The body identifier.
+   */
   remove(bodyId: number): boolean {
     const m = this.motorcyclesMap.get(bodyId);
     if (!m) {
@@ -189,18 +212,29 @@ export class Gfx3JoltMotorcycleManager {
     return true;
   }
 
+  /**
+   * Remove all motorcycles.
+   */
   clear() {
     for (const m of this.motorcycles) {
       this.remove(m.bodyId);
     }
   }
 
+  /**
+   * The update function.
+   * 
+   * @param {number} clampedDeltaMs - The timestep.
+   */
   update(clampedDeltaMs: number) {
     for (const m of this.motorcycles) {
       this.#updateMotorcycle(clampedDeltaMs, m);
     }
   }
 
+  /**
+   * The draw function.
+   */
   draw() {
     for (const m of this.motorcycles) {
       gfx3JoltManager.drawShape(m.body.GetShape(), m.body.GetWorldTransform(), m.color);

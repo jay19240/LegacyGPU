@@ -33,7 +33,7 @@ export class PhysicsSystem extends DNASystem {
 
   onEntityBind(eid: number): void {
     const physics = dnaManager.getComponent(eid, PhysicsComponent);
-    physics.character = gfx3JoltManager.characters.add(physics.options);
+    physics.character = gfx3JoltManager.addCharacter(physics.options);
 
     const characterContactListener = new Gfx3Jolt.CharacterContactListenerJS();
     characterContactListener.OnAdjustBodyVelocity = (...args) => this.OnAdjustBodyVelocity(...args, physics);

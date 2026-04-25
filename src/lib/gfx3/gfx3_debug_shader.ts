@@ -1,12 +1,12 @@
-export const SHADER_VERTEX_ATTR_COUNT = 6;
+export const DEBUG_SHADER_VERTEX_ATTR_COUNT = 6;
 
-export const PIPELINE_DESC: any = {
+export const DEBUG_PIPELINE_DESC: any = {
   label: 'Debug pipeline',
   layout: 'auto',
   vertex: {
     entryPoint: 'main',
     buffers: [{
-      arrayStride: SHADER_VERTEX_ATTR_COUNT * 4,
+      arrayStride: DEBUG_SHADER_VERTEX_ATTR_COUNT * 4,
       attributes: [{
         shaderLocation: 0, /*position*/
         offset: 0,
@@ -39,7 +39,7 @@ export const PIPELINE_DESC: any = {
   }
 };
 
-export const VERTEX_SHADER = (data: any) => /* wgsl */`
+export const DEBUG_VERTEX_SHADER = (data: any) => /* wgsl */`
 struct VertexOutput {
   @builtin(position) Position: vec4<f32>,
   @location(0) Color: vec3<f32>
@@ -58,7 +58,7 @@ fn main(
   return output;
 }`;
 
-export const FRAGMENT_SHADER = (data: any) => /* wgsl */`
+export const DEBUG_FRAGMENT_SHADER = (data: any) => /* wgsl */`
 struct FragOutput {
   @location(0) Base: vec4f,
   @location(1) Normal: vec4f,

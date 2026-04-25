@@ -10,7 +10,6 @@ export * from './core/array_collection';
 export * from './core/curve';
 export * from './core/object_pool';
 export * from './core/straight_flow';
-export * from './core/quaternion';
 export * from './core/tree_partition';
 export * from './core/tween';
 export * from './core/utils';
@@ -18,18 +17,22 @@ export * from './core/format_jas';
 // dna ---------------------------------------------------------------------------------------
 export * from './dna/dna_component';
 export * from './dna/dna_system';
-// ui ----------------------------------------------------------------------------------------
+// engine ------------------------------------------------------------------------------------
 export * from './engine/engine_pack_2d';
 // gfx2 --------------------------------------------------------------------------------------
 export * from './gfx2/gfx2_bounding_rect';
 export * from './gfx2/gfx2_drawable';
 export * from './gfx2/gfx2_tree_partition';
+// gfx2 tile iso -----------------------------------------------------------------------------
 export * from './gfx2_tile_iso/gfx2_tile_iso_map_layer';
 export * from './gfx2_tile_iso/gfx2_tile_iso';
+// gfx2 particles ----------------------------------------------------------------------------
 export * from './gfx2_particles/gfx2_particles';
+// gfx2 sprite -------------------------------------------------------------------------------
 export * from './gfx2_sprite/gfx2_sprite_jas';
 export * from './gfx2_sprite/gfx2_sprite_jss';
 export * from './gfx2_sprite/gfx2_sprite_scrolling';
+// gfx2 tile ---------------------------------------------------------------------------------
 export * from './gfx2_tile/gfx2_tile_map_layer';
 export * from './gfx2_tile/gfx2_tile_map';
 export * from './gfx2_tile/gfx2_tile_layer';
@@ -47,6 +50,7 @@ export * from './ui_bubble/ui_bubble';
 export * from './ui_confetti/ui_confetti';
 export * from './ui_description_list/ui_description_list';
 export * from './ui_dialog/ui_dialog';
+export * from './ui_input/ui_input';
 export * from './ui_input_keyboard/ui_input_keyboard';
 export * from './ui_input_slider/ui_input_slider';
 export * from './ui_menu/ui_menu';

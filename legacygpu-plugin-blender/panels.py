@@ -1,16 +1,30 @@
 import bpy
+import bpy.utils.previews
+import os
 from . import utils
 # ----------------------------------------------------------------------------------
 
+preview_collections = {}
 
 def register():
+  pcoll = bpy.utils.previews.new()
+  img_engine_path = os.path.join(os.path.dirname(__file__), "images/engine.png")
+  pcoll.load("engine", img_engine_path, 'IMAGE')
+  preview_collections["main"] = pcoll
+
   bpy.utils.register_class(WARME_PT_options)
   bpy.utils.register_class(WARME_PT_object)
+  bpy.utils.register_class(WARME_PT_grf_node_editor)
 
 
 def unregister():
+  for pcoll in preview_collections.values():
+    bpy.utils.previews.remove(pcoll)
+  preview_collections.clear()
+
   bpy.utils.unregister_class(WARME_PT_options)
   bpy.utils.unregister_class(WARME_PT_object)
+  bpy.utils.unregister_class(WARME_PT_grf_node_editor)
 
 
 class WARME_PT_options(bpy.types.Panel):
@@ -22,15 +36,32 @@ class WARME_PT_options(bpy.types.Panel):
   bl_context = "objectmode"
 
   def draw(self, context):
+    pcoll = preview_collections["main"]
+    engine_image = pcoll["engine"]
+
     layout = self.layout.column()
+
+    box = layout.box()
+    row = box.row()
+    row.alignment = 'CENTER'
+    row.template_icon(icon_value=engine_image.icon_id, scale=10)
+
     layout.label(text=f"Export path: {bpy.path.abspath(context.scene.render.filepath)}")
     layout.separator()
     layout.operator("object.export_pack")
-    layout.operator("object.export_objects")
-    layout.operator("object.export_world")
-    layout.separator()
-    layout.prop(context.scene.world_properties, "enable_auto_export")
-    layout.prop(context.scene.world_properties, "enable_export_has_binary")
+
+    # START EXPORT
+    box, opened = utils.draw_foldout(layout, context.scene.world_properties, "show_export", "Export", 'EXPORT')
+    if opened:
+      layout.operator("object.export_objects")
+      layout.operator("object.export_objects_as_wavefront")
+      layout.separator()
+      layout.operator("object.export_world_json")
+      layout.operator("object.export_camera_json")
+      layout.separator()
+      layout.prop(context.scene.world_properties, "enable_auto_export")
+      layout.prop(context.scene.world_properties, "enable_export_has_binary")
+    # END EXPORT
 
     # START CREATE
     box, opened = utils.draw_foldout(layout, context.scene.world_properties, "show_create", "Create", 'ADD')
@@ -53,16 +84,24 @@ class WARME_PT_options(bpy.types.Panel):
       layout.operator("object.create_jlt_spot")
 
       utils.draw_title_row(layout, "--- Specials ---")
-      
-      layout.separator()
-    #endif
+      layout.operator("object.create_special_dcl")
+      layout.operator("object.create_special_sun")
+      layout.operator("object.create_special_shadow_projector")
+      layout.operator("object.create_special_shadow_projector_target")
+      layout.operator("object.create_special_skybox")
+      layout.operator("object.create_special_particles")
+
+      utils.draw_title_row(layout, "--- Entities ---")
+      layout.operator("object.create_entity_aabb")
+      layout.operator("object.create_entity_cylinder")
+      layout.operator("object.create_entity_sphere")
+    #END CREATE
 
     # START CAST
     box, opened = utils.draw_foldout(layout, context.scene.world_properties, "show_cast_to", "Cast To", 'ARROW_LEFTRIGHT')
     if opened:
       utils.draw_title_row(layout, "--- Meshes ---")
       layout.operator("object.cast_to_jsm")
-      layout.operator("object.cast_to_obj")
       layout.operator("object.cast_to_jam")
       layout.operator("object.cast_to_jwm")
       layout.operator("object.cast_to_jnm")
@@ -87,21 +126,21 @@ class WARME_PT_options(bpy.types.Panel):
     # START WORLD
     box, opened = utils.draw_foldout(layout, context.scene.world_properties, "show_world", "World", 'WORLD')
     if opened:
-      utils.draw_title_row(layout, "--- Shadow ---")
-      layout.prop(context.scene.world_properties, "shadow_enabled")
-      utils.draw_input_row(layout, context.scene.world_properties, "shadow_position", "Shadow Position")
-      utils.draw_input_row(layout, context.scene.world_properties, "shadow_target", "Shadow Target")
-      layout.prop(context.scene.world_properties, "shadow_size")
-      layout.prop(context.scene.world_properties, "shadow_depth")
       utils.draw_title_row(layout, "--- Fog ---")
       layout.prop(context.scene.world_properties, "fog_enabled")
       layout.prop(context.scene.world_properties, "fog_near")
       layout.prop(context.scene.world_properties, "fog_far")
       utils.draw_input_row(layout, context.scene.world_properties, "fog_color", "Fog Color")
-      utils.draw_title_row(layout, "--- Ambient Color ---")
+      utils.draw_title_row(layout, "--- Others ---")
       utils.draw_input_row(layout, context.scene.world_properties, "ambient", "Ambient Color")
-      utils.draw_title_row(layout, "--- Decal Atlas ---")
       utils.draw_input_row(layout, context.scene.world_properties, "decal_atlas", "Decal Atlas")
+      utils.draw_input_row(layout, context.scene.world_properties, "skybox_name", "Skybox Name")
+      utils.draw_input_row(layout, context.scene.world_properties, "skybox_right", "Skybox Right")
+      utils.draw_input_row(layout, context.scene.world_properties, "skybox_left", "Skybox Left")
+      utils.draw_input_row(layout, context.scene.world_properties, "skybox_top", "Skybox Top")
+      utils.draw_input_row(layout, context.scene.world_properties, "skybox_bottom", "Skybox Bottom")
+      utils.draw_input_row(layout, context.scene.world_properties, "skybox_front", "Skybox Front")
+      utils.draw_input_row(layout, context.scene.world_properties, "skybox_back", "Skybox Back")
       utils.draw_title_row(layout, "--- Custom Params ---")
       row = layout.row()
       row.prop(context.scene.world_properties, "world_s00_name", text="")
@@ -167,14 +206,144 @@ class WARME_PT_object(bpy.types.Panel):
     layout = self.layout.column()    
     layout.separator()
 
-    # START SUN
-    if selected and len(selected) == 1 and utils.belong_to_collection(bpy.context.selected_objects[0], "SUN"):
+    # START TRANSFORM
+    if bpy.context.selected_objects and bpy.context.selected_objects[0]:
       selected_object = bpy.context.selected_objects[0]
-      utils.draw_input_row(layout, selected_object.sun_properties, "sun_diffuse", "Sun Diffuse")
-      utils.draw_input_row(layout, selected_object.sun_properties, "sun_specular", "Sun Specular")
-      layout.prop(selected_object.sun_properties, "sun_intensity")
-      layout.prop(selected_object.sun_properties, "sun_light_group_id")
+      box, opened = utils.draw_foldout(layout, selected_object.mat_properties, "show_transform_infos", "Transform Informations", 'PREFERENCES')
+      if opened:
+        pos = utils.get_position_of_object(bpy.context.selected_objects[0])
+        layout.operator("object.copy_object_position")
+        layout.label(text=f"X: {pos[0]:.3f}")
+        layout.label(text=f"Y: {pos[1]:.3f}")
+        layout.label(text=f"Z: {pos[2]:.3f}")
+        layout.separator()
+
+        rot = utils.get_rotation_of_object(bpy.context.selected_objects[0])
+        layout.operator("object.copy_object_rotation")
+        layout.label(text=f"X: {rot[0]:.3f}")
+        layout.label(text=f"Y: {rot[1]:.3f}")
+        layout.label(text=f"Z: {rot[2]:.3f}")
+        layout.separator()
+        
+        mat = utils.get_object_matrix_converted_for_engine(bpy.context.selected_objects[0])
+        layout.operator("object.copy_object_matrix")
+        layout.label(text=f"{mat[0][0]:.3f}, {mat[0][1]:.3f}, {mat[0][2]:.3f}, {mat[0][3]:.3f}")
+        layout.label(text=f"{mat[1][0]:.3f}, {mat[1][1]:.3f}, {mat[1][2]:.3f}, {mat[1][3]:.3f}")
+        layout.label(text=f"{mat[2][0]:.3f}, {mat[2][1]:.3f}, {mat[2][2]:.3f}, {mat[2][3]:.3f}")
+        layout.label(text=f"{mat[3][0]:.3f}, {mat[3][1]:.3f}, {mat[3][2]:.3f}, {mat[3][3]:.3f}")
+      #endif
+    # END TRANSFORM
+
+    # START SUN
+    if selected and len(selected) == 1 and selected[0].name == 'Sun':
+      selected_object = bpy.context.selected_objects[0]
+      utils.draw_input_row(layout, selected_object.sun_properties, "diffuse", "Diffuse")
+      utils.draw_input_row(layout, selected_object.sun_properties, "specular", "Specular")
+      layout.prop(selected_object.sun_properties, "intensity")
+      layout.prop(selected_object.sun_properties, "group")
     # END SUN
+
+    # START SHADOW
+    if selected and len(selected) == 1 and selected[0].name == 'ShadowProjector':
+      selected_object = bpy.context.selected_objects[0]
+      utils.draw_input_row(layout, selected_object.shadow_properties, "size", "Size")
+      utils.draw_input_row(layout, selected_object.shadow_properties, "depth", "Depth")
+      utils.draw_input_row(layout, selected_object.shadow_properties, "texture_size", "Texture Depth Size")
+    # END SHADOW
+
+    # START SKYBOX
+    if selected and len(selected) == 1 and utils.belong_to_collection(bpy.context.selected_objects[0], "SKY"):
+      selected_object = bpy.context.selected_objects[0]
+      utils.draw_input_row(layout, selected_object.skybox_properties, "name", "Name")
+      utils.draw_input_row(layout, selected_object.skybox_properties, "right", "Right")
+      utils.draw_input_row(layout, selected_object.skybox_properties, "left", "Left")
+      utils.draw_input_row(layout, selected_object.skybox_properties, "top", "Top")
+      utils.draw_input_row(layout, selected_object.skybox_properties, "bottom", "Bottom")
+      utils.draw_input_row(layout, selected_object.skybox_properties, "front", "Front")
+      utils.draw_input_row(layout, selected_object.skybox_properties, "back", "Back")
+    # END SKYBOX
+
+    # START PARTICLES
+    if selected and len(selected) == 1 and utils.belong_to_collection(bpy.context.selected_objects[0], "PRT"):
+      selected_object = bpy.context.selected_objects[0]
+      utils.draw_input_row(layout, selected_object.particles_properties, "texture", "Texture")
+      utils.draw_input_row(layout, selected_object.particles_properties, "position_style", "Position Style")
+      utils.draw_input_row(layout, selected_object.particles_properties, "position_base", "Position Base")
+      utils.draw_input_row(layout, selected_object.particles_properties, "position_spread", "Position Spread")
+      utils.draw_input_row(layout, selected_object.particles_properties, "position_sphere_radius_base", "Position Sphere Radius Base")
+      utils.draw_input_row(layout, selected_object.particles_properties, "position_radius_spread", "Position Radius Spread")
+      utils.draw_input_row(layout, selected_object.particles_properties, "velocity_style", "Velocity Style")
+      utils.draw_input_row(layout, selected_object.particles_properties, "velocity_base", "Velocity Base")
+      utils.draw_input_row(layout, selected_object.particles_properties, "velocity_spread", "Velocity Spread")
+      utils.draw_input_row(layout, selected_object.particles_properties, "velocity_explode_speed_base", "Velocity Explode Speed Base")
+      utils.draw_input_row(layout, selected_object.particles_properties, "velocity_explode_speed_spread", "Velocity Explode Speed Spread")
+      utils.draw_input_row(layout, selected_object.particles_properties, "color_base", "Color Base")
+      utils.draw_input_row(layout, selected_object.particles_properties, "color_spread", "Color Spread")
+
+      layout = self.layout.column()
+      layout.operator("object.add_particles_tweens_color")
+      layout.operator("object.remove_particles_tweens_color")
+      layout.separator(type="LINE")
+      # Row for each items
+      for i, anim in enumerate(context.object.particles_properties.tweens_color):
+        utils.draw_input_row(layout, context.object.particles_properties.tweens_color[i], "time", "Time")
+        utils.draw_input_row(layout, context.object.particles_properties.tweens_color[i], "value", "Value")
+        layout.separator(type="LINE")
+      #endfor
+
+      utils.draw_input_row(layout, selected_object.particles_properties, "size_base", "Size Base")
+      utils.draw_input_row(layout, selected_object.particles_properties, "size_spread", "Size Spread")
+
+      layout = self.layout.column()
+      layout.operator("object.add_particles_tweens_size")
+      layout.operator("object.remove_particles_tweens_size")
+      layout.separator(type="LINE")
+      # Row for each items
+      for i, anim in enumerate(context.object.particles_properties.tweens_size):
+        utils.draw_input_row(layout, context.object.particles_properties.tweens_size[i], "time", "Time")
+        utils.draw_input_row(layout, context.object.particles_properties.tweens_size[i], "value", "Value")
+        layout.separator(type="LINE")
+      #endfor
+
+      utils.draw_input_row(layout, selected_object.particles_properties, "opacity_base", "Opacity Base")
+      utils.draw_input_row(layout, selected_object.particles_properties, "opacity_spread", "Opacity Spread")
+
+      layout = self.layout.column()
+      layout.operator("object.add_particles_tweens_opacity")
+      layout.operator("object.remove_particles_tweens_opacity")
+      layout.separator(type="LINE")
+      # Row for each items
+      for i, anim in enumerate(context.object.particles_properties.tweens_opacity):
+        utils.draw_input_row(layout, context.object.particles_properties.tweens_opacity[i], "time", "Time")
+        utils.draw_input_row(layout, context.object.particles_properties.tweens_opacity[i], "value", "Value")
+        layout.separator(type="LINE")
+      #endfor
+
+      utils.draw_input_row(layout, selected_object.particles_properties, "acceleration_base", "Acceleration Base")
+      utils.draw_input_row(layout, selected_object.particles_properties, "acceleration_spread", "Acceleration Spread")
+
+      layout = self.layout.column()
+      layout.operator("object.add_particles_tweens_acceleration")
+      layout.operator("object.remove_particles_tweens_acceleration")
+      layout.separator(type="LINE")
+      # Row for each items
+      for i, anim in enumerate(context.object.particles_properties.tweens_acceleration):
+        utils.draw_input_row(layout, context.object.particles_properties.tweens_acceleration[i], "time", "Time")
+        utils.draw_input_row(layout, context.object.particles_properties.tweens_acceleration[i], "value", "Value")
+        layout.separator(type="LINE")
+      #endfor
+
+      utils.draw_input_row(layout, selected_object.particles_properties, "angle_base", "Angle Base")
+      utils.draw_input_row(layout, selected_object.particles_properties, "angle_spread", "Angle Spread")
+      utils.draw_input_row(layout, selected_object.particles_properties, "angle_velocity_base", "Angle Velocity Base")
+      utils.draw_input_row(layout, selected_object.particles_properties, "angle_velocity_spread", "Angle Velocity Spread")
+      utils.draw_input_row(layout, selected_object.particles_properties, "angle_acceleration_base", "Angle Acceleration Base")
+      utils.draw_input_row(layout, selected_object.particles_properties, "angle_acceleration_spread", "Angle Acceleration Spread")
+      utils.draw_input_row(layout, selected_object.particles_properties, "particle_death_age", "Particle Death Age")
+      utils.draw_input_row(layout, selected_object.particles_properties, "particles_per_second", "Particles Per Second")
+      utils.draw_input_row(layout, selected_object.particles_properties, "particles_quantity", "Particles Quantity")
+      utils.draw_input_row(layout, selected_object.particles_properties, "emitter_death_age", "Emitter Death Age")
+    # END PARTICLES
 
     # START LIGHT
     if selected and len(selected) == 1 and selected[0].type == 'LIGHT':
@@ -186,37 +355,80 @@ class WARME_PT_object(bpy.types.Panel):
       layout.prop(selected_object.light_properties, "constant")
       layout.prop(selected_object.light_properties, "linear")
       layout.prop(selected_object.light_properties, "exp")
-      layout.prop(selected_object.light_properties, "group_id")
+      layout.prop(selected_object.light_properties, "group")
       layout.prop(selected_object.light_properties, "spot_cutoff_angle")
     # END LIGHT
+
+    # START DECAL
+    if selected and len(selected) == 1 and utils.belong_to_collection(bpy.context.selected_objects[0], "DCL"):
+      selected_object = bpy.context.selected_objects[0]
+      layout = self.layout.column()
+      utils.draw_input_row(layout, selected_object.decal_properties, "size", "Size")
+      utils.draw_input_row(layout, selected_object.decal_properties, "group", "Group")
+      utils.draw_input_row(layout, selected_object.decal_properties, "source_position", "Source Position")
+      utils.draw_input_row(layout, selected_object.decal_properties, "source_size", "Source Size")
+      layout.prop(selected_object.light_properties, "opacity")
+    # END DECAL
+
+    # START ENTITY
+    if selected and len(selected) == 1 and utils.belong_to_collection(bpy.context.selected_objects[0], "ENT"):
+      selected_object = bpy.context.selected_objects[0]
+      layout = self.layout.column()
+      utils.draw_input_row(layout, selected_object.entity_properties, "type", "Type")
+      row = layout.row()
+      row.prop(selected_object.entity_properties, "s00_name", text="")
+      row.prop(selected_object.entity_properties, "s00_value", text="")
+      row = layout.row()
+      row.prop(selected_object.entity_properties, "s01_name", text="")
+      row.prop(selected_object.entity_properties, "s01_value", text="")
+      row = layout.row()
+      row.prop(selected_object.entity_properties, "s02_name", text="")
+      row.prop(selected_object.entity_properties, "s02_value", text="")
+      row = layout.row()
+      row.prop(selected_object.entity_properties, "s03_name", text="")
+      row.prop(selected_object.entity_properties, "s03_value", text="")
+      row = layout.row()
+      row.prop(selected_object.entity_properties, "s04_name", text="")
+      row.prop(selected_object.entity_properties, "s04_value", text="")
+      row = layout.row()
+      row.prop(selected_object.entity_properties, "s05_name", text="")
+      row.prop(selected_object.entity_properties, "s05_value", text="")
+      row = layout.row()
+      row.prop(selected_object.entity_properties, "s06_name", text="")
+      row.prop(selected_object.entity_properties, "s06_value", text="")
+      row = layout.row()
+      row.prop(selected_object.entity_properties, "s07_name", text="")
+      row.prop(selected_object.entity_properties, "s07_value", text="")
+      row = layout.row()
+      row.prop(selected_object.entity_properties, "s08_name", text="")
+      row.prop(selected_object.entity_properties, "s08_value", text="")
+      row = layout.row()
+      row.prop(selected_object.entity_properties, "s09_name", text="")
+      row.prop(selected_object.entity_properties, "s09_value", text="")
+      row = layout.row()
+      row.prop(selected_object.entity_properties, "s10_name", text="")
+      row.prop(selected_object.entity_properties, "s10_value", text="")
+      row = layout.row()
+      row.prop(selected_object.entity_properties, "s11_name", text="")
+      row.prop(selected_object.entity_properties, "s11_value", text="")
+      row = layout.row()
+      row.prop(selected_object.entity_properties, "s12_name", text="")
+      row.prop(selected_object.entity_properties, "s12_value", text="")
+      row = layout.row()
+      row.prop(selected_object.entity_properties, "s13_name", text="")
+      row.prop(selected_object.entity_properties, "s13_value", text="")
+      row = layout.row()
+      row.prop(selected_object.entity_properties, "s14_name", text="")
+      row.prop(selected_object.entity_properties, "s14_value", text="")
+      row = layout.row()
+      row.prop(selected_object.entity_properties, "s15_name", text="")
+      row.prop(selected_object.entity_properties, "s15_value", text="")
+    # END ENTITY
 
     # START MESH
     if selected and len(selected) == 1 and selected[0].type == 'MESH':
       selected_object = bpy.context.selected_objects[0]
       layout = self.layout.column()
-
-      # START TRANSFORM
-      if bpy.context.selected_objects and bpy.context.selected_objects[0]:
-        selected_object = bpy.context.selected_objects[0]
-        box, opened = utils.draw_foldout(layout, selected_object.mat_properties, "show_transform_infos", "Transform Informations", 'PREFERENCES')
-        if opened:
-          pos = utils.get_position_of_object(bpy.context.selected_objects[0])
-          utils.draw_title_row(layout, "--- Position ---")
-          layout.label(text=f"X: {pos[0]:.3f}")
-          layout.label(text=f"Y: {pos[1]:.3f}")
-          layout.label(text=f"Z: {pos[2]:.3f}")
-
-          rot = utils.get_rotation_of_object(bpy.context.selected_objects[0])
-          utils.draw_title_row(layout, "--- Rotation ---")
-          layout.label(text=f"X: {rot[0]:.3f}")
-          layout.label(text=f"Y: {rot[1]:.3f}")
-          layout.label(text=f"Z: {rot[2]:.3f}")
-          layout.separator()
-          layout.operator("object.copy_object_position")
-          layout.operator("object.copy_object_rotation")
-          layout.operator("object.copy_camera_matrix")
-        #endif
-      # END TRANSFORM
 
       # START ANIMATIONS
       if bpy.context.selected_objects and bpy.context.selected_objects[0] and utils.belong_to_collection(bpy.context.selected_objects[0], "JAM"):
@@ -246,25 +458,32 @@ class WARME_PT_object(bpy.types.Panel):
       # SHADOW
       box, opened = utils.draw_foldout(layout, selected_object.mat_properties, "show_shadow", "Shadow", 'NORMALS_FACE')
       if opened:
-        utils.draw_input_row(layout, selected_object.mat_properties, "shadow_enabled", "Shadow Enabled")
+        utils.draw_input_row(layout, selected_object.mat_properties, "shadow_enabled", "Enable")
+        utils.draw_input_row(layout, selected_object.mat_properties, "shadow_casting", "Enable Shadow Casting")
 
       # DECALS
       box, opened = utils.draw_foldout(layout, selected_object.mat_properties, "show_decals", "Decals", 'STICKY_UVS_DISABLE')
       if opened:
-        utils.draw_input_row(layout, selected_object.mat_properties, "decal_enabled", "Enable Decal")
-        utils.draw_input_row(layout, selected_object.mat_properties, "decal_group", "Decal Group Identifier")
+        utils.draw_input_row(layout, selected_object.mat_properties, "decal_enabled", "Enable")
+        utils.draw_input_row(layout, selected_object.mat_properties, "decal_group", "Group Id")
 
       # LIGHT
       box, opened = utils.draw_foldout(layout, selected_object.mat_properties, "show_light", "Light", 'LIGHT')
       if opened:
-        utils.draw_input_row(layout, selected_object.mat_properties, "light_enabled", "Light Enabled")
-        utils.draw_input_row(layout, selected_object.mat_properties, "light_group", "Light Group identifier")
-        utils.draw_input_row(layout, selected_object.mat_properties, "light_gouraud_shading_enabled", "Light Gouraud Shading Enabled")
+        utils.draw_input_row(layout, selected_object.mat_properties, "light_enabled", "Enable")
+        utils.draw_input_row(layout, selected_object.mat_properties, "light_group", "Group Id")
+        utils.draw_input_row(layout, selected_object.mat_properties, "light_gouraud_shading_enabled", "Enable Gouraud Shading")
+        utils.draw_input_row(layout, selected_object.mat_properties, "light_emissive_factor", "Emissive Strength Factor")
+        utils.draw_input_row(layout, selected_object.mat_properties, "light_emissive_color", "Emissive Color")
+        utils.draw_input_row(layout, selected_object.mat_properties, "light_ambient_color", "Ambient Color")
+        utils.draw_input_row(layout, selected_object.mat_properties, "light_diffuse_color", "Diffuse Color")
+        utils.draw_input_row(layout, selected_object.mat_properties, "light_specular_factor", "Specular Strength Factor")
+        utils.draw_input_row(layout, selected_object.mat_properties, "light_specular_color", "Specular Color")
 
       # SAMPLER
       box, opened = utils.draw_foldout(layout, selected_object.mat_properties, "show_sampler", "Sampler", 'IMAGE')
       if opened:
-        utils.draw_input_row(layout, selected_object.mat_properties, "sampler_enabled", "Enabled")
+        utils.draw_input_row(layout, selected_object.mat_properties, "sampler_enabled", "Enable")
         utils.draw_input_row(layout, selected_object.mat_properties, "sampler_address_mode_u", "Address Mode U")
         utils.draw_input_row(layout, selected_object.mat_properties, "sampler_address_mode_v", "Address Mode V")
         utils.draw_input_row(layout, selected_object.mat_properties, "sampler_address_mode_w", "Address Mode W")
@@ -312,12 +531,13 @@ class WARME_PT_object(bpy.types.Panel):
       # ENV MAP
       box, opened = utils.draw_foldout(layout, selected_object.mat_properties, "show_env_map", "Env Map", 'WORLD')
       if opened:
-        utils.draw_input_row(layout, selected_object.mat_properties, "env_map_right", "Right")
-        utils.draw_input_row(layout, selected_object.mat_properties, "env_map_left", "Left")
-        utils.draw_input_row(layout, selected_object.mat_properties, "env_map_top", "Top")
-        utils.draw_input_row(layout, selected_object.mat_properties, "env_map_bottom", "Bottom")
-        utils.draw_input_row(layout, selected_object.mat_properties, "env_map_front", "Front")
-        utils.draw_input_row(layout, selected_object.mat_properties, "env_map_back", "Back")
+        utils.draw_input_row(layout, selected_object.mat_properties, "env_map_name", "Name")
+        utils.draw_input_row(layout, selected_object.mat_properties, "env_map_right", "Right Texture")
+        utils.draw_input_row(layout, selected_object.mat_properties, "env_map_left", "Left Texture")
+        utils.draw_input_row(layout, selected_object.mat_properties, "env_map_top", "Top Texture")
+        utils.draw_input_row(layout, selected_object.mat_properties, "env_map_bottom", "Bottom Texture")
+        utils.draw_input_row(layout, selected_object.mat_properties, "env_map_front", "Front Texture")
+        utils.draw_input_row(layout, selected_object.mat_properties, "env_map_back", "Back Texture")
         utils.draw_input_row(layout, selected_object.mat_properties, "env_map_opacity", "Opacity")
 
       # NORMAL MAP
@@ -380,26 +600,16 @@ class WARME_PT_object(bpy.types.Panel):
       box, opened = utils.draw_foldout(layout, selected_object.mat_properties, "show_emissive_map", "Emissive Map", 'LIGHT_DATA')
       if opened:
         utils.draw_input_row(layout, selected_object.mat_properties, "emissive_map", "Texture")
-        utils.draw_input_row(layout, selected_object.mat_properties, "emissive_factor", "Strength Factor")
-        utils.draw_input_row(layout, selected_object.mat_properties, "emissive", "Color")
-
-      # AMBIENT
-      box, opened = utils.draw_foldout(layout, selected_object.mat_properties, "show_ambient", "Ambient", 'LIGHT_DATA')
-      if opened:
-        utils.draw_input_row(layout, selected_object.mat_properties, "ambient", "Color")
 
       # DIFFUSE MAP
       box, opened = utils.draw_foldout(layout, selected_object.mat_properties, "show_diffuse_map", "Diffuse Map", 'IMAGE')
       if opened:
         utils.draw_input_row(layout, selected_object.mat_properties, "diffuse_map", "Texture")
-        utils.draw_input_row(layout, selected_object.mat_properties, "diffuse", "Color")
 
       # SPECULAR MAP
       box, opened = utils.draw_foldout(layout, selected_object.mat_properties, "show_specular_map", "Specular Map", 'SHADING_RENDERED')
       if opened:
         utils.draw_input_row(layout, selected_object.mat_properties, "specular_map", "Texture")
-        utils.draw_input_row(layout, selected_object.mat_properties, "specular_map_factor", "Strength Factor")
-        utils.draw_input_row(layout, selected_object.mat_properties, "specular", "Color")
 
       # THUNE MAP
       box, opened = utils.draw_foldout(layout, selected_object.mat_properties, "show_thune_map", "Thune Map", 'SHADING_RENDERED')
@@ -412,8 +622,9 @@ class WARME_PT_object(bpy.types.Panel):
       # ALPHA BLEND
       box, opened = utils.draw_foldout(layout, selected_object.mat_properties, "show_alpha_blend", "Alpha Blend", 'MOD_UVPROJECT')
       if opened:
-        utils.draw_input_row(layout, selected_object.mat_properties, "alpha_blend_facing", "Alpha Blend Facing")
-        utils.draw_input_row(layout, selected_object.mat_properties, "alpha_blend_distance", "Alpha Blend Distance")
+        utils.draw_input_row(layout, selected_object.mat_properties, "alpha_blend_enabled", "Enable")
+        utils.draw_input_row(layout, selected_object.mat_properties, "alpha_blend_facing", "Facing value")
+        utils.draw_input_row(layout, selected_object.mat_properties, "alpha_blend_distance", "Distance start")
 
       # JITTER VERTEX
       box, opened = utils.draw_foldout(layout, selected_object.mat_properties, "show_jitter_vertex", "Jitter Vertex", 'PLAY')
@@ -508,3 +719,40 @@ class WARME_PT_object(bpy.types.Panel):
         utils.draw_input_row(row, selected_object.mat_properties, "s1_texture", "Texture S1")
       #endif
     # END MESH
+
+
+class WARME_PT_grf_node_editor(bpy.types.Panel):
+  """Panneau dans l'onglet 'GRF' de la barre latérale (N)"""
+  bl_label = "GRF Node Metadata"
+  bl_idname = "VIEW3D_PT_grf_node_editor"
+  bl_space_type = 'VIEW_3D'
+  bl_region_type = 'UI'
+  bl_category = 'GRF' # Nom de l'onglet dans le N-Panel
+
+  def draw(self, context):
+    layout = self.layout
+    scene = context.scene
+    obj = context.active_object
+
+    if not obj or obj.type != 'MESH':
+      layout.label(text="Sélectionnez un Mesh", icon='ERROR')
+      return
+
+    box = layout.box()
+    box.label(text="Édition des Sommets", icon='DOT')
+    
+    # Champ de saisie de la valeur
+    col = box.column(align=True)
+    col.prop(scene, "grf_node_value", text="ID / Type")
+    
+    # Bouton pour appliquer
+    col.operator("mesh.apply_node_meta", icon='CHECKMARK')
+
+    # Aide visuelle pour le vertex actif
+    if obj.mode == 'EDIT':
+      bm = bmesh.from_edit_mesh(obj.data)
+      active_vert = bm.select_history.active
+      if active_vert and isinstance(active_vert, bmesh.types.BMVert):
+        layer = bm.verts.layers.int.get(ATTR_NAME)
+        current_val = active_vert[layer] if layer else 0
+        box.label(text=f"Vertex Actif ({active_vert.index}) : {current_val}", icon='INFO')

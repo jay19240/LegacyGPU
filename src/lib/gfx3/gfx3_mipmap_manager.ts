@@ -1,11 +1,11 @@
 import { gfx3Manager } from './gfx3_manager';
 import { Gfx3Texture } from './gfx3_texture';
-import { SHADER_CODE } from './gfx3_mipmap_shader';
+import { MIPMAP_SHADER_CODE } from './gfx3_mipmap_shader';
 
 /**
  * Singleton mipmap generator manager.
  */
-class Gfx3MipmapManager {
+export class Gfx3MipmapManager {
   device: GPUDevice;
   sampler: GPUSampler;
   pipelines: Map<string, GPURenderPipeline>;
@@ -15,7 +15,7 @@ class Gfx3MipmapManager {
     this.device = gfx3Manager.getDevice();
     this.sampler = this.device.createSampler({ minFilter: 'linear' });
     this.pipelines = new Map<string, GPURenderPipeline>();
-    this.shaderModule = this.device.createShaderModule({ code: SHADER_CODE });
+    this.shaderModule = this.device.createShaderModule({ code: MIPMAP_SHADER_CODE });
   }
 
   /**
@@ -122,7 +122,6 @@ class Gfx3MipmapManager {
   }
 }
 
-export { Gfx3MipmapManager };
 export const gfx3MipmapManager = new Gfx3MipmapManager();
 
 // -------------------------------------------------------------------------------------------

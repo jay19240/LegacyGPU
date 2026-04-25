@@ -1,7 +1,7 @@
 import { eventManager } from '../core/event_manager';
 import { coreManager } from '../core/core_manager';
 
-interface Pad {
+export interface InputPad {
   index: number;
   id: string;
   nButtons: number;
@@ -10,13 +10,13 @@ interface Pad {
   pressed: Array<boolean>;
 }
 
-interface Action {
+export interface InputAction {
   id: string;
   inputSource: InputSource;
   eventKey: string;
 }
 
-type InputSource = 'keyboard' | 'gamepad0' | 'gamepad1' | 'gamepad2' | 'gamepad3';
+export type InputSource = 'keyboard' | 'gamepad0' | 'gamepad1' | 'gamepad2' | 'gamepad3';
 
 // standard mapping https://w3c.github.io/gamepad/#remapping
 const GAME_PAD_KEY_MAPPING = new Map<string, string>();
@@ -55,13 +55,13 @@ GAME_PAD_KEY_MAPPING.set('PadRight', '15');
  * ■ UP => ArrowUp => PadTop
  * ■ DOWN => ArrowDown => PadBottom
  */
-class InputManager {
+export class InputManager {
   container: HTMLDivElement;
   keyMap: Map<string, boolean>;
   actionMap: Map<string, boolean>;
   actionOnceMap: Map<string, number>;
-  actionRegister: Map<string, Action>;
-  pads: Array<Pad>;
+  actionRegister: Map<string, InputAction>;
+  pads: Array<InputPad>;
   padsInterval: NodeJS.Timeout | number | undefined;
   mouseDown: boolean;
   mousePosition: vec2;
@@ -75,7 +75,7 @@ class InputManager {
     this.keyMap = new Map<string, boolean>;
     this.actionMap = new Map<string, boolean>;
     this.actionOnceMap = new Map<string, number>;
-    this.actionRegister = new Map<string, Action>;
+    this.actionRegister = new Map<string, InputAction>;
     this.pads = [];
     this.padsInterval;
     this.mouseDown = false;
@@ -289,7 +289,7 @@ class InputManager {
    * 
    * @param {number} index - The index of the pad.
    */
-  getPad(index: number): Pad | undefined {
+  getPad(index: number): InputPad | undefined {
     return this.pads.find(p => p.index == index);
   }
 
@@ -320,7 +320,7 @@ class InputManager {
     eventManager.emit(this, 'E_GAMEPAD_REMOVED', { id: id });
   }
 
-  #addPad(pad: Pad): void {
+  #addPad(pad: InputPad): void {
     this.pads.push(pad);
     if (this.padsInterval === null) {
       this.padsInterval = setInterval(() => this.#updatePadsStatus(), 50);
@@ -436,7 +436,7 @@ class InputManager {
   }
 
   #handleGamePadConnected(e: GamepadEvent): void {
-    const pad: Pad = {
+    const pad: InputPad = {
       index: e.gamepad.index,
       id: e.gamepad.id,
       nButtons: e.gamepad.buttons.length,
@@ -486,5 +486,4 @@ class InputManager {
   }
 }
 
-export { InputManager };
 export const inputManager = new InputManager();

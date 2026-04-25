@@ -5,7 +5,7 @@ import { Gfx3Texture } from './gfx3_texture';
 /**
  * Singleton 3D textures manager.
  */
-class Gfx3TextureManager {
+export class Gfx3TextureManager {
   textures: Map<string, Gfx3Texture>;
   urls: Map<string, string>;
   blobs: Map<string, Blob>;
@@ -77,8 +77,6 @@ class Gfx3TextureManager {
    * @param {string} storePath - The optionnal store file path.
    */
   async loadCubemapTexture(paths: { right: string, left: string, top: string, bottom: string, front: string, back: string }, storePath: string = ''): Promise<Gfx3Texture> {
-    storePath = storePath ? storePath : paths['right'];
-
     if (this.textures.has(storePath)) {
       return this.textures.get(storePath)!;
     }
@@ -188,5 +186,4 @@ class Gfx3TextureManager {
   }
 }
 
-export { Gfx3TextureManager };
 export const gfx3TextureManager = new Gfx3TextureManager();

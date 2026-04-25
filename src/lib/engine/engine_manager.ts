@@ -12,7 +12,7 @@ const DEFAULT_FRAME_RATE = 60;
 /**
  * Singleton managing the main loop engine.
  */
-class EngineManager {
+export class EngineManager {
   then: number;
   delta: number;
   timeStamp: number;
@@ -46,7 +46,7 @@ class EngineManager {
    * 
    * @param {boolean} [enableScanlines=true] - Determines whether scanlines should be enabled or not.
    */
-  startup(enableScanlines: boolean = true, ): void {
+  startup(enableScanlines: boolean = true): void {
     coreManager.enableScanlines(enableScanlines);
     this.run(0);
   }
@@ -75,11 +75,11 @@ class EngineManager {
     if (this.delta >= frameDuration) {
       this.then = timeStamp - (this.delta % frameDuration);
 
-      inputManager.update(this.delta);
-      uiManager.update(this.delta);
-      screenManager.update(this.delta);
+      inputManager.update(frameDuration);
+      uiManager.update(frameDuration);
+      screenManager.update(frameDuration);
       screenManager.draw();
-      screenManager.render(this.delta);
+      screenManager.render(frameDuration);
 
       this.stats.end();
     }
@@ -169,5 +169,4 @@ class EngineManager {
   }
 }
 
-export { EngineManager };
 export const em = new EngineManager();

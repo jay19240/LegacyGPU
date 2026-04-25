@@ -4,7 +4,7 @@ import { UT } from './utils';
  * Generic values interpolator.
  * @typeParam T - The interpolate value type as a number or array of numbers.
  */
-class Tween<T> {
+export class Tween<T> {
   times: Array<number>;
   values: Array<T>;
   fns: Array<Function>;
@@ -93,14 +93,29 @@ class Tween<T> {
     this.looped = looped;
   }
 
+  /**
+   * Define the times intervals.
+   * 
+   * @param {Array<number>} times - The time values.
+   */
   setTimes(times: Array<number>): void {
     this.times = times;
   }
 
+  /**
+   * Define the values that will be associated with each time values
+   * 
+   * @param {Array<T>} values - The values.
+   */
   setValues(values: Array<T>): void {
     this.values = values;
   }
 
+  /**
+   * Define the interpolation functions.
+   * 
+   * @param {Array<Function>} fns - The interpolation functions.
+   */
   setFunctions(fns: Array<Function>): void {
     this.fns = fns;
   }
@@ -130,9 +145,10 @@ class Tween<T> {
     return this.times.length == 0 || this.values.length == 0;
   }
 
+  /**
+   * Checks if animation is finished or not.
+   */
   isFinished(): boolean {
     return this.finished;
   }
 }
-
-export { Tween };

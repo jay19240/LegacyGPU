@@ -8,7 +8,7 @@ const GRID_HEIGHT = 8;
  * A UI widget displaying a virtual keyboard.
  * It emit 'E_VALUE_CHANGED' with data { value }
  */
-class UIInputKeyboard extends UIWidget {
+export class UIInputKeyboard extends UIWidget {
   value: string;
   row: number;
   column: number;
@@ -217,5 +217,3 @@ class UIInputKeyboard extends UIWidget {
     items[this.row * GRID_WIDTH + this.column].classList.add('u-focused');
   }
 }
-
-export { UIInputKeyboard };

@@ -42,7 +42,7 @@ export default defineConfig(({ mode }) => {
       outDir: "dist",
       rollupOptions: {
         treeshake: false,
-        input: 'game.html',
+        input: 'index.html',
         output: {
           inlineDynamicImports: true
         }

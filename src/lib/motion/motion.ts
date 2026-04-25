@@ -5,7 +5,7 @@ import { UT } from '../core/utils';
  * Is used to move along a serie of points.
  * It emit 'E_FINISHED'
  */
-class Motion {
+export class Motion {
   vertices: Array<number>;
   points: Array<vec3>;
   speed: number;
@@ -292,5 +292,3 @@ class Motion {
     return this.currentSegmentTime;
   }
 }
-
-export { Motion };

@@ -17,11 +17,12 @@ import { ScriptMachine } from '../script/script_machine';
 import { AIPathGraph2D } from '../ai/ai_path_graph';
 import { AIPathGrid2D } from '../ai/ai_path_grid';
 import { EnginePackItemList, EnginePackItem } from './engine_pack_item_list';
+import { EngineEntity, createEntityFromFile } from './engine_entity';
 
 /**
  * A package manager for 2D assets.
  */
-class EnginePack2D {
+export class EnginePack2D {
   bin: EnginePackItemList<Blob>;
   sst: EnginePackItemList<FormatJAS>;
   jsc: EnginePackItemList<ScriptMachine>;
@@ -34,7 +35,7 @@ class EnginePack2D {
   crv: EnginePackItemList<CurveInterpolator>;
   grf: EnginePackItemList<AIPathGraph2D>;
   grd: EnginePackItemList<AIPathGrid2D>;
-  any: EnginePackItemList<any>;
+  ent: EnginePackItemList<EngineEntity>;
   cameraX: number;
   cameraY: number;
   scaleX: number;
@@ -55,7 +56,7 @@ class EnginePack2D {
     this.crv = new EnginePackItemList<CurveInterpolator>;
     this.grf = new EnginePackItemList<AIPathGraph2D>;
     this.grd = new EnginePackItemList<AIPathGrid2D>;
-    this.any = new EnginePackItemList<any>;
+    this.ent = new EnginePackItemList<EngineEntity>;
     this.cameraX = 0;
     this.cameraY = 0;
     this.scaleX = 1;
@@ -180,9 +181,10 @@ class EnginePack2D {
         await grd.loadFromFile(url);
         pack.grd.push({ name: infos.name, ext: 'grd', object: grd, blobUrl: url });
       }
-      else if (file != null && infos.ext == 'any') {
-        const data = JSON.parse(await file.async('string'));
-        pack.any.push({ name: infos.name, ext: 'any', object: data, blobUrl: '' });
+      else if (file != null && infos.ext == 'ent') {
+        const url = URL.createObjectURL(await file.async('blob'));
+        const entity = await createEntityFromFile(url);
+        pack.ent.push({ name: infos.name, ext: 'ent', object: entity, blobUrl: url });
       }
       else if (file != null) {
         const url = URL.createObjectURL(await file.async('blob'));
@@ -208,6 +210,12 @@ class EnginePack2D {
       item.object.draw();
     }
   }
-}
 
-export { EnginePack2D };
+  setUpdateList(updateItems: Array<EnginePackItem<any>>): void {
+    this.updateItems = updateItems;
+  }
+
+  setDrawList(drawItems: Array<EnginePackItem<any>>): void {
+    this.drawItems = drawItems;
+  }
+}

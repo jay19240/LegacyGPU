@@ -20,7 +20,6 @@ import os
 from bpy.app.handlers import persistent
 # ----------------------------------------------------------------------------------
 
-
 @persistent
 def on_save(dummy):
   if (bpy.context.scene.world_properties.enable_auto_export):

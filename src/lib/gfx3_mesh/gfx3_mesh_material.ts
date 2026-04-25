@@ -3,24 +3,25 @@ import { gfx3TextureManager } from '../gfx3/gfx3_texture_manager';
 import { gfx3Manager } from '../gfx3/gfx3_manager';
 import { Gfx3StaticGroup } from '../gfx3/gfx3_group';
 import { Gfx3Texture } from '../gfx3/gfx3_texture';
-import { MatParam, MAT_CUSTOM_PARAMS } from './gfx3_mesh_shader';
+import { Gfx3MatParam, MESH_MAT_CUSTOM_PARAMS } from './gfx3_mesh_shader';
 
-enum TextureTarget {
+export enum Gfx3MatFlipbookTarget {
   TEXTURE = 'Texture',
   SECONDARY_TEXTURE = 'SecondaryTexture',
   DISPLACEMENT_MAP = 'DisplacementMap',
   DISSOLVE_MAP = 'DissolveMap'
 };
 
-enum BlendingMode {
+export enum Gfx3MatBlendingMode {
   NONE,
   ADD,
   MUL,
   MIX
 };
 
-interface MATOptions {
-  flipbooks?: Array<MATFlipbook>;
+export interface Gfx3MatOptions {
+  shadowCasting?: boolean;
+  flipbooks?: Array<Gfx3MatFlipbook>;
   customParams?: Array<{ name: string, value: number }>;
   // --------------------------------------
   id?: number;
@@ -34,6 +35,20 @@ interface MATOptions {
   lightEnabled?: boolean;
   lightGroup?: number;
   lightGouraudShadingEnabled?: boolean;
+  lightEmissiveFactor?: number;
+  lightEmissiveR?: number;
+  lightEmissiveG?: number;
+  lightEmissiveB?: number;
+  lightAmbientR?: number;
+  lightAmbientG?: number;
+  lightAmbientB?: number;
+  lightDiffuseR?: number;
+  lightDiffuseG?: number;
+  lightDiffuseB?: number;
+  lightSpecularFactor?: number;
+  lightSpecularR?: number;
+  lightSpecularG?: number;
+  lightSpecularB?: number;
   // --------------------------------------
   texture?: Gfx3Texture;
   textureScrollAngle?: number;
@@ -47,7 +62,7 @@ interface MATOptions {
   textureBlendColorR?: number,
   textureBlendColorG?: number,
   textureBlendColorB?: number,
-  textureBlendColorMode?: BlendingMode;
+  textureBlendColorMode?: Gfx3MatBlendingMode;
   textureBlendColorMix?: number,
   // --------------------------------------
   secondaryTexture?: Gfx3Texture;
@@ -59,11 +74,11 @@ interface MATOptions {
   secondaryTextureScaleY?: number;
   secondaryTextureRotationAngle?: number;
   secondaryTextureOpacity?: number;
-  secondaryTextureBlendMode?: BlendingMode;
+  secondaryTextureBlendMode?: Gfx3MatBlendingMode;
   secondaryTextureBlendColorR?: number,
   secondaryTextureBlendColorG?: number,
   secondaryTextureBlendColorB?: number,
-  secondaryTextureBlendColorMode?: BlendingMode;
+  secondaryTextureBlendColorMode?: Gfx3MatBlendingMode;
   secondaryTextureBlendColorMix?: number,
   // --------------------------------------
   envMap?: Gfx3Texture;
@@ -116,31 +131,17 @@ interface MATOptions {
   toonLightDirZ?: number;
   // --------------------------------------
   emissiveMap?: Gfx3Texture;
-  emissiveFactor?: number;
-  emissiveR?: number;
-  emissiveG?: number;
-  emissiveB?: number;
-  // --------------------------------------
-  ambientR?: number;
-  ambientG?: number;
-  ambientB?: number;
   // --------------------------------------
   diffuseMap?: Gfx3Texture;
-  diffuseR?: number;
-  diffuseG?: number;
-  diffuseB?: number;
   // --------------------------------------
   specularMap?: Gfx3Texture;
-  specularFactor?: number;
-  specularR?: number;
-  specularG?: number;
-  specularB?: number;
   // --------------------------------------
   thuneMap?: Gfx3Texture;
   thuneMapShininessEnabled?: boolean;
   thuneMapArcadeEnabled?: boolean;
   thuneMapReflectiveEnabled?: boolean;
   // --------------------------------------
+  alphaBlendEnabled?: number;
   alphaBlendFacing?: number;
   alphaBlendDistance?: number;
   // --------------------------------------
@@ -170,8 +171,8 @@ interface MATOptions {
   s1Texture?: Gfx3Texture;
 };
 
-interface MATFlipbook {
-  textureTarget: TextureTarget;
+export interface Gfx3MatFlipbook {
+  textureTarget: Gfx3MatFlipbookTarget;
   frameWidth: number;
   frameHeight: number;
   numCol: number;
@@ -180,12 +181,12 @@ interface MATFlipbook {
   frameDuration: number;
 };
 
-interface Animation {
-  flipbook: MATFlipbook;
+export interface Gfx3MatAnimation {
+  flipbook: Gfx3MatFlipbook;
   currentFrameIndex: number;
   looped: boolean;
   frameProgress: number;
-  blendingFromProgress: number;
+  blendingStartAt: number;
   offsetParams: [number, number];
   offsetNextParams: [number, number];
   offsetBlendingParam: number;
@@ -195,9 +196,10 @@ interface Animation {
  * The surface material.
  * It emit 'E_FINISHED' (on texture animation end)
  */
-class Gfx3Material {
-  flipbooks: Array<MATFlipbook>;
-  animations: Map<TextureTarget, Animation>;
+export class Gfx3Material {
+  shadowCasting: boolean;
+  flipbooks: Array<Gfx3MatFlipbook>;
+  animations: Set<Gfx3MatAnimation>;
   dataChanged: boolean;
   texturesChanged: boolean;
   jamFramesChanged: boolean;
@@ -220,173 +222,174 @@ class Gfx3Material {
   jamFrames: Float32Array;
 
   /**
-   * @param {MATOptions} options - The options to configure the material.
+   * @param {Gfx3MatOptions} options - The options to configure the material.
    */
-  constructor(options: MATOptions) {
+  constructor(options: Gfx3MatOptions) {
+    this.shadowCasting = options.shadowCasting ?? false;
     this.flipbooks = options.flipbooks ?? [];
-    this.animations = new Map<TextureTarget, Animation>();
+    this.animations = new Set<Gfx3MatAnimation>();
     this.dataChanged = true;
     this.texturesChanged = false;
     this.jamFramesChanged = false;
 
     this.grp2 = gfx3Manager.createStaticGroup('MESH_PIPELINE', 2);
-    this.params = this.grp2.setFloat(0, 'MAT_PARAMS', MatParam.COUNT + 16);
-    this.params[MatParam.ID] = options.id ?? 0;
-    this.params[MatParam.OPACITY] = options.opacity ?? 1.0;
+    this.params = this.grp2.setFloat(0, 'MAT_PARAMS', Gfx3MatParam.COUNT + 16);
+    this.params[Gfx3MatParam.ID] = options.id ?? 0;
+    this.params[Gfx3MatParam.OPACITY] = options.opacity ?? 1.0;
     // --------------------------------------------------------------------------------------------------------
-    this.params[MatParam.SHADOW_ENABLED] = options.shadowEnabled ? 1.0 : 0.0;
+    this.params[Gfx3MatParam.SHADOW_ENABLED] = options.shadowEnabled ? 1.0 : 0.0;
     // --------------------------------------------------------------------------------------------------------
-    this.params[MatParam.DECAL_ENABLED] = options.decalEnabled ? 1.0 : 0.0;
-    this.params[MatParam.DECAL_GROUP] = options.decalGroup ?? 0;
+    this.params[Gfx3MatParam.DECAL_ENABLED] = options.decalEnabled ? 1.0 : 0.0;
+    this.params[Gfx3MatParam.DECAL_GROUP] = options.decalGroup ?? 0;
     // --------------------------------------------------------------------------------------------------------
-    this.params[MatParam.LIGHT_ENABLED] = options.lightEnabled ? 1.0 : 0.0;
-    this.params[MatParam.LIGHT_GROUP] = options.lightGroup ?? 0;
-    this.params[MatParam.LIGHT_GOURAUD_SHADING_ENABLED] = options.lightGouraudShadingEnabled ? 1.0 : 0.0;
+    this.params[Gfx3MatParam.LIGHT_ENABLED] = options.lightEnabled ? 1.0 : 0.0;
+    this.params[Gfx3MatParam.LIGHT_GROUP] = options.lightGroup ?? 0;
+    this.params[Gfx3MatParam.LIGHT_GOURAUD_SHADING_ENABLED] = options.lightGouraudShadingEnabled ? 1.0 : 0.0;
+    this.params[Gfx3MatParam.LIGHT_EMISSIVE_FACTOR] = options.lightEmissiveFactor ?? 1.0;
+    this.params[Gfx3MatParam.LIGHT_EMISSIVE_R] = options.lightEmissiveR ?? 0.0;
+    this.params[Gfx3MatParam.LIGHT_EMISSIVE_G] = options.lightEmissiveG ?? 0.0;
+    this.params[Gfx3MatParam.LIGHT_EMISSIVE_B] = options.lightEmissiveB ?? 0.0;
+    this.params[Gfx3MatParam.LIGHT_AMBIENT_R] = options.lightAmbientR ?? 0.5;
+    this.params[Gfx3MatParam.LIGHT_AMBIENT_G] = options.lightAmbientG ?? 0.5;
+    this.params[Gfx3MatParam.LIGHT_AMBIENT_B] = options.lightAmbientB ?? 0.5;
+    this.params[Gfx3MatParam.LIGHT_DIFFUSE_R] = options.lightDiffuseR ?? 1.0;
+    this.params[Gfx3MatParam.LIGHT_DIFFUSE_G] = options.lightDiffuseG ?? 1.0;
+    this.params[Gfx3MatParam.LIGHT_DIFFUSE_B] = options.lightDiffuseB ?? 1.0;
+    this.params[Gfx3MatParam.LIGHT_SPECULAR_FACTOR] = options.lightSpecularFactor ?? 1.0;
+    this.params[Gfx3MatParam.LIGHT_SPECULAR_R] = options.lightSpecularR ?? 0.0;
+    this.params[Gfx3MatParam.LIGHT_SPECULAR_G] = options.lightSpecularG ?? 0.0;
+    this.params[Gfx3MatParam.LIGHT_SPECULAR_B] = options.lightSpecularB ?? 0.0;
     // --------------------------------------------------------------------------------------------------------
-    this.params[MatParam.TEXTURE_EXIST] = options.texture ? 1.0 : 0.0;
-    this.params[MatParam.TEXTURE_SCROLL_ANGLE] = options.textureScrollAngle ?? 0.0;
-    this.params[MatParam.TEXTURE_SCROLL_RATE] = options.textureScrollRate ?? 0.0;
-    this.params[MatParam.TEXTURE_OFFSET_X] = options.textureOffsetX ?? 0.0;
-    this.params[MatParam.TEXTURE_OFFSET_Y] = options.textureOffsetY ?? 0.0;
-    this.params[MatParam.TEXTURE_OFFSET_NEXT_X] = 0.0;
-    this.params[MatParam.TEXTURE_OFFSET_NEXT_Y] = 0.0;
-    this.params[MatParam.TEXTURE_OFFSET_BLENDING] = 0.0;
-    this.params[MatParam.TEXTURE_SCALE_X] = options.textureScaleX ?? 1.0;
-    this.params[MatParam.TEXTURE_SCALE_Y] = options.textureScaleY ?? 1.0;
-    this.params[MatParam.TEXTURE_ROTATION_ANGLE] = options.textureRotationAngle ?? 0.0;
-    this.params[MatParam.TEXTURE_OPACITY] = options.textureOpacity ?? 1.0;
-    this.params[MatParam.TEXTURE_BLEND_COLOR_R] = options.textureBlendColorR ?? 1.0;
-    this.params[MatParam.TEXTURE_BLEND_COLOR_G] = options.textureBlendColorG ?? 1.0;
-    this.params[MatParam.TEXTURE_BLEND_COLOR_B] = options.textureBlendColorB ?? 1.0;
-    this.params[MatParam.TEXTURE_BLEND_COLOR_MODE] = options.textureBlendColorMode ?? 0.0;
-    this.params[MatParam.TEXTURE_BLEND_COLOR_MIX] = options.textureBlendColorMix ?? 1.0;
+    this.params[Gfx3MatParam.TEXTURE_EXIST] = options.texture ? 1.0 : 0.0;
+    this.params[Gfx3MatParam.TEXTURE_SCROLL_ANGLE] = options.textureScrollAngle ?? 0.0;
+    this.params[Gfx3MatParam.TEXTURE_SCROLL_RATE] = options.textureScrollRate ?? 0.0;
+    this.params[Gfx3MatParam.TEXTURE_OFFSET_X] = options.textureOffsetX ?? 0.0;
+    this.params[Gfx3MatParam.TEXTURE_OFFSET_Y] = options.textureOffsetY ?? 0.0;
+    this.params[Gfx3MatParam.TEXTURE_OFFSET_NEXT_X] = 0.0;
+    this.params[Gfx3MatParam.TEXTURE_OFFSET_NEXT_Y] = 0.0;
+    this.params[Gfx3MatParam.TEXTURE_OFFSET_BLENDING] = 0.0;
+    this.params[Gfx3MatParam.TEXTURE_SCALE_X] = options.textureScaleX ?? 1.0;
+    this.params[Gfx3MatParam.TEXTURE_SCALE_Y] = options.textureScaleY ?? 1.0;
+    this.params[Gfx3MatParam.TEXTURE_ROTATION_ANGLE] = options.textureRotationAngle ?? 0.0;
+    this.params[Gfx3MatParam.TEXTURE_OPACITY] = options.textureOpacity ?? 1.0;
+    this.params[Gfx3MatParam.TEXTURE_BLEND_COLOR_R] = options.textureBlendColorR ?? 1.0;
+    this.params[Gfx3MatParam.TEXTURE_BLEND_COLOR_G] = options.textureBlendColorG ?? 1.0;
+    this.params[Gfx3MatParam.TEXTURE_BLEND_COLOR_B] = options.textureBlendColorB ?? 1.0;
+    this.params[Gfx3MatParam.TEXTURE_BLEND_COLOR_MODE] = options.textureBlendColorMode ?? 0.0;
+    this.params[Gfx3MatParam.TEXTURE_BLEND_COLOR_MIX] = options.textureBlendColorMix ?? 1.0;
     // --------------------------------------------------------------------------------------------------------
-    this.params[MatParam.SECONDARY_TEXTURE_EXIST] = options.secondaryTexture ? 1.0 : 0.0;
-    this.params[MatParam.SECONDARY_TEXTURE_SCROLL_ANGLE] = options.secondaryTextureScrollAngle ?? 0.0;
-    this.params[MatParam.SECONDARY_TEXTURE_SCROLL_RATE] = options.secondaryTextureScrollRate ?? 0.0;
-    this.params[MatParam.SECONDARY_TEXTURE_OFFSET_X] = options.secondaryTextureOffsetX ?? 0.0;
-    this.params[MatParam.SECONDARY_TEXTURE_OFFSET_Y] = options.secondaryTextureOffsetY ?? 0.0;
-    this.params[MatParam.SECONDARY_TEXTURE_OFFSET_NEXT_X] = 0.0;
-    this.params[MatParam.SECONDARY_TEXTURE_OFFSET_NEXT_Y] = 0.0;
-    this.params[MatParam.SECONDARY_TEXTURE_OFFSET_BLENDING] = 0.0;
-    this.params[MatParam.SECONDARY_TEXTURE_SCALE_X] = options.secondaryTextureScaleX ?? 1.0;
-    this.params[MatParam.SECONDARY_TEXTURE_SCALE_Y] = options.secondaryTextureScaleY ?? 1.0;
-    this.params[MatParam.SECONDARY_TEXTURE_ROTATION_ANGLE] = options.secondaryTextureRotationAngle ?? 0.0;
-    this.params[MatParam.SECONDARY_TEXTURE_OPACITY] = options.secondaryTextureOpacity ?? 1.0;
-    this.params[MatParam.SECONDARY_TEXTURE_BLEND_MODE] = options.secondaryTextureBlendMode ?? 0.0;
-    this.params[MatParam.SECONDARY_TEXTURE_BLEND_COLOR_R] = options.secondaryTextureBlendColorR ?? 1.0;
-    this.params[MatParam.SECONDARY_TEXTURE_BLEND_COLOR_G] = options.secondaryTextureBlendColorG ?? 1.0;
-    this.params[MatParam.SECONDARY_TEXTURE_BLEND_COLOR_B] = options.secondaryTextureBlendColorB ?? 1.0;
-    this.params[MatParam.SECONDARY_TEXTURE_BLEND_COLOR_MODE] = options.secondaryTextureBlendColorMode ?? 0.0;
-    this.params[MatParam.SECONDARY_TEXTURE_BLEND_COLOR_MIX] = options.secondaryTextureBlendColorMix ?? 1.0;
+    this.params[Gfx3MatParam.SECONDARY_TEXTURE_EXIST] = options.secondaryTexture ? 1.0 : 0.0;
+    this.params[Gfx3MatParam.SECONDARY_TEXTURE_SCROLL_ANGLE] = options.secondaryTextureScrollAngle ?? 0.0;
+    this.params[Gfx3MatParam.SECONDARY_TEXTURE_SCROLL_RATE] = options.secondaryTextureScrollRate ?? 0.0;
+    this.params[Gfx3MatParam.SECONDARY_TEXTURE_OFFSET_X] = options.secondaryTextureOffsetX ?? 0.0;
+    this.params[Gfx3MatParam.SECONDARY_TEXTURE_OFFSET_Y] = options.secondaryTextureOffsetY ?? 0.0;
+    this.params[Gfx3MatParam.SECONDARY_TEXTURE_OFFSET_NEXT_X] = 0.0;
+    this.params[Gfx3MatParam.SECONDARY_TEXTURE_OFFSET_NEXT_Y] = 0.0;
+    this.params[Gfx3MatParam.SECONDARY_TEXTURE_OFFSET_BLENDING] = 0.0;
+    this.params[Gfx3MatParam.SECONDARY_TEXTURE_SCALE_X] = options.secondaryTextureScaleX ?? 1.0;
+    this.params[Gfx3MatParam.SECONDARY_TEXTURE_SCALE_Y] = options.secondaryTextureScaleY ?? 1.0;
+    this.params[Gfx3MatParam.SECONDARY_TEXTURE_ROTATION_ANGLE] = options.secondaryTextureRotationAngle ?? 0.0;
+    this.params[Gfx3MatParam.SECONDARY_TEXTURE_OPACITY] = options.secondaryTextureOpacity ?? 1.0;
+    this.params[Gfx3MatParam.SECONDARY_TEXTURE_BLEND_MODE] = options.secondaryTextureBlendMode ?? 0.0;
+    this.params[Gfx3MatParam.SECONDARY_TEXTURE_BLEND_COLOR_R] = options.secondaryTextureBlendColorR ?? 1.0;
+    this.params[Gfx3MatParam.SECONDARY_TEXTURE_BLEND_COLOR_G] = options.secondaryTextureBlendColorG ?? 1.0;
+    this.params[Gfx3MatParam.SECONDARY_TEXTURE_BLEND_COLOR_B] = options.secondaryTextureBlendColorB ?? 1.0;
+    this.params[Gfx3MatParam.SECONDARY_TEXTURE_BLEND_COLOR_MODE] = options.secondaryTextureBlendColorMode ?? 0.0;
+    this.params[Gfx3MatParam.SECONDARY_TEXTURE_BLEND_COLOR_MIX] = options.secondaryTextureBlendColorMix ?? 1.0;
     // --------------------------------------------------------------------------------------------------------
-    this.params[MatParam.ENV_MAP_EXIST] = options.envMap ? 1.0 : 0.0;
-    this.params[MatParam.ENV_MAP_OPACITY] = options.envMapOpacity ?? 1.0;
+    this.params[Gfx3MatParam.ENV_MAP_EXIST] = options.envMap ? 1.0 : 0.0;
+    this.params[Gfx3MatParam.ENV_MAP_OPACITY] = options.envMapOpacity ?? 1.0;
     // --------------------------------------------------------------------------------------------------------
-    this.params[MatParam.NORMAL_MAP_EXIST] = options.normalMap ? 1.0 : 0.0;
-    this.params[MatParam.NORMAL_MAP_SCROLL_ANGLE] = options.normalMapScrollAngle ?? 0.0;
-    this.params[MatParam.NORMAL_MAP_SCROLL_RATE] = options.normalMapScrollRate ?? 0.0;
-    this.params[MatParam.NORMAL_MAP_OFFSET_X] = options.normalMapOffsetX ?? 0.0;
-    this.params[MatParam.NORMAL_MAP_OFFSET_Y] = options.normalMapOffsetY ?? 0.0;
-    this.params[MatParam.NORMAL_MAP_SCALE_X] = options.normalMapScaleX ?? 1.0;
-    this.params[MatParam.NORMAL_MAP_SCALE_Y] = options.normalMapScaleY ?? 1.0;
-    this.params[MatParam.NORMAL_MAP_ROTATION_ANGLE] = options.normalMapRotationAngle ?? 0.0;
-    this.params[MatParam.NORMAL_MAP_INTENSITY] = options.normalMapIntensity ?? 1.0;
+    this.params[Gfx3MatParam.NORMAL_MAP_EXIST] = options.normalMap ? 1.0 : 0.0;
+    this.params[Gfx3MatParam.NORMAL_MAP_SCROLL_ANGLE] = options.normalMapScrollAngle ?? 0.0;
+    this.params[Gfx3MatParam.NORMAL_MAP_SCROLL_RATE] = options.normalMapScrollRate ?? 0.0;
+    this.params[Gfx3MatParam.NORMAL_MAP_OFFSET_X] = options.normalMapOffsetX ?? 0.0;
+    this.params[Gfx3MatParam.NORMAL_MAP_OFFSET_Y] = options.normalMapOffsetY ?? 0.0;
+    this.params[Gfx3MatParam.NORMAL_MAP_SCALE_X] = options.normalMapScaleX ?? 1.0;
+    this.params[Gfx3MatParam.NORMAL_MAP_SCALE_Y] = options.normalMapScaleY ?? 1.0;
+    this.params[Gfx3MatParam.NORMAL_MAP_ROTATION_ANGLE] = options.normalMapRotationAngle ?? 0.0;
+    this.params[Gfx3MatParam.NORMAL_MAP_INTENSITY] = options.normalMapIntensity ?? 1.0;
     // --------------------------------------------------------------------------------------------------------
-    this.params[MatParam.DISPLACEMENT_MAP_EXIST] = options.displacementMap ? 1.0 : 0.0;
-    this.params[MatParam.DISPLACEMENT_MAP_SCROLL_ANGLE] = options.displacementMapScrollAngle ?? 0.0;
-    this.params[MatParam.DISPLACEMENT_MAP_SCROLL_RATE] = options.displacementMapScrollRate ?? 0.0;
-    this.params[MatParam.DISPLACEMENT_MAP_OFFSET_X] = options.displacementMapOffsetX ?? 0.0;
-    this.params[MatParam.DISPLACEMENT_MAP_OFFSET_Y] = options.displacementMapOffsetY ?? 0.0;
-    this.params[MatParam.DISPLACEMENT_MAP_SCALE_X] = options.displacementMapScaleX ?? 1.0;
-    this.params[MatParam.DISPLACEMENT_MAP_SCALE_Y] = options.displacementMapScaleY ?? 1.0;
-    this.params[MatParam.DISPLACEMENT_MAP_ROTATION_ANGLE] = options.displacementMapRotationAngle ?? 0.0;
-    this.params[MatParam.DISPLACEMENT_MAP_FACTOR] = options.displacementMapFactor ?? 1.0;
-    this.params[MatParam.DISPLACE_TEXTURE_ENABLED] = options.displaceTextureEnabled ? 1.0 : 0.0;
-    this.params[MatParam.DISPLACE_SECONDARY_TEXTURE_ENABLED] = options.displaceSecondaryTextureEnabled ? 1.0 : 0.0;
-    this.params[MatParam.DISPLACE_NORMAL_MAP_ENABLED] = options.displaceNormalMapEnabled ? 1.0 : 0.0;
-    this.params[MatParam.DISPLACE_DISSOLVE_MAP_ENABLED] = options.displaceDissolveMapEnabled ? 1.0 : 0.0;
+    this.params[Gfx3MatParam.DISPLACEMENT_MAP_EXIST] = options.displacementMap ? 1.0 : 0.0;
+    this.params[Gfx3MatParam.DISPLACEMENT_MAP_SCROLL_ANGLE] = options.displacementMapScrollAngle ?? 0.0;
+    this.params[Gfx3MatParam.DISPLACEMENT_MAP_SCROLL_RATE] = options.displacementMapScrollRate ?? 0.0;
+    this.params[Gfx3MatParam.DISPLACEMENT_MAP_OFFSET_X] = options.displacementMapOffsetX ?? 0.0;
+    this.params[Gfx3MatParam.DISPLACEMENT_MAP_OFFSET_Y] = options.displacementMapOffsetY ?? 0.0;
+    this.params[Gfx3MatParam.DISPLACEMENT_MAP_SCALE_X] = options.displacementMapScaleX ?? 1.0;
+    this.params[Gfx3MatParam.DISPLACEMENT_MAP_SCALE_Y] = options.displacementMapScaleY ?? 1.0;
+    this.params[Gfx3MatParam.DISPLACEMENT_MAP_ROTATION_ANGLE] = options.displacementMapRotationAngle ?? 0.0;
+    this.params[Gfx3MatParam.DISPLACEMENT_MAP_FACTOR] = options.displacementMapFactor ?? 1.0;
+    this.params[Gfx3MatParam.DISPLACE_TEXTURE_ENABLED] = options.displaceTextureEnabled ? 1.0 : 0.0;
+    this.params[Gfx3MatParam.DISPLACE_SECONDARY_TEXTURE_ENABLED] = options.displaceSecondaryTextureEnabled ? 1.0 : 0.0;
+    this.params[Gfx3MatParam.DISPLACE_NORMAL_MAP_ENABLED] = options.displaceNormalMapEnabled ? 1.0 : 0.0;
+    this.params[Gfx3MatParam.DISPLACE_DISSOLVE_MAP_ENABLED] = options.displaceDissolveMapEnabled ? 1.0 : 0.0;
     // --------------------------------------------------------------------------------------------------------
-    this.params[MatParam.DISSOLVE_MAP_EXIST] = options.dissolveMap ? 1.0 : 0.0;
-    this.params[MatParam.DISSOLVE_MAP_SCROLL_ANGLE] = options.dissolveMapScrollAngle ?? 0.0;
-    this.params[MatParam.DISSOLVE_MAP_SCROLL_RATE] = options.dissolveMapScrollRate ?? 0.0;
-    this.params[MatParam.DISSOLVE_MAP_OFFSET_X] = options.dissolveMapOffsetX ?? 0.0;
-    this.params[MatParam.DISSOLVE_MAP_OFFSET_Y] = options.dissolveMapOffsetY ?? 0.0;
-    this.params[MatParam.DISSOLVE_MAP_SCALE_X] = options.dissolveMapScaleX ?? 1.0;
-    this.params[MatParam.DISSOLVE_MAP_SCALE_Y] = options.dissolveMapScaleY ?? 1.0;
-    this.params[MatParam.DISSOLVE_MAP_ROTATION_ANGLE] = options.dissolveMapRotationAngle ?? 0.0;
-    this.params[MatParam.DISSOLVE_GLOW_R] = options.dissolveGlowR ?? 1.0;
-    this.params[MatParam.DISSOLVE_GLOW_G] = options.dissolveGlowG ?? 1.0;
-    this.params[MatParam.DISSOLVE_GLOW_B] = options.dissolveGlowB ?? 1.0;
-    this.params[MatParam.DISSOLVE_GLOW_RANGE] = options.dissolveGlowRange ?? 0.0;
-    this.params[MatParam.DISSOLVE_GLOW_FALLOFF] = options.dissolveGlowFalloff ?? 0.0;
-    this.params[MatParam.DISSOLVE_AMOUNT] = options.dissolveAmount ?? 0.5;
+    this.params[Gfx3MatParam.DISSOLVE_MAP_EXIST] = options.dissolveMap ? 1.0 : 0.0;
+    this.params[Gfx3MatParam.DISSOLVE_MAP_SCROLL_ANGLE] = options.dissolveMapScrollAngle ?? 0.0;
+    this.params[Gfx3MatParam.DISSOLVE_MAP_SCROLL_RATE] = options.dissolveMapScrollRate ?? 0.0;
+    this.params[Gfx3MatParam.DISSOLVE_MAP_OFFSET_X] = options.dissolveMapOffsetX ?? 0.0;
+    this.params[Gfx3MatParam.DISSOLVE_MAP_OFFSET_Y] = options.dissolveMapOffsetY ?? 0.0;
+    this.params[Gfx3MatParam.DISSOLVE_MAP_SCALE_X] = options.dissolveMapScaleX ?? 1.0;
+    this.params[Gfx3MatParam.DISSOLVE_MAP_SCALE_Y] = options.dissolveMapScaleY ?? 1.0;
+    this.params[Gfx3MatParam.DISSOLVE_MAP_ROTATION_ANGLE] = options.dissolveMapRotationAngle ?? 0.0;
+    this.params[Gfx3MatParam.DISSOLVE_GLOW_R] = options.dissolveGlowR ?? 1.0;
+    this.params[Gfx3MatParam.DISSOLVE_GLOW_G] = options.dissolveGlowG ?? 1.0;
+    this.params[Gfx3MatParam.DISSOLVE_GLOW_B] = options.dissolveGlowB ?? 1.0;
+    this.params[Gfx3MatParam.DISSOLVE_GLOW_RANGE] = options.dissolveGlowRange ?? 0.0;
+    this.params[Gfx3MatParam.DISSOLVE_GLOW_FALLOFF] = options.dissolveGlowFalloff ?? 0.0;
+    this.params[Gfx3MatParam.DISSOLVE_AMOUNT] = options.dissolveAmount ?? 0.5;
     // --------------------------------------------------------------------------------------------------------
-    this.params[MatParam.TOON_MAP_EXIST] = options.toonMap ? 1.0 : 0.0;
-    this.params[MatParam.TOON_MAP_OPACITY] = options.toonMapOpacity ?? 1.0;
-    this.params[MatParam.TOON_LIGHT_DIR_X] = options.toonLightDirX ?? 0.0;
-    this.params[MatParam.TOON_LIGHT_DIR_Y] = options.toonLightDirY ?? 0.0;
-    this.params[MatParam.TOON_LIGHT_DIR_Z] = options.toonLightDirZ ?? 0.0;
+    this.params[Gfx3MatParam.TOON_MAP_EXIST] = options.toonMap ? 1.0 : 0.0;
+    this.params[Gfx3MatParam.TOON_MAP_OPACITY] = options.toonMapOpacity ?? 1.0;
+    this.params[Gfx3MatParam.TOON_LIGHT_DIR_X] = options.toonLightDirX ?? 0.0;
+    this.params[Gfx3MatParam.TOON_LIGHT_DIR_Y] = options.toonLightDirY ?? 0.0;
+    this.params[Gfx3MatParam.TOON_LIGHT_DIR_Z] = options.toonLightDirZ ?? 0.0;
     // --------------------------------------------------------------------------------------------------------
-    this.params[MatParam.EMISSIVE_MAP_EXIST] = options.emissiveMap ? 1.0 : 0.0;
-    this.params[MatParam.EMISSIVE_FACTOR] = options.emissiveFactor ?? 1.0;
-    this.params[MatParam.EMISSIVE_R] = options.emissiveR ?? 0.0;
-    this.params[MatParam.EMISSIVE_G] = options.emissiveG ?? 0.0;
-    this.params[MatParam.EMISSIVE_B] = options.emissiveB ?? 0.0;
+    this.params[Gfx3MatParam.EMISSIVE_MAP_EXIST] = options.emissiveMap ? 1.0 : 0.0;
     // --------------------------------------------------------------------------------------------------------
-    this.params[MatParam.AMBIENT_R] = options.ambientR ?? 0.5;
-    this.params[MatParam.AMBIENT_G] = options.ambientG ?? 0.5;
-    this.params[MatParam.AMBIENT_B] = options.ambientB ?? 0.5;
+    this.params[Gfx3MatParam.DIFFUSE_MAP_EXIST] = options.diffuseMap ? 1.0 : 0.0;
     // --------------------------------------------------------------------------------------------------------
-    this.params[MatParam.DIFFUSE_MAP_EXIST] = options.diffuseMap ? 1.0 : 0.0;
-    this.params[MatParam.DIFFUSE_R] = options.diffuseR ?? 1.0;
-    this.params[MatParam.DIFFUSE_G] = options.diffuseG ?? 1.0;
-    this.params[MatParam.DIFFUSE_B] = options.diffuseB ?? 1.0;
+    this.params[Gfx3MatParam.SPECULAR_MAP_EXIST] = options.specularMap ? 1.0 : 0.0;
     // --------------------------------------------------------------------------------------------------------
-    this.params[MatParam.SPECULAR_MAP_EXIST] = options.specularMap ? 1.0 : 0.0;
-    this.params[MatParam.SPECULAR_FACTOR] = options.specularFactor ?? 1.0;
-    this.params[MatParam.SPECULAR_R] = options.specularR ?? 0.0;
-    this.params[MatParam.SPECULAR_G] = options.specularG ?? 0.0;
-    this.params[MatParam.SPECULAR_B] = options.specularB ?? 0.0;
+    this.params[Gfx3MatParam.THUNE_MAP_EXIST] = options.thuneMap ? 1.0 : 0.0;
+    this.params[Gfx3MatParam.THUNE_MAP_SHININESS_ENABLED] = options.thuneMapShininessEnabled ? 1.0 : 0.0;
+    this.params[Gfx3MatParam.THUNE_MAP_ARCADE_ENABLED] = options.thuneMapArcadeEnabled ? 1.0 : 0.0;
+    this.params[Gfx3MatParam.THUNE_MAP_REFLECTIVE_ENABLED] = options.thuneMapReflectiveEnabled ? 1.0 : 0.0;
     // --------------------------------------------------------------------------------------------------------
-    this.params[MatParam.THUNE_MAP_EXIST] = options.thuneMap ? 1.0 : 0.0;
-    this.params[MatParam.THUNE_MAP_SHININESS_ENABLED] = options.thuneMapShininessEnabled ? 1.0 : 0.0;
-    this.params[MatParam.THUNE_MAP_ARCADE_ENABLED] = options.thuneMapArcadeEnabled ? 1.0 : 0.0;
-    this.params[MatParam.THUNE_MAP_REFLECTIVE_ENABLED] = options.thuneMapReflectiveEnabled ? 1.0 : 0.0;
+    this.params[Gfx3MatParam.ALPHA_BLEND_ENABLED] = options.alphaBlendEnabled ? 1.0 : 0.0;
+    this.params[Gfx3MatParam.ALPHA_BLEND_FACING] = options.alphaBlendFacing ?? 1.0;
+    this.params[Gfx3MatParam.ALPHA_BLEND_DISTANCE] = options.alphaBlendFacing ?? 0.0;
     // --------------------------------------------------------------------------------------------------------
-    this.params[MatParam.ALPHA_BLEND_FACING] = options.alphaBlendFacing ?? 1.0;
-    this.params[MatParam.ALPHA_BLEND_DISTANCE] = options.alphaBlendFacing ?? 0.0;
+    this.params[Gfx3MatParam.JITTER_VERTEX_ENABLED] = options.jitterVertexEnabled ? 1.0 : 0.0;
+    this.params[Gfx3MatParam.JITTER_VERTEX_LEVEL] = options.jitterVertexLevel ?? 120.0;
     // --------------------------------------------------------------------------------------------------------
-    this.params[MatParam.JITTER_VERTEX_ENABLED] = options.jitterVertexEnabled ? 1.0 : 0.0;
-    this.params[MatParam.JITTER_VERTEX_LEVEL] = options.jitterVertexLevel ?? 120.0;
+    this.params[Gfx3MatParam.ARCADE_ENABLED] = options.arcadeEnabled ? 1.0 : 0.0;
+    this.params[Gfx3MatParam.ARCADE_START_COLOR_R] = options.arcadeStartColorR ?? 0.0;
+    this.params[Gfx3MatParam.ARCADE_START_COLOR_G] = options.arcadeStartColorG ?? 0.0;
+    this.params[Gfx3MatParam.ARCADE_START_COLOR_B] = options.arcadeStartColorB ?? 0.0;
+    this.params[Gfx3MatParam.ARCADE_END_COLOR_R] = options.arcadeEndColorR ?? 0.0;
+    this.params[Gfx3MatParam.ARCADE_END_COLOR_G] = options.arcadeEndColorG ?? 0.0;
+    this.params[Gfx3MatParam.ARCADE_END_COLOR_B] = options.arcadeEndColorB ?? 0.0;
+    this.params[Gfx3MatParam.ARCADE_SHARP_COLOR_R] = options.arcadeSharpColorR ?? 0.0;
+    this.params[Gfx3MatParam.ARCADE_SHARP_COLOR_G] = options.arcadeSharpColorG ?? 0.0;
+    this.params[Gfx3MatParam.ARCADE_SHARP_COLOR_B] = options.arcadeSharpColorB ?? 0.0;
     // --------------------------------------------------------------------------------------------------------
-    this.params[MatParam.ARCADE_ENABLED] = options.arcadeEnabled ? 1.0 : 0.0;
-    this.params[MatParam.ARCADE_START_COLOR_R] = options.arcadeStartColorR ?? 0.0;
-    this.params[MatParam.ARCADE_START_COLOR_G] = options.arcadeStartColorG ?? 0.0;
-    this.params[MatParam.ARCADE_START_COLOR_B] = options.arcadeStartColorB ?? 0.0;
-    this.params[MatParam.ARCADE_END_COLOR_R] = options.arcadeEndColorR ?? 0.0;
-    this.params[MatParam.ARCADE_END_COLOR_G] = options.arcadeEndColorG ?? 0.0;
-    this.params[MatParam.ARCADE_END_COLOR_B] = options.arcadeEndColorB ?? 0.0;
-    this.params[MatParam.ARCADE_SHARP_COLOR_R] = options.arcadeSharpColorR ?? 0.0;
-    this.params[MatParam.ARCADE_SHARP_COLOR_G] = options.arcadeSharpColorG ?? 0.0;
-    this.params[MatParam.ARCADE_SHARP_COLOR_B] = options.arcadeSharpColorB ?? 0.0;
+    this.params[Gfx3MatParam.JAM_FRAME_INDEX_A] = options.jamFrameIndexA ?? 0.0;
+    this.params[Gfx3MatParam.JAM_FRAME_INDEX_B] = options.jamFrameIndexB ?? 0.0;
+    this.params[Gfx3MatParam.JAM_IS_ANIMATED] = options.jamIsAnimated ? 1.0 : 0.0;
+    this.params[Gfx3MatParam.JAM_INTERPOLATED] = options.jamInterpolated ? Number(options.jamInterpolated) : 1.0;
+    this.params[Gfx3MatParam.JAM_LAST_FRAME_TIME] = options.jamLastFrameTime ?? 0.0;
+    this.params[Gfx3MatParam.JAM_FRAME_DURATION] = options.jamFrameDuration ?? 0.0;
+    this.params[Gfx3MatParam.JAM_NUM_VERTICES] = options.jamNumVertices ?? 0.0;
     // --------------------------------------------------------------------------------------------------------
-    this.params[MatParam.JAM_FRAME_INDEX_A] = options.jamFrameIndexA ?? 0.0;
-    this.params[MatParam.JAM_FRAME_INDEX_B] = options.jamFrameIndexB ?? 0.0;
-    this.params[MatParam.JAM_IS_ANIMATED] = options.jamIsAnimated ? 1.0 : 0.0;
-    this.params[MatParam.JAM_INTERPOLATED] = options.jamInterpolated ? Number(options.jamInterpolated) : 1.0;
-    this.params[MatParam.JAM_LAST_FRAME_TIME] = options.jamLastFrameTime ?? 0.0;
-    this.params[MatParam.JAM_FRAME_DURATION] = options.jamFrameDuration ?? 0.0;
-    this.params[MatParam.JAM_NUM_VERTICES] = options.jamNumVertices ?? 0.0;
-    // --------------------------------------------------------------------------------------------------------
-    this.params[MatParam.S0_TEXTURE_EXIST] = options.s0Texture ? 1.0 : 0.0;
-    this.params[MatParam.S1_TEXTURE_EXIST] = options.s1Texture ? 1.0 : 0.0;
+    this.params[Gfx3MatParam.S0_TEXTURE_EXIST] = options.s0Texture ? 1.0 : 0.0;
+    this.params[Gfx3MatParam.S1_TEXTURE_EXIST] = options.s1Texture ? 1.0 : 0.0;
     // --------------------------------------------------------------------------------------------------------
     if (options.customParams) {
       for (const p of options.customParams) {
-        const paramIndex = Object.values(MAT_CUSTOM_PARAMS).findIndex(n => n == p.name);
+        const paramIndex = Object.values(MESH_MAT_CUSTOM_PARAMS).findIndex(n => n == p.name);
         if (paramIndex != -1) {
-          this.params[MatParam.COUNT + paramIndex] = p.value ?? 0.0;
+          this.params[Gfx3MatParam.COUNT + paramIndex] = p.value ?? 0.0;
         }
       }
     }
@@ -414,7 +417,6 @@ class Gfx3Material {
     this.dissolveMap = this.grp3.setSampler(19, 'MAT_DISSOLVE_MAP_SAMPLER', this.dissolveMap);
     this.thuneMap = this.grp3.setTexture(20, 'MAT_THUNE_MAP', options.thuneMap ?? gfx3Manager.createTextureFromBitmap());
     this.thuneMap = this.grp3.setSampler(21, 'MAT_THUNE_MAP_SAMPLER', this.thuneMap);
-
     this.s0Texture = this.grp3.setTexture(22, 'MAT_S0_TEXTURE', gfx3Manager.createTextureFromBitmap());
     this.s0Texture = this.grp3.setSampler(23, 'MAT_S0_TEXTURE_SAMPLER', this.s0Texture);
     this.s1Texture = this.grp3.setTexture(24, 'MAT_S1_TEXTURE', gfx3Manager.createTextureFromBitmap());
@@ -439,7 +441,7 @@ class Gfx3Material {
       throw new Error('Gfx3Material::loadFromFile(): File not valid !');
     }
 
-    const flipbooks = new Array<MATFlipbook>();
+    const flipbooks = new Array<Gfx3MatFlipbook>();
     for (const obj of json['Flipbooks']) {
       flipbooks.push({
         textureTarget: obj['TextureTarget'],
@@ -461,7 +463,7 @@ class Gfx3Material {
     }
 
     let envMap = undefined;
-    if (json['EnvMapRight'] && json['EnvMapLeft'] && json['EnvMapTop'] && json['EnvMapBottom'] && json['EnvMapFront'] && json['EnvMapBack']) {
+    if (json['EnvMapName'] && json['EnvMapRight'] && json['EnvMapLeft'] && json['EnvMapTop'] && json['EnvMapBottom'] && json['EnvMapFront'] && json['EnvMapBack']) {
       envMap = await gfx3TextureManager.loadCubemapTexture({
         right: textureDir + json['EnvMapRight'],
         left: textureDir + json['EnvMapLeft'],
@@ -469,10 +471,10 @@ class Gfx3Material {
         bottom: textureDir + json['EnvMapBottom'],
         front: textureDir + json['EnvMapFront'],
         back: textureDir + json['EnvMapBack']
-      });
+      }, json['EnvMapName']);
     }
 
-    return new Gfx3Material({
+    return new Gfx3Material({  
       flipbooks: flipbooks,
       customParams: customParams,
       // ----------------------------------------------------------------------------------------------------------------------------------------------
@@ -480,6 +482,7 @@ class Gfx3Material {
       opacity: json['Opacity'],
       // ----------------------------------------------------------------------------------------------------------------------------------------------
       shadowEnabled: json['ShadowEnabled'],
+      shadowCasting: json['ShadowCasting'],
       // ----------------------------------------------------------------------------------------------------------------------------------------------
       decalEnabled: json['DecalEnabled'],
       decalGroup: json['DecalGroup'],
@@ -487,6 +490,20 @@ class Gfx3Material {
       lightEnabled: json['LightEnabled'],
       lightGroup: json['LightGroup'],
       lightGouraudShadingEnabled: json['LightGouraudShadingEnabled'],
+      lightEmissiveFactor: json['LightEmissiveFactor'],
+      lightEmissiveR: json['LightEmissiveR'],
+      lightEmissiveG: json['LightEmissiveG'],
+      lightEmissiveB: json['LightEmissiveB'],
+      lightAmbientR: json['LightAmbientR'],
+      lightAmbientG: json['LightAmbientG'],
+      lightAmbientB: json['LightAmbientB'],
+      lightDiffuseR: json['LightDiffuseR'],
+      lightDiffuseG: json['LightDiffuseG'],
+      lightDiffuseB: json['LightDiffuseB'],
+      lightSpecularFactor: json['LightSpecularFactor'],
+      lightSpecularR: json['LightSpecularR'],
+      lightSpecularG: json['LightSpecularG'],
+      lightSpecularB: json['LightSpecularB'],
       // ----------------------------------------------------------------------------------------------------------------------------------------------
       texture: json['Texture'] ? await gfx3TextureManager.loadTexture(textureDir + json['Texture']) : undefined,
       textureScrollAngle: json['TextureScrollAngle'],
@@ -569,38 +586,24 @@ class Gfx3Material {
       toonLightDirZ: json['ToonLightDirZ'],
       // ----------------------------------------------------------------------------------------------------------------------------------------------
       emissiveMap: json['EmissiveMap'] ? await gfx3TextureManager.loadTexture(textureDir + json['EmissiveMap']) : undefined,
-      emissiveFactor: json['EmissiveFactor'],
-      emissiveR: json['EmissiveR'],
-      emissiveG: json['EmissiveG'],
-      emissiveB: json['EmissiveB'],
-      // ----------------------------------------------------------------------------------------------------------------------------------------------
-      ambientR: json['AmbientR'],
-      ambientG: json['AmbientG'],
-      ambientB: json['AmbientB'],
       // ----------------------------------------------------------------------------------------------------------------------------------------------
       diffuseMap: json['DiffuseMap'] ? await gfx3TextureManager.loadTexture(textureDir + json['DiffuseMap']) : undefined,
-      diffuseR: json['DiffuseR'],
-      diffuseG: json['DiffuseG'],
-      diffuseB: json['DiffuseB'],
       // ----------------------------------------------------------------------------------------------------------------------------------------------
       specularMap: json['SpecularMap'] ? await gfx3TextureManager.loadTexture(textureDir + json['SpecularMap']) : undefined,
-      specularFactor: json['SpecularFactor'],
-      specularR: json['SpecularR'],
-      specularG: json['SpecularG'],
-      specularB: json['SpecularB'],
       // ----------------------------------------------------------------------------------------------------------------------------------------------
       thuneMap: json['ThuneMap'] ? await gfx3TextureManager.loadTexture(textureDir + json['ThuneMap']) : undefined,
       thuneMapShininessEnabled: json['ThuneMapShininessEnabled'],
       thuneMapArcadeEnabled: json['ThuneMapArcadeEnabled'],
       thuneMapReflectiveEnabled: json['ThuneMapReflectiveEnabled'],
       // ----------------------------------------------------------------------------------------------------------------------------------------------
+      alphaBlendEnabled: json['AlphaBlendEnabled'],
       alphaBlendFacing: json['AlphaBlendFacing'],
       alphaBlendDistance: json['AlphaBlendDistance'],
       // ----------------------------------------------------------------------------------------------------------------------------------------------
       jitterVertexEnabled: json['JitterVertexEnabled'],
       jitterVertexLevel: json['JitterVertexLevel'],
       // ----------------------------------------------------------------------------------------------------------------------------------------------
-      arcadeEnabled: json['ArcadeMap'],
+      arcadeEnabled: json['ArcadeEnabled'],
       arcadeStartColorR: json['ArcadeStartColorR'],
       arcadeStartColorG: json['ArcadeStartColorG'],
       arcadeStartColorB: json['ArcadeStartColorB'],
@@ -646,18 +649,17 @@ class Gfx3Material {
         const nextOffsetX = animation.flipbook.frameWidth * (nextFrameIndex % animation.flipbook.numCol);
         const nextOffsetY = animation.flipbook.frameHeight * Math.floor(nextFrameIndex / animation.flipbook.numCol);
 
-        this.params[animation.offsetNextParams[0]] = nextOffsetX / this.texture.gpuTexture.width;
-        this.params[animation.offsetNextParams[1]] = nextOffsetY / this.texture.gpuTexture.height;
-
         this.params[animation.offsetParams[0]] = offsetX / this.texture.gpuTexture.width;
         this.params[animation.offsetParams[1]] = offsetY / this.texture.gpuTexture.height;
+        this.params[animation.offsetNextParams[0]] = nextOffsetX / this.texture.gpuTexture.width;
+        this.params[animation.offsetNextParams[1]] = nextOffsetY / this.texture.gpuTexture.height;
         this.dataChanged = true;
       }
 
       const progressNormalized = animation.frameProgress / animation.flipbook.frameDuration;
 
-      if (animation.blendingFromProgress > 0.0 && animation.blendingFromProgress <= progressNormalized) {
-        const blending = (progressNormalized - animation.blendingFromProgress) / (1.0 - animation.blendingFromProgress);
+      if (animation.blendingStartAt > 0.0 && animation.blendingStartAt <= progressNormalized) {
+        const blending = (progressNormalized - animation.blendingStartAt) / (1.0 - animation.blendingStartAt);
         this.params[animation.offsetBlendingParam] = blending;
         this.dataChanged = true;
       }
@@ -673,7 +675,7 @@ class Gfx3Material {
             animation.frameProgress = 0;
           }
           else {
-            this.animations.delete(animation.flipbook.textureTarget);
+            this.animations.delete(animation);
           }
 
           eventManager.emit(this, 'E_FINISHED');
@@ -690,45 +692,61 @@ class Gfx3Material {
   }
 
   /**
+   * Set the shadow casting.
+   * 
+   * @param {boolean} shadowCasting - Determines if object cast shadows.
+   */
+  setShadowCasting(shadowCasting: boolean): void {
+    this.shadowCasting = shadowCasting;
+  }
+
+  /**
+   * Check if shadow casting is enable or not.
+   */
+  isShadowCasting(): boolean {
+    return this.shadowCasting;
+  }
+
+  /**
    * Play a specific animation.
    * 
    * @param {TextureTarget} textureTarget - The name of the animated texture.
    * @param {boolean} [looped=false] - Determines whether the animation should loop or not.
    * @param {boolean} [preventSameAnimation=false] - Determines whether the same animation should be prevented from playing again.
-   * @param {boolean} blendingFromProgress - Define the normalize progression from flipbook blending start.
+   * @param {boolean} blendingStartAt - Define the normalize progression from flipbook blending start.
    */
-  playAnimation(textureTarget: TextureTarget, looped: boolean = false, preventSameAnimation: boolean = false, blendingFromProgress: number = 0.0): void {
+  playAnimation(textureTarget: Gfx3MatFlipbookTarget, looped: boolean = false, preventSameAnimation: boolean = false, blendingStartAt: number = 0.0): void {
     const flipbook = this.flipbooks.find(f => f.textureTarget == textureTarget);
     if (!flipbook) {
       throw new Error('Gfx3Material::playAnimation: flipbook not exist for this texture target.');
     }
 
-    if (preventSameAnimation && this.animations.has(textureTarget)) {
+    if (preventSameAnimation && this.animations.values().find(a => a.flipbook == flipbook)) {
       return;
     }
 
-    let offsetParams: vec2 = [MatParam.TEXTURE_OFFSET_X, MatParam.TEXTURE_OFFSET_Y];
-    let offsetNextParams: vec2 = [MatParam.TEXTURE_OFFSET_NEXT_X, MatParam.TEXTURE_OFFSET_NEXT_Y];
-    let offsetBlendingParam = MatParam.TEXTURE_OFFSET_BLENDING;
+    let offsetParams: vec2 = [Gfx3MatParam.TEXTURE_OFFSET_X, Gfx3MatParam.TEXTURE_OFFSET_Y];
+    let offsetNextParams: vec2 = [Gfx3MatParam.TEXTURE_OFFSET_NEXT_X, Gfx3MatParam.TEXTURE_OFFSET_NEXT_Y];
+    let offsetBlendingParam = Gfx3MatParam.TEXTURE_OFFSET_BLENDING;
 
-    if (flipbook.textureTarget == TextureTarget.SECONDARY_TEXTURE) {
-      offsetParams = [MatParam.SECONDARY_TEXTURE_OFFSET_X, MatParam.SECONDARY_TEXTURE_OFFSET_Y];
-      offsetNextParams = [MatParam.SECONDARY_TEXTURE_OFFSET_NEXT_X, MatParam.SECONDARY_TEXTURE_OFFSET_NEXT_Y];
-      offsetBlendingParam = MatParam.SECONDARY_TEXTURE_OFFSET_BLENDING;
+    if (flipbook.textureTarget == Gfx3MatFlipbookTarget.SECONDARY_TEXTURE) {
+      offsetParams = [Gfx3MatParam.SECONDARY_TEXTURE_OFFSET_X, Gfx3MatParam.SECONDARY_TEXTURE_OFFSET_Y];
+      offsetNextParams = [Gfx3MatParam.SECONDARY_TEXTURE_OFFSET_NEXT_X, Gfx3MatParam.SECONDARY_TEXTURE_OFFSET_NEXT_Y];
+      offsetBlendingParam = Gfx3MatParam.SECONDARY_TEXTURE_OFFSET_BLENDING;
     }
-    else if (flipbook.textureTarget == TextureTarget.DISPLACEMENT_MAP) {
-      offsetParams = [MatParam.DISPLACEMENT_MAP_OFFSET_X, MatParam.DISPLACEMENT_MAP_OFFSET_Y];
+    else if (flipbook.textureTarget == Gfx3MatFlipbookTarget.DISPLACEMENT_MAP) {
+      offsetParams = [Gfx3MatParam.DISPLACEMENT_MAP_OFFSET_X, Gfx3MatParam.DISPLACEMENT_MAP_OFFSET_Y];
     }
-    else if (flipbook.textureTarget == TextureTarget.DISSOLVE_MAP) {
-      offsetParams = [MatParam.DISSOLVE_MAP_OFFSET_X, MatParam.DISSOLVE_MAP_OFFSET_Y];
+    else if (flipbook.textureTarget == Gfx3MatFlipbookTarget.DISSOLVE_MAP) {
+      offsetParams = [Gfx3MatParam.DISSOLVE_MAP_OFFSET_X, Gfx3MatParam.DISSOLVE_MAP_OFFSET_Y];
     }
 
-    this.animations.set(textureTarget, {
+    this.animations.add({
       flipbook: flipbook,
       currentFrameIndex: 0,
       looped: looped,
       frameProgress: 0,
-      blendingFromProgress: blendingFromProgress,
+      blendingStartAt: blendingStartAt,
       offsetParams: offsetParams,
       offsetNextParams: offsetNextParams,
       offsetBlendingParam: offsetBlendingParam
@@ -740,8 +758,8 @@ class Gfx3Material {
    * 
    * @param {TextureTarget} textureTarget - The name of the animated texture.
    */
-  stopAnimation(textureTarget: TextureTarget): void {
-    const animation = this.animations.get(textureTarget);
+  stopAnimation(textureTarget: Gfx3MatFlipbookTarget): void {
+    const animation = this.animations.values().find(a => a.flipbook.textureTarget == textureTarget);
     if (!animation) {
       throw new Error('Gfx3Material::stopAnimation: animation not found on this texture target.');
     }
@@ -750,16 +768,16 @@ class Gfx3Material {
     this.params[animation.offsetParams[1]] = 0.0;
     this.params[animation.offsetBlendingParam] = 0.0;
 
-    this.animations.delete(textureTarget);
+    this.animations.delete(animation);
     this.dataChanged = true;
   }
 
   /**
    * Set flipbook list.
    * 
-   * @param {Array<MATFlipbook>} flipbooks - The flipbook list.
+   * @param {Array<Gfx3MatFlipbook>} flipbooks - The flipbook list.
    */
-  setFlipbooks(flipbooks: Array<MATFlipbook>): void {
+  setFlipbooks(flipbooks: Array<Gfx3MatFlipbook>): void {
     this.flipbooks = flipbooks;
   }
 
@@ -790,12 +808,12 @@ class Gfx3Material {
    * @param {number} value - The param value.
    */
   setCustomParamValue(name: string, value: number): void {
-    const paramIndex = Object.values(MAT_CUSTOM_PARAMS).findIndex(n => n == name);
+    const paramIndex = Object.values(MESH_MAT_CUSTOM_PARAMS).findIndex(n => n == name);
     if (paramIndex == -1) {
       throw new Error('Gfx3Material::setCustomParam(): Custom param name not found !');
     }
 
-    this.params[MatParam.COUNT + paramIndex] = value;
+    this.params[Gfx3MatParam.COUNT + paramIndex] = value;
   }
 
   /**
@@ -804,12 +822,12 @@ class Gfx3Material {
    * @param {string} name - The param name.
    */
   getCustomParamValue(name: string): number {
-    const paramIndex = Object.values(MAT_CUSTOM_PARAMS).findIndex(n => n == name);
+    const paramIndex = Object.values(MESH_MAT_CUSTOM_PARAMS).findIndex(n => n == name);
     if (paramIndex == -1) {
       throw new Error('Gfx3Material::getCustomParam(): Custom param name not found !');
     }
 
-    return this.params[MatParam.COUNT + paramIndex];
+    return this.params[Gfx3MatParam.COUNT + paramIndex];
   }
 
   /**
@@ -842,13 +860,13 @@ class Gfx3Material {
    * @param {number} numVertices - The number of vertices in a frame.
    */
   setJamInfos(frameIndexA: number, frameIndexB: number, isAnimated: boolean, interpolated: boolean, frameTimeStamp: number, frameDuration: number, numVertices: number): void {
-    this.params[MatParam.JAM_FRAME_INDEX_A] = frameIndexA;
-    this.params[MatParam.JAM_FRAME_INDEX_B] = frameIndexB;
-    this.params[MatParam.JAM_IS_ANIMATED] = isAnimated ? 1.0 : 0.0;
-    this.params[MatParam.JAM_INTERPOLATED] = interpolated ? 1.0 : 0.0;
-    this.params[MatParam.JAM_LAST_FRAME_TIME] = frameTimeStamp;
-    this.params[MatParam.JAM_FRAME_DURATION] = frameDuration;
-    this.params[MatParam.JAM_NUM_VERTICES] = numVertices;
+    this.params[Gfx3MatParam.JAM_FRAME_INDEX_A] = frameIndexA;
+    this.params[Gfx3MatParam.JAM_FRAME_INDEX_B] = frameIndexB;
+    this.params[Gfx3MatParam.JAM_IS_ANIMATED] = isAnimated ? 1.0 : 0.0;
+    this.params[Gfx3MatParam.JAM_INTERPOLATED] = interpolated ? 1.0 : 0.0;
+    this.params[Gfx3MatParam.JAM_LAST_FRAME_TIME] = frameTimeStamp;
+    this.params[Gfx3MatParam.JAM_FRAME_DURATION] = frameDuration;
+    this.params[Gfx3MatParam.JAM_NUM_VERTICES] = numVertices;
     this.dataChanged = true;
   }
 
@@ -861,9 +879,9 @@ class Gfx3Material {
    */
   setTexture(texture: Gfx3Texture, angle: number = 0, rate: number = 0): void {
     this.texture = texture;
-    this.params[MatParam.TEXTURE_SCROLL_ANGLE] = angle;
-    this.params[MatParam.TEXTURE_SCROLL_RATE] = rate;
-    this.params[MatParam.TEXTURE_EXIST] = 1;
+    this.params[Gfx3MatParam.TEXTURE_SCROLL_ANGLE] = angle;
+    this.params[Gfx3MatParam.TEXTURE_SCROLL_RATE] = rate;
+    this.params[Gfx3MatParam.TEXTURE_EXIST] = 1;
     this.texturesChanged = true;
     this.dataChanged = true;
   }
@@ -876,12 +894,12 @@ class Gfx3Material {
    * @param {number} [rate=0] - The scrolling rate of the texture.
    * @param {string} blendMode - The blend mode.
    */
-  setSecondaryTexture(texture: Gfx3Texture, angle: number = 0, rate: number = 0, blendMode: BlendingMode = BlendingMode.NONE): void {
+  setSecondaryTexture(texture: Gfx3Texture, angle: number = 0, rate: number = 0, blendMode: Gfx3MatBlendingMode = Gfx3MatBlendingMode.NONE): void {
     this.secondaryTexture = texture;
-    this.params[MatParam.SECONDARY_TEXTURE_SCROLL_ANGLE] = angle;
-    this.params[MatParam.SECONDARY_TEXTURE_SCROLL_RATE] = rate;
-    this.params[MatParam.SECONDARY_TEXTURE_BLEND_MODE] = blendMode;
-    this.params[MatParam.SECONDARY_TEXTURE_EXIST] = 1;
+    this.params[Gfx3MatParam.SECONDARY_TEXTURE_SCROLL_ANGLE] = angle;
+    this.params[Gfx3MatParam.SECONDARY_TEXTURE_SCROLL_RATE] = rate;
+    this.params[Gfx3MatParam.SECONDARY_TEXTURE_BLEND_MODE] = blendMode;
+    this.params[Gfx3MatParam.SECONDARY_TEXTURE_EXIST] = 1;
     this.texturesChanged = true;
     this.dataChanged = true;
   }
@@ -900,10 +918,10 @@ class Gfx3Material {
    */
   setDisplacementMap(displacementMap: Gfx3Texture, angle: number = 0, rate: number = 0, factor: number = 0): void {
     this.displacementMap = displacementMap;
-    this.params[MatParam.DISPLACEMENT_MAP_SCROLL_ANGLE] = angle;
-    this.params[MatParam.DISPLACEMENT_MAP_SCROLL_RATE] = rate;
-    this.params[MatParam.DISPLACEMENT_MAP_FACTOR] = factor;
-    this.params[MatParam.DISPLACEMENT_MAP_EXIST] = 1;
+    this.params[Gfx3MatParam.DISPLACEMENT_MAP_SCROLL_ANGLE] = angle;
+    this.params[Gfx3MatParam.DISPLACEMENT_MAP_SCROLL_RATE] = rate;
+    this.params[Gfx3MatParam.DISPLACEMENT_MAP_FACTOR] = factor;
+    this.params[Gfx3MatParam.DISPLACEMENT_MAP_EXIST] = 1;
     this.texturesChanged = true;
     this.dataChanged = true;
   }
@@ -915,7 +933,7 @@ class Gfx3Material {
    */
   setDiffuseMap(diffuseMap: Gfx3Texture): void {
     this.diffuseMap = diffuseMap;
-    this.params[MatParam.DIFFUSE_MAP_EXIST] = 1;
+    this.params[Gfx3MatParam.DIFFUSE_MAP_EXIST] = 1;
     this.texturesChanged = true;
     this.dataChanged = true;
   }
@@ -928,8 +946,8 @@ class Gfx3Material {
    */
   setSpecularMap(specularMap: Gfx3Texture, specularFactor: number = 1.0): void {
     this.specularMap = specularMap;
-    this.params[MatParam.SPECULAR_MAP_EXIST] = 1;
-    this.params[MatParam.SPECULAR_FACTOR] = specularFactor;
+    this.params[Gfx3MatParam.SPECULAR_MAP_EXIST] = 1;
+    this.params[Gfx3MatParam.LIGHT_SPECULAR_FACTOR] = specularFactor;
     this.texturesChanged = true;
     this.dataChanged = true;
   }
@@ -942,8 +960,8 @@ class Gfx3Material {
    */
   setEmissiveMap(emissiveMap: Gfx3Texture, emissiveFactor: number = 1.0): void {
     this.emissiveMap = emissiveMap;
-    this.params[MatParam.EMISSIVE_MAP_EXIST] = 1;
-    this.params[MatParam.EMISSIVE_FACTOR] = emissiveFactor;
+    this.params[Gfx3MatParam.EMISSIVE_MAP_EXIST] = 1;
+    this.params[Gfx3MatParam.LIGHT_EMISSIVE_FACTOR] = emissiveFactor;
     this.texturesChanged = true;
     this.dataChanged = true;
   }
@@ -956,8 +974,8 @@ class Gfx3Material {
    */
   setNormalMap(normalMap: Gfx3Texture, normalIntensity: number = 1.0): void {
     this.normalMap = normalMap;
-    this.params[MatParam.NORMAL_MAP_EXIST] = 1;
-    this.params[MatParam.NORMAL_MAP_INTENSITY] = normalIntensity;
+    this.params[Gfx3MatParam.NORMAL_MAP_EXIST] = 1;
+    this.params[Gfx3MatParam.NORMAL_MAP_INTENSITY] = normalIntensity;
     this.texturesChanged = true;
     this.dataChanged = true;
   }
@@ -970,8 +988,8 @@ class Gfx3Material {
    */
   setEnvMap(envMap: Gfx3Texture, envMapOpacity: number = 1.0): void {
     this.envMap = envMap;
-    this.params[MatParam.ENV_MAP_EXIST] = 1;
-    this.params[MatParam.ENV_MAP_OPACITY] = envMapOpacity;
+    this.params[Gfx3MatParam.ENV_MAP_EXIST] = 1;
+    this.params[Gfx3MatParam.ENV_MAP_OPACITY] = envMapOpacity;
     this.texturesChanged = true;
     this.dataChanged = true;
   }
@@ -985,11 +1003,11 @@ class Gfx3Material {
    */
   setToonMap(toonMap: Gfx3Texture, toonMapOpacity: number = 1.0, toonMapLightDir: vec3 = [0, 0, 0]): void {
     this.toonMap = toonMap;
-    this.params[MatParam.TOON_MAP_EXIST] = 1;
-    this.params[MatParam.TOON_MAP_OPACITY] = toonMapOpacity;
-    this.params[MatParam.TOON_LIGHT_DIR_X] = toonMapLightDir[0];
-    this.params[MatParam.TOON_LIGHT_DIR_Y] = toonMapLightDir[1];
-    this.params[MatParam.TOON_LIGHT_DIR_Z] = toonMapLightDir[2];
+    this.params[Gfx3MatParam.TOON_MAP_EXIST] = 1;
+    this.params[Gfx3MatParam.TOON_MAP_OPACITY] = toonMapOpacity;
+    this.params[Gfx3MatParam.TOON_LIGHT_DIR_X] = toonMapLightDir[0];
+    this.params[Gfx3MatParam.TOON_LIGHT_DIR_Y] = toonMapLightDir[1];
+    this.params[Gfx3MatParam.TOON_LIGHT_DIR_Z] = toonMapLightDir[2];
     this.texturesChanged = true;
     this.dataChanged = true;
   }
@@ -1004,10 +1022,10 @@ class Gfx3Material {
    */
   setDissolveMap(dissolveMap: Gfx3Texture, glowRange: number = 0.0, glowFalloff: number = 0.0, amount: number = 0.5): void {
     this.dissolveMap = dissolveMap;
-    this.params[MatParam.DISSOLVE_MAP_EXIST] = 1;
-    this.params[MatParam.DISSOLVE_GLOW_RANGE] = glowRange;
-    this.params[MatParam.DISSOLVE_GLOW_FALLOFF] = glowFalloff;
-    this.params[MatParam.DISSOLVE_AMOUNT] = amount;
+    this.params[Gfx3MatParam.DISSOLVE_MAP_EXIST] = 1;
+    this.params[Gfx3MatParam.DISSOLVE_GLOW_RANGE] = glowRange;
+    this.params[Gfx3MatParam.DISSOLVE_GLOW_FALLOFF] = glowFalloff;
+    this.params[Gfx3MatParam.DISSOLVE_AMOUNT] = amount;
     this.texturesChanged = true;
     this.dataChanged = true;
   }
@@ -1023,10 +1041,10 @@ class Gfx3Material {
    */
   setThuneMap(thuneMap: Gfx3Texture, shininessEnabled: boolean, arcadeEnabled: boolean, reflectiveEnabled: boolean): void {
     this.thuneMap = thuneMap;
-    this.params[MatParam.THUNE_MAP_EXIST] = 1;
-    this.params[MatParam.THUNE_MAP_SHININESS_ENABLED] = shininessEnabled ? 1 : 0;
-    this.params[MatParam.THUNE_MAP_ARCADE_ENABLED] = arcadeEnabled ? 1 : 0;
-    this.params[MatParam.THUNE_MAP_REFLECTIVE_ENABLED] = reflectiveEnabled ? 1 : 0;
+    this.params[Gfx3MatParam.THUNE_MAP_EXIST] = 1;
+    this.params[Gfx3MatParam.THUNE_MAP_SHININESS_ENABLED] = shininessEnabled ? 1 : 0;
+    this.params[Gfx3MatParam.THUNE_MAP_ARCADE_ENABLED] = arcadeEnabled ? 1 : 0;
+    this.params[Gfx3MatParam.THUNE_MAP_REFLECTIVE_ENABLED] = reflectiveEnabled ? 1 : 0;
     this.texturesChanged = true;
     this.dataChanged = true;
   }
@@ -1049,8 +1067,8 @@ class Gfx3Material {
       this.dataChanged = true;
     }
 
-    this.params[MatParam.S0_TEXTURE_EXIST] = textures[0] ? 1 : 0;
-    this.params[MatParam.S1_TEXTURE_EXIST] = textures[1] ? 1 : 0;
+    this.params[Gfx3MatParam.S0_TEXTURE_EXIST] = textures[0] ? 1 : 0;
+    this.params[Gfx3MatParam.S1_TEXTURE_EXIST] = textures[1] ? 1 : 0;
   }
 
   /**
@@ -1183,6 +1201,3 @@ class Gfx3Material {
     return this.s1Texture;
   }
 }
-
-export { Gfx3Material };
-export type { TextureTarget, MATFlipbook };

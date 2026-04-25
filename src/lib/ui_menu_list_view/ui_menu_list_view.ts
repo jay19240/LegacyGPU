@@ -7,7 +7,7 @@ import { UIMenu } from '../ui_menu/ui_menu';
  * Note: It send same event than UIMenu.
  * @typeParam T - The item type.
  */
-class UIMenuListView<T> extends UIMenu {
+export class UIMenuListView<T> extends UIMenu {
   collection: ArrayCollection<T>;
   views: Array<T>;
   sortPredicate: (a: T, b: T) => number;
@@ -160,5 +160,3 @@ class UIMenuListView<T> extends UIMenu {
     this.views = items.sort(this.sortPredicate).filter(this.filterPredicate);    
   }
 }
-
-export { UIMenuListView };

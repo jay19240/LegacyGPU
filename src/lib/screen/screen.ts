@@ -2,7 +2,7 @@
  * A screen in a game like "start-screen", "menu-screen", "game-screen" or "pause-screen.
  * It is your top-level classes with methods for updating, drawing, entering, exiting.
  */
-class Screen {
+export class Screen {
   blocking: boolean;
 
   constructor() {
@@ -70,5 +70,3 @@ class Screen {
    */
   onBringToBack(newScreen: Screen): void {}
 }
-
-export { Screen };

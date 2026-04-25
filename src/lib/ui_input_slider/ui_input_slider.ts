@@ -5,7 +5,7 @@ import { UIWidget } from '../ui/ui_widget';
  * A UI widget displaying a slider input.
  * It emit 'E_VALUE_CHANGED' with data { value }
  */
-class UIInputSlider extends UIWidget {
+export class UIInputSlider extends UIWidget {
   value: number;
   min: number;
   max: number;
@@ -95,5 +95,3 @@ class UIInputSlider extends UIWidget {
     this.node.querySelector<any>('.js-value').textContent = this.value;
   }
 }
-
-export { UIInputSlider };

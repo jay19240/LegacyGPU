@@ -3,7 +3,7 @@ import { FormatJAS, fromAseprite, fromEzSpriteSheet } from './format_jas';
 /**
  * Singleton spritesheet manager.
  */
-class SpritesheetManager {
+export class SpritesheetManager {
   spritesheets: Map<string, FormatJAS>;
   textures: Map<string, ImageBitmap>;
   textureUrls: Map<string, string>;
@@ -119,6 +119,11 @@ class SpritesheetManager {
     return this.spritesheets.get(path)!;
   }
 
+  /**
+   * Returns a texture or throws an error if doesn't exist.
+   * 
+   * @param {string} name - The sprite name.
+   */
   getTexture(name: string): ImageBitmap {
     if (!this.textures.has(name)) {
       throw new Error('SpritesheetManager::getTexture(): The texture doesn\'t exist, cannot get !');
@@ -127,6 +132,11 @@ class SpritesheetManager {
     return this.textures.get(name)!;
   }
 
+  /**
+   * Returns the URL of a texture.
+   * 
+   * @param {string} name - The sprite name.
+   */
   getTextureURL(name: string): string {
     if (!this.textureUrls.has(name)) {
       throw new Error('SpritesheetManager::getTextureURL(): The texture doesn\'t exist, cannot get !');
@@ -154,5 +164,4 @@ class SpritesheetManager {
   }
 }
 
-export { SpritesheetManager };
 export const spritesheetManager = new SpritesheetManager();

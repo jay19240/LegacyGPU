@@ -6,16 +6,16 @@ import { Gfx3BoundingBox } from '../gfx3/gfx3_bounding_box';
 import { Gfx3Sprite } from './gfx3_sprite';
 import { Gfx3BoundingCylinder } from '../gfx3/gfx3_bounding_cylinder';
 
-interface JASFrame {
+export interface Gfx3JASFrame {
   x: number;
   y: number;
   width: number;
   height: number;
 };
 
-interface JASAnimation {
+export interface Gfx3JASAnimation {
   name: string;
-  frames: Array<JASFrame>;
+  frames: Array<Gfx3JASFrame>;
   frameDuration: number;
   boundingBoxes: Array<Gfx3BoundingBox>;
   boundingCylinders: Array<Gfx3BoundingCylinder>;
@@ -25,13 +25,14 @@ interface JASAnimation {
  * A 3D animated sprite.
  * It emit 'E_FINISHED'
  */
-class Gfx3SpriteJAS extends Gfx3Sprite implements Poolable<Gfx3SpriteJAS> {
-  animations: Array<JASAnimation>;
-  currentAnimation: JASAnimation | null;
+export class Gfx3SpriteJAS extends Gfx3Sprite implements Poolable<Gfx3SpriteJAS> {
+  animations: Array<Gfx3JASAnimation>;
+  currentAnimation: Gfx3JASAnimation | null;
   currentAnimationFrameIndex: number;
   looped: boolean;
   frameProgress: number;
   finished: boolean;
+  boundingShapesDynamicMode: boolean;
 
   constructor() {
     super();
@@ -41,6 +42,7 @@ class Gfx3SpriteJAS extends Gfx3Sprite implements Poolable<Gfx3SpriteJAS> {
     this.looped = false;
     this.frameProgress = 0;
     this.finished = false;
+    this.boundingShapesDynamicMode = false;
   }
 
   /**
@@ -92,10 +94,11 @@ class Gfx3SpriteJAS extends Gfx3Sprite implements Poolable<Gfx3SpriteJAS> {
 
     this.offsetFactor[0] = data['OffsetFactorX'] ?? 0;
     this.offsetFactor[1] = data['OffsetFactorY'] ?? 0;
+    this.offsetFactorEnabled = data['OffsetFactorEnabled'] ? true : false;
 
     this.animations = [];
     for (const obj of data['Animations']) {
-      const animation: JASAnimation = {
+      const animation: Gfx3JASAnimation = {
         name: obj['Name'],
         frames: [],
         frameDuration: Number(obj['FrameDuration']),
@@ -135,12 +138,13 @@ class Gfx3SpriteJAS extends Gfx3Sprite implements Poolable<Gfx3SpriteJAS> {
    * @param {number} ts - The timestep.
    */
   update(ts: number): void {
-    if (!this.currentAnimation || !this.texture) {
+    if (!this.currentAnimation || !this.texture || this.finished) {
       return;
     }
 
+    const currentFrame = this.currentAnimation.frames[this.currentAnimationFrameIndex];
+
     if (this.frameChanged || this.textureChanged) {
-      const currentFrame = this.currentAnimation.frames[this.currentAnimationFrameIndex];
       const minX = 0;
       const minY = 0;
       const maxX = currentFrame.width;
@@ -154,14 +158,6 @@ class Gfx3SpriteJAS extends Gfx3Sprite implements Poolable<Gfx3SpriteJAS> {
       const fvx = this.flip[0] ? 1 - vx : vx;
       const fvy = this.flip[1] ? 1 - vy : vy;
 
-      if (this.offsetFactor[0] != 0) {
-        this.offset[0] = currentFrame.width * this.offsetFactor[0];
-      }
-
-      if (this.offsetFactor[1] != 0) {
-        this.offset[1] = currentFrame.height * this.offsetFactor[1];
-      }
-
       this.setVertices([
         minX, maxY, 0, fux, fuy,
         minX, minY, 0, fux, fvy,
@@ -172,6 +168,11 @@ class Gfx3SpriteJAS extends Gfx3Sprite implements Poolable<Gfx3SpriteJAS> {
       ]);
 
       this.frameChanged = false;
+    }
+
+    if (this.offsetFactorEnabled) {
+      this.offset[0] = currentFrame.width * this.offsetFactor[0];
+      this.offset[1] = currentFrame.height * this.offsetFactor[1];
     }
 
     if (this.frameProgress >= this.currentAnimation.frameDuration) {
@@ -186,6 +187,11 @@ class Gfx3SpriteJAS extends Gfx3Sprite implements Poolable<Gfx3SpriteJAS> {
         this.currentAnimationFrameIndex = this.currentAnimationFrameIndex + 1;
         this.frameProgress = 0;
         this.frameChanged = true;
+      }
+
+      if (this.boundingShapesDynamicMode) {
+        this.boundingBox = this.currentAnimation.boundingBoxes[this.currentAnimationFrameIndex];
+        this.boundingCylinder = this.currentAnimation.boundingCylinders[this.currentAnimationFrameIndex];
       }
     }
     else {
@@ -221,7 +227,7 @@ class Gfx3SpriteJAS extends Gfx3Sprite implements Poolable<Gfx3SpriteJAS> {
   /**
    * Returns the list of animation descriptors.
    */
-  getAnimations(): Array<JASAnimation> {
+  getAnimations(): Array<Gfx3JASAnimation> {
     return this.animations;
   }
 
@@ -230,7 +236,7 @@ class Gfx3SpriteJAS extends Gfx3Sprite implements Poolable<Gfx3SpriteJAS> {
    * 
    * @param animations - The animations data.
    */
-  setAnimations(animations: Array<JASAnimation>): void {
+  setAnimations(animations: Array<Gfx3JASAnimation>): void {
     this.animations = animations;
     this.currentAnimation = null;
   }
@@ -238,7 +244,7 @@ class Gfx3SpriteJAS extends Gfx3Sprite implements Poolable<Gfx3SpriteJAS> {
   /**
    * Returns the current animation or null if there is no current animation.
    */
-  getCurrentAnimation(): JASAnimation | null {
+  getCurrentAnimation(): Gfx3JASAnimation | null {
     return this.currentAnimation;
   }
 
@@ -250,59 +256,22 @@ class Gfx3SpriteJAS extends Gfx3Sprite implements Poolable<Gfx3SpriteJAS> {
   }
 
   /**
-   * Returns the bounding box.
+   * Bounding shapes fit the sprite size in realtime.
    * 
-   * @param {boolean} [dynamicMode=false] - Determines if bounding box fit the current animation.
+   * @param {boolean} [dynamicMode] - Determines if bounding shapes fit the current animation.
    */
-  getBoundingBox(dynamicMode: boolean = false): Gfx3BoundingBox {
-    if (dynamicMode && this.currentAnimation) {
-      this.currentAnimation.boundingBoxes[this.currentAnimationFrameIndex];
+  setBoundingShapesDynamicMode(dynamicMode: boolean) {
+    if (dynamicMode == false) {
+      this.boundingBox = this.animations[0].boundingBoxes[0];
+      this.boundingCylinder = this.animations[0].boundingCylinders[0];
     }
 
-    return this.boundingBox;
+    this.boundingShapesDynamicMode = dynamicMode;
   }
 
   /**
-   * Returns the bounding box in the world space coordinates.
-   * 
-   * @param {boolean} [dynamicMode=false] - Determines if bounding box fit the current animation.
+   * Checks if animation is finished or not.
    */
-  getWorldBoundingBox(dynamicMode: boolean = false): Gfx3BoundingBox {
-    if (dynamicMode && this.currentAnimation) {
-      const box = this.currentAnimation.boundingBoxes[this.currentAnimationFrameIndex];
-      return box.transform(this.getTransformMatrix());
-    }
-
-    return this.boundingBox.transform(this.getTransformMatrix());
-  }
-
-  /**
-   * Returns the bounding box.
-   * 
-   * @param {boolean} [dynamicMode=false] - Determines if bounding cylinder fit the current animation.
-   */
-  getBoundingCylinder(dynamicMode: boolean = false): Gfx3BoundingCylinder {
-    if (dynamicMode && this.currentAnimation) {
-      this.currentAnimation.boundingCylinders[this.currentAnimationFrameIndex];
-    }
-
-    return this.boundingCylinder;
-  }
-
-  /**
-   * Returns the bounding box in the world space coordinates.
-   * 
-   * @param {boolean} [dynamicMode=false] - Determines if bounding cylinder fit the current animation.
-   */
-  getWorldBoundingCylinder(dynamicMode: boolean = false): Gfx3BoundingCylinder {
-    if (dynamicMode && this.currentAnimation) {
-      const cylinder = this.currentAnimation.boundingCylinders[this.currentAnimationFrameIndex];
-      return cylinder.transform(this.getTransformMatrix());
-    }
-
-    return this.boundingCylinder.transform(this.getTransformMatrix());
-  }
-
   isFinished(): boolean {
     return this.finished;
   }
@@ -320,10 +289,7 @@ class Gfx3SpriteJAS extends Gfx3Sprite implements Poolable<Gfx3SpriteJAS> {
     jas.currentAnimationFrameIndex = 0;
     jas.looped = false;
     jas.frameProgress = 0;
-    jas.offsetFactor[0] = this.offsetFactor[0];
-    jas.offsetFactor[1] = this.offsetFactor[1];
+    jas.finished = this.finished;
     return jas;
   }
 }
-
-export { Gfx3SpriteJAS };

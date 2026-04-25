@@ -16,7 +16,7 @@ export interface ITreePartitionMethod<T> {
  * The root partition binary tree.
  * @typeParam T - The type of data that the tree nodes hold.
  */
-class TreePartition<T> {
+export class TreePartition<T> {
   maxChildren: number;
   maxDepth: number;
   root: TreePartitionNode<T>;
@@ -92,7 +92,7 @@ class TreePartition<T> {
  * The node in a binary tree partition data structure.
  * @typeParam T - The type of data that the tree nodes hold.
  */
-class TreePartitionNode<T> {
+export class TreePartitionNode<T> {
   tree: TreePartition<T>;
   depth: number;
   method: ITreePartitionMethod<T>;
@@ -253,5 +253,3 @@ class TreePartitionNode<T> {
     this.children = [];
   }
 }
-
-export { TreePartition, TreePartitionNode };

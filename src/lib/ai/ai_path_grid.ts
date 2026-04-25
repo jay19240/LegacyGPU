@@ -2,7 +2,7 @@
  * A general grid representation.
  * @typeParam T - The grid dimensions.
  */
-abstract class AIPathGrid<T extends vec2 | vec3> {
+export abstract class AIPathGrid<T extends vec2 | vec3> {
   grid: Array<number>;
   size: T;
 
@@ -66,7 +66,7 @@ abstract class AIPathGrid<T extends vec2 | vec3> {
 /**
  * A 2D grid representation.
  */
-class AIPathGrid2D extends AIPathGrid<vec2> {
+export class AIPathGrid2D extends AIPathGrid<vec2> {
   /**
    * @param size - The grid size.
    * @param grid - The grid data.
@@ -131,7 +131,7 @@ class AIPathGrid2D extends AIPathGrid<vec2> {
 /**
  * A 3D grid representation.
  */
-class AIPathGrid3D extends AIPathGrid<vec3> {
+export class AIPathGrid3D extends AIPathGrid<vec3> {
   /**
    * @param size - The grid size.
    * @param grid - The grid data.
@@ -195,5 +195,3 @@ class AIPathGrid3D extends AIPathGrid<vec3> {
     return a[0] == b[0] && a[1] == b[1] && a[2] == b[2];
   }
 }
-
-export { AIPathGrid, AIPathGrid2D, AIPathGrid3D };

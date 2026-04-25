@@ -5,7 +5,6 @@ import { UT } from '@lib/core/utils';
 import { Screen } from '@lib/screen/screen';
 import { Gfx3Camera } from '@lib/gfx3_camera/gfx3_camera';
 import { inputManager } from '@lib/input/input_manager';
-import { Quaternion } from '@lib/core/quaternion';
 
 // Caméra
 const CAMERA_DISTANCE = 8;
@@ -248,7 +247,7 @@ class RacingShipScreen extends Screen {
   }
 
   updateTransform() {
-    this.ship.matrix = UT.MAT4_TRANSFORM(this.ship.pos, [this.ship.pitch, this.ship.yaw, this.ship.roll], [1, 1, 1], new Quaternion());
+    this.ship.matrix = UT.MAT4_TRANSFORM(this.ship.pos, [this.ship.pitch, this.ship.yaw, this.ship.roll], [1, 1, 1]);
   }
 
   updateCamera() {

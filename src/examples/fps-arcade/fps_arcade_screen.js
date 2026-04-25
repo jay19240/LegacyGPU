@@ -2,12 +2,13 @@ import { inputManager } from '@lib/input/input_manager';
 import { gfx3Manager } from '@lib/gfx3/gfx3_manager';
 import { gfx3TextureManager } from '@lib/gfx3/gfx3_texture_manager';
 import { gfx3MeshRenderer } from '@lib/gfx3_mesh/gfx3_mesh_renderer';
-import { gfx3PostRenderer, PostParam } from '@lib/gfx3_post/gfx3_post_renderer';
+import { gfx3PostRenderer } from '@lib/gfx3_post/gfx3_post_renderer';
+import { Gfx3PostParam } from '@lib/gfx3_post/gfx3_post_shader';
 import { Screen } from '@lib/screen/screen';
 import { Gfx3Camera } from '@lib/gfx3_camera/gfx3_camera';
 import { Gfx3MeshJSM } from '@lib/gfx3_mesh/gfx3_mesh_jsm';
 import { Gfx3Material } from '@lib/gfx3_mesh/gfx3_mesh_material';
-import { MatParam } from '@lib/gfx3_mesh/gfx3_mesh_shader';
+import { Gfx3MatParam } from '@lib/gfx3_mesh/gfx3_mesh_shader';
 import { Gfx3PhysicsJNM } from '@lib/gfx3_physics/gfx3_physics_jnm';
 // ---------------------------------------------------------------------------------------
 import { Player } from './player';
@@ -34,6 +35,8 @@ class FPSArcadeScreen extends Screen {
     this.map = await this.createMap();
     this.player = new Player(this.map.jnm, this.camera);
     await this.player.load();
+
+    gfx3MeshRenderer.setDirLight(true, [0, -1, 0], [1, 1, 1], [0, 0, 0]);
   }
 
   update(ts) {
@@ -43,7 +46,6 @@ class FPSArcadeScreen extends Screen {
 
   draw() {
     gfx3Manager.beginDrawing();
-    gfx3MeshRenderer.drawDirLight([0, -1, 0], [1, 1, 1], [0, 0, 0]);
     this.player.draw();
     this.map.mesh.draw();
     gfx3Manager.endDrawing();
@@ -62,7 +64,8 @@ class FPSArcadeScreen extends Screen {
   async createMap() {
     const mesh = new Gfx3MeshJSM();
     await mesh.loadFromFile('./examples/fps/map.jsm');
-    mesh.mat.setParam(MatParam.LIGHT_ENABLED, 1.0);
+    mesh.disableTag();
+    mesh.mat.setParam(Gfx3MatParam.LIGHT_ENABLED, 1.0);    
     mesh.mat.setTexture(await gfx3TextureManager.loadTexture('./examples/fps/map.png', {
       mipmapFilter: 'linear'
     }));

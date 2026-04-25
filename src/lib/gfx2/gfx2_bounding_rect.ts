@@ -4,7 +4,7 @@ import { PH } from '../core/physics';
 /**
  * A 2D bounding rectangle.
  */
-class Gfx2BoundingRect {
+export class Gfx2BoundingRect {
   min: vec2;
   max: vec2;
 
@@ -249,6 +249,12 @@ class Gfx2BoundingRect {
     return PH.RECTS_COLLIDE(this.min, this.max, aabr.min, aabr.max);
   }
 
+  /**
+   * Checks if bounding rectangles intersect the circle.
+   * 
+   * @param {vec2} center - The circle center.
+   * @param {number} radius - The circle radius.
+   */
   intersectCircle(center: vec2, radius: number): boolean {
     return PH.RECT_CIRCLE_COLLIDE(this.min, this.max, center, radius);
   }
@@ -260,5 +266,3 @@ class Gfx2BoundingRect {
     return PH.LINES_FROM_RECT(this.min[0], this.min[1], this.max[0], this.max[1]);
   }
 }
-
-export { Gfx2BoundingRect };

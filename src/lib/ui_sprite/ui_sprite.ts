@@ -2,16 +2,16 @@ import { eventManager } from '../core/event_manager';
 import { FormatJAS, fromAseprite, fromEzSpriteSheet } from '../core/format_jas';
 import { UIWidget } from '../ui/ui_widget';
 
-interface JASFrame {
+export interface UIJASFrame {
   x: number;
   y: number;
   width: number;
   height: number;
 };
 
-interface JASAnimation {
+export interface UIJASAnimation {
   name: string;
-  frames: Array<JASFrame>;
+  frames: Array<UIJASFrame>;
   frameDuration: number;
 };
 
@@ -19,9 +19,9 @@ interface JASAnimation {
  * A UI widget displaying a sprite with animations.
  * It emit 'E_FINISHED'
  */
-class UISprite extends UIWidget {
-  animations: Array<JASAnimation>;
-  currentAnimation: JASAnimation | null;
+export class UISprite extends UIWidget {
+  animations: Array<UIJASAnimation>;
+  currentAnimation: UIJASAnimation | null;
   currentAnimationFrameIndex: number;
   looped: boolean;
   timeElapsed: number;
@@ -100,7 +100,7 @@ class UISprite extends UIWidget {
   loadFromData(data: FormatJAS): void {
     this.animations = [];
     for (const obj of data['Animations']) {
-      const animation: JASAnimation = { name: obj['Name'], frames: [], frameDuration: Number(obj['FrameDuration']) };
+      const animation: UIJASAnimation = { name: obj['Name'], frames: [], frameDuration: Number(obj['FrameDuration']) };
       for (const objFrame of obj['Frames']) {
         animation.frames.push({
           x: objFrame['X'],
@@ -126,7 +126,7 @@ class UISprite extends UIWidget {
    * @param {number} ts - The timestep.
    */
   update(ts: number): void {
-    if (!this.currentAnimation) {
+    if (!this.currentAnimation || this.finished) {
       return;
     }
 
@@ -186,7 +186,7 @@ class UISprite extends UIWidget {
   /**
    * Returns the list of animation descriptors.
    */
-  getAnimations(): Array<JASAnimation> {
+  getAnimations(): Array<UIJASAnimation> {
     return this.animations;
   }
 
@@ -195,14 +195,14 @@ class UISprite extends UIWidget {
    * 
    * @param animations - The animations data.
    */
-  setAnimations(animations: Array<JASAnimation>): void {
+  setAnimations(animations: Array<UIJASAnimation>): void {
     this.animations = animations;
   }
 
   /**
    * Returns the current animation or null if there is no current animation.
    */
-  getCurrentAnimation(): JASAnimation | null {
+  getCurrentAnimation(): UIJASAnimation | null {
     return this.currentAnimation;
   }
 
@@ -220,5 +220,3 @@ class UISprite extends UIWidget {
     return this.finished;
   }
 }
-
-export { UISprite };

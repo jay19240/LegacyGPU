@@ -3,7 +3,7 @@ import { UIWidget } from '../ui/ui_widget';
 /**
  * A UI widget displaying a simple menu text item.
  */
-class UIMenuTextItem extends UIWidget {
+export class UIMenuTextItem extends UIWidget {
   constructor() {
     super({
       className: 'UIMenuTextItem'
@@ -19,5 +19,3 @@ class UIMenuTextItem extends UIWidget {
     this.node.textContent = text;
   }
 }
-
-export { UIMenuTextItem };

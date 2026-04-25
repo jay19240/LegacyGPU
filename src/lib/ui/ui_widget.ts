@@ -7,7 +7,7 @@ import { inputManager } from '../input/input_manager';
  * It emit 'E_UNFOCUSED'
  * It emit 'E_ANIMATION_FINISHED'
  */
-class UIWidget {
+export class UIWidget {
   id: string;
   className: string;
   template: string;
@@ -234,5 +234,3 @@ class UIWidget {
    */
   onAction(actionId: string): void {}
 }
-
-export { UIWidget };

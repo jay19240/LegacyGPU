@@ -6,7 +6,7 @@ import { Gfx2TileIso } from './gfx2_tile_iso';
 /**
  * A isometric tilemap layer drawable.
  */
-class Gfx2TileIsoMapLayer extends Gfx2Drawable {
+export class Gfx2TileIsoMapLayer extends Gfx2Drawable {
   tilemap: Gfx2TileMap;
   layerIndex: number;
   tiles: Array<Gfx2TileIso>;
@@ -255,5 +255,3 @@ class Gfx2TileIsoMapLayer extends Gfx2Drawable {
     this.lineWidthDebug = lineWidthDebug;
   }
 }
-
-export { Gfx2TileIsoMapLayer };

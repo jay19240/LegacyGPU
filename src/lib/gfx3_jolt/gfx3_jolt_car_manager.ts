@@ -46,6 +46,9 @@ export interface Gfx3JoltCar extends Required<Gfx3JoltCarOptions>, Gfx3JoltEntit
   inputHandBrake: boolean;
 }
 
+/**
+ * A car physics manager powered by Jolt.
+ */
 export class Gfx3JoltCarManager {
   system: Jolt.PhysicsSystem;
   inter: Jolt.JoltInterface;
@@ -65,6 +68,11 @@ export class Gfx3JoltCarManager {
     this.cars = [];
   }
 
+  /**
+   * Add a car to the manager.
+   * 
+   * @param {Gfx3JoltCarOptions} options - The options to create a car.
+   */
   add(options: Gfx3JoltCarOptions): Gfx3JoltCar {
     const o: Required<Gfx3JoltCarOptions> = {
       x: options.x ?? 0,
@@ -144,10 +152,20 @@ export class Gfx3JoltCarManager {
     return c;
   }
 
+  /**
+   * Returns the car entity from the given body identifier.
+   * 
+   * @param {number} bodyId - The body identifier of the car.
+   */
   get(bodyId: number): Gfx3JoltCar | undefined {
     return this.carsMap.get(bodyId);
   }
 
+  /**
+   * Returns car metadata from the given body identifier.
+   * 
+   * @param {number} bodyId - The body identifier of the car.
+   */
   getMeta(bodyId: number): any {
     const c = this.carsMap.get(bodyId);
     if (!c) {
@@ -157,6 +175,11 @@ export class Gfx3JoltCarManager {
     return c.meta;
   }
 
+  /**
+   * Remove a car from the given body identifier.
+   * 
+   * @param {number} bodyId - The body identifier of the car.
+   */
   remove(bodyId: number): boolean {
     const c = this.carsMap.get(bodyId);
     if (!c) {
@@ -171,18 +194,29 @@ export class Gfx3JoltCarManager {
     return true;
   }
 
+  /**
+   * Remove all cars.
+   */
   clear() {
     for (const c of this.cars) {
       this.remove(c.bodyId);
     }
   }
 
+  /**
+   * The update function.
+   * 
+   * @param {number} clampedDeltaMs - The timestep.
+   */
   update(clampedDeltaMs: number) {
     for (const c of this.cars) {
       this.#updateCar(clampedDeltaMs, c);
     }
   }
 
+  /**
+   * The draw function.
+   */
   draw() {
     for (const c of this.cars) {
       gfx3JoltManager.drawShape(c.body.GetShape(), c.body.GetWorldTransform(), c.color);

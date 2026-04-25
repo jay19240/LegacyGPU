@@ -3,7 +3,7 @@ import { UT } from '../core/utils';
 import { Poolable } from '../core/object_pool';
 import { Gfx3Drawable } from '../gfx3/gfx3_drawable';
 import { Gfx3Material } from './gfx3_mesh_material';
-import { SHADER_VERTEX_ATTR_COUNT } from './gfx3_mesh_shader';
+import { MESH_SHADER_VERTEX_ATTR_COUNT } from './gfx3_mesh_shader';
 
 export interface Gfx3Face {
   v: vec3;
@@ -30,16 +30,16 @@ export interface Gfx3MeshBuild {
 /**
  * A 3D base mesh object.
  */
-class Gfx3Mesh extends Gfx3Drawable implements Poolable<Gfx3Mesh> {
-  shadowCasting: boolean;
+export class Gfx3Mesh extends Gfx3Drawable implements Poolable<Gfx3Mesh> {
   billboard: boolean;
+  viewInversion: boolean;
   material: Gfx3Material;
   geo: Gfx3MeshBuild;
 
   constructor() {
-    super(SHADER_VERTEX_ATTR_COUNT);
-    this.shadowCasting = false;
+    super(MESH_SHADER_VERTEX_ATTR_COUNT);
     this.billboard = false;
+    this.viewInversion = false;
     this.material = new Gfx3Material({});
     this.geo = { vertices: [], indexes: [], coords: [] };
   }
@@ -219,28 +219,14 @@ class Gfx3Mesh extends Gfx3Drawable implements Poolable<Gfx3Mesh> {
   }
 
   /**
-   * Set the shadow casting.
-   * 
-   * @param {boolean} shadowCasting - Determines if object cast shadows.
-   */
-  setShadowCasting(shadowCasting: boolean): void {
-    this.shadowCasting = shadowCasting;
-  }
-
-  /**
-   * Check if shadow casting is enable or not.
-   */
-  getShadowCasting(): boolean {
-    return this.shadowCasting;
-  }
-
-  /**
    * Set the billboard mode.
    * 
    * @param {boolean} billboard - Determines if object is a billboard.
+   * @param {boolean} viewInversion - Enable or not the view translation for this billboard.
    */
-  setBillboard(billboard: boolean): void {
+  setBillboard(billboard: boolean, viewInversion: boolean = false): void {
     this.billboard = billboard;
+    this.viewInversion = viewInversion;
   }
 
   /**
@@ -248,6 +234,13 @@ class Gfx3Mesh extends Gfx3Drawable implements Poolable<Gfx3Mesh> {
    */
   isBillboard(): boolean {
     return this.billboard;
+  }
+
+  /**
+   * Check if the view translation is enable or not.
+   */
+  hasViewInversion(): boolean {
+    return this.viewInversion;
   }
 
   /**
@@ -279,7 +272,7 @@ class Gfx3Mesh extends Gfx3Drawable implements Poolable<Gfx3Mesh> {
   }
 
   /**
-   * Set a material parameter.
+   * Shortcut to set a material param value.
    * 
    * @param {number} name - The parameter name.
    * @param {number} value - The parameter value.
@@ -289,7 +282,7 @@ class Gfx3Mesh extends Gfx3Drawable implements Poolable<Gfx3Mesh> {
   }
 
   /**
-   * Get a material parameter.
+   * Shortcut to get a material param value.
    * 
    * @param {number} name - The parameter name.
    */
@@ -298,7 +291,7 @@ class Gfx3Mesh extends Gfx3Drawable implements Poolable<Gfx3Mesh> {
   }
 
   /**
-   * Set a custom material parameter.
+   * Shortcut to set a custom material param value.
    * 
    * @param {string} name - The parameter name.
    * @param {number} value - The parameter value.
@@ -308,7 +301,7 @@ class Gfx3Mesh extends Gfx3Drawable implements Poolable<Gfx3Mesh> {
   }
 
   /**
-   * Get a custom material parameter.
+   * Shortcut to get a custom material param value.
    * 
    * @param {string} name - The parameter name.
    */
@@ -324,8 +317,8 @@ class Gfx3Mesh extends Gfx3Drawable implements Poolable<Gfx3Mesh> {
    */
   clone(mesh: Gfx3Mesh = new Gfx3Mesh(), transformMatrix: mat4 = UT.MAT4_IDENTITY()): Gfx3Mesh {
     super.clone(mesh, transformMatrix);
-    mesh.shadowCasting = this.shadowCasting;
     mesh.material = this.material;
+    mesh.geo = this.geo;
     return mesh;
   }
 
@@ -336,8 +329,6 @@ class Gfx3Mesh extends Gfx3Drawable implements Poolable<Gfx3Mesh> {
     return this.material;
   }
 }
-
-export { Gfx3Mesh };
 
 // -------------------------------------------------------------------------------------------
 // HELPFUL

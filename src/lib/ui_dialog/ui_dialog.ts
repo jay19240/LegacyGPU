@@ -6,7 +6,7 @@ import { UIWidget } from '../ui/ui_widget';
  * It emit 'E_PRINT_FINISHED'
  * It emit 'E_OK'
  */
-class UIDialog extends UIWidget {
+export class UIDialog extends UIWidget {
   text: string;
   stepDuration: number;
   currentTextOffset: number;
@@ -109,5 +109,3 @@ class UIDialog extends UIWidget {
     }
   }
 }
-
-export { UIDialog };

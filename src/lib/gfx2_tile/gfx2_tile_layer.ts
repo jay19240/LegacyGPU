@@ -3,7 +3,7 @@ import { Gfx2TileObject } from './gfx2_tile_object';
 /**
  * The tile layer.
  */
-class Gfx2TileLayer {
+export class Gfx2TileLayer {
   name: string;
   rows: number;
   offsetX: number;
@@ -134,5 +134,3 @@ class Gfx2TileLayer {
     return this.objects;
   }
 }
-
-export { Gfx2TileLayer };

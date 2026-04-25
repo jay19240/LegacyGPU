@@ -1,6 +1,6 @@
 import { UT } from '../core/utils';
 import { gfx3JoltManager, Gfx3Jolt, Jolt, Gfx3JoltEntity, bodyFilter, shapeFilter, JOLT_LAYER_NON_MOVING } from './gfx3_jolt_manager';
-import { JOLT_RVEC3_TO_VEC3, JOLT_VEC3_TO_VEC3, VEC3_TO_JOLT_RVEC3, VEC3_TO_JOLT_VEC3 } from './gfx3_jolt_manager';
+import { JOLT_VEC3_TO_VEC3 } from './gfx3_jolt_manager';
 
 export interface Gfx3JoltCharacterOptions {
   x?: number,
@@ -46,6 +46,9 @@ export interface Gfx3JoltCharacter extends Required<Gfx3JoltCharacterOptions>, G
   inputCrouched: boolean;
 }
 
+/**
+ * A character controller manager powered by Jolt.
+ */
 export class Gfx3JoltCharacterManager {
   system: Jolt.PhysicsSystem;
   inter: Jolt.JoltInterface;
@@ -65,6 +68,11 @@ export class Gfx3JoltCharacterManager {
     this.characters = [];
   }
 
+  /**
+   * Add a character to the manager.
+   * 
+   * @param {Gfx3JoltCharacterOptions} options - The options to create a character controller.
+   */
   add(options: Gfx3JoltCharacterOptions) {
     const o: Required<Gfx3JoltCharacterOptions> = {
       x: options.x ?? 0,
@@ -148,7 +156,7 @@ export class Gfx3JoltCharacterManager {
 
     const c: Gfx3JoltCharacter = {
       type: 'character',
-      bodyId: headBody.GetID().GetIndex(),
+      bodyId: character.GetID().GetValue(),
       body: headBody,
       vCharacter: character,
       standingShape: standingShape,
@@ -168,10 +176,20 @@ export class Gfx3JoltCharacterManager {
     return c;
   }
 
+  /**
+   * Returns the character entity from the given identifier.
+   * 
+   * @param {number} characterId - The identifier of the character.
+   */
   get(characterId: number): Gfx3JoltCharacter | undefined {
     return this.charactersMap.get(characterId);
   }
 
+  /**
+   * Returns character metadata from the given identifier.
+   * 
+   * @param {number} characterId - The identifier of the character.
+   */
   getMeta(characterId: number): any {
     const c = this.charactersMap.get(characterId);
     if (!c) {
@@ -181,6 +199,11 @@ export class Gfx3JoltCharacterManager {
     return c.meta;
   }
 
+  /**
+   * Remove a character from the given identifier.
+   * 
+   * @param {number} characterId - The identifier of the character.
+   */
   remove(characterId: number) {
     const c = this.charactersMap.get(characterId);
     if (!c) {
@@ -195,12 +218,20 @@ export class Gfx3JoltCharacterManager {
     this.bodyInter.DestroyBody(headId);
   }
 
+  /**
+   * Remove all characters.
+   */
   clear() {
     for (const c of this.characters) {
       this.remove(c.bodyId);
     }
   }
 
+  /**
+   * The update function.
+   * 
+   * @param {number} clampedDeltaMs - The timestep.
+   */
   update(clampedDeltaMs: number) {
     for (const c of this.characters) {
       this.#updateCrouchInput(clampedDeltaMs, c);
@@ -210,6 +241,9 @@ export class Gfx3JoltCharacterManager {
     }
   }
 
+  /**
+   * The draw function.
+   */
   draw() {
     for (const c of this.characters) {
       gfx3JoltManager.drawShape(c.vCharacter.GetShape(), c.vCharacter.GetWorldTransform(), c.color);

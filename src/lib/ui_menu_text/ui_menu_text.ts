@@ -1,6 +1,6 @@
 import { UIMenu } from '../ui_menu/ui_menu';
 import { UIWidget } from '../ui/ui_widget';
-import { MenuAxis } from '../ui_menu/ui_menu';
+import { UIMenuAxis } from '../ui_menu/ui_menu';
 import { UIMenuTextItem } from './ui_menu_text_item';
 import { eventManager } from '../core/event_manager';
 import { gfx2TextureManager } from '../gfx2/gfx2_texture_manager';
@@ -11,7 +11,7 @@ import { FormatJAS, getSpriteAnimation } from '../core/format_jas';
  * A UI widget displaying a simple text menu.
  * It send same events as UIMenu.
  */
-class UIMenuText extends UIMenu {
+export class UIMenuText extends UIMenu {
   spritesheetImageUrl: string | null;
   spritesheetJAS: FormatJAS | null;
   spritesheetWidth: number;
@@ -20,7 +20,7 @@ class UIMenuText extends UIMenu {
   animationNamesByIdsOnFocus: Map<string, string>;
   previousImageItemFocused: UIWidget | null;
 
-  constructor(options: { axis?: MenuAxis, className?: string } = {}) {
+  constructor(options: { axis?: UIMenuAxis, className?: string } = {}) {
     super(Object.assign(options, {
       className: options.className ?? 'UIMenuText'
     }));
@@ -167,5 +167,3 @@ class UIMenuText extends UIMenu {
     this.previousImageItemFocused = item;
   }
 }
-
-export { UIMenuText };

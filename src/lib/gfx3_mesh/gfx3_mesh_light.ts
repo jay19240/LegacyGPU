@@ -9,7 +9,7 @@ export enum Gfx3LightType {
 /**
  * A 3D light.
  */
-class Gfx3MeshLight extends Gfx3Transformable {
+export class Gfx3MeshLight extends Gfx3Transformable {
   type: Gfx3LightType;
   diffuse: vec3;
   specular: vec3;
@@ -49,16 +49,24 @@ class Gfx3MeshLight extends Gfx3Transformable {
     }
 
     this.type = json['Type'] == 'POINT' ? Gfx3LightType.POINT : Gfx3LightType.SPOT;
-    this.position = json['Position'];    
-    this.diffuse = json['DiffuseColor'];
-    this.specular = json['SpecularColor'];
+    this.position[0] = json['PositionX'];
+    this.position[1] = json['PositionY'];
+    this.position[2] = json['PositionZ'];
+    this.diffuse[0] = json['DiffuseColorR'];
+    this.diffuse[1] = json['DiffuseColorG'];
+    this.diffuse[2] = json['DiffuseColorB'];
+    this.specular[0] = json['SpecularColorR'];
+    this.specular[1] = json['SpecularColorG'];
+    this.specular[2] = json['SpecularColorB'];
     this.intensity = json['Intensity'];
     this.constant = json['Constant'];
     this.linear = json['Linear'];
     this.exp = json['Exp'];
     this.groupId = json['GroupId'];
     this.spotCutoff = json['SpotCutoff'];
-    this.spotDirection = json['SpotDirection'];
+    this.spotDirection[0] = json['SpotDirectionX'];
+    this.spotDirection[0] = json['SpotDirectionY'];
+    this.spotDirection[0] = json['SpotDirectionZ'];
   }
 
   /**
@@ -266,5 +274,3 @@ class Gfx3MeshLight extends Gfx3Transformable {
     return this.spotDirection;
   }
 }
-
-export { Gfx3MeshLight };

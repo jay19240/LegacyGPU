@@ -1,6 +1,6 @@
-import { Gfx3RendererAbstract } from '@lib/gfx3/gfx3_renderer_abstract';
+import { Gfx3RendererAbstract } from '../gfx3/gfx3_renderer_abstract';
 
-export enum PostParam {
+export enum Gfx3PostParam {
   ENABLED,
   PIXELATION_ENABLED,
   PIXELATION_WIDTH,
@@ -42,23 +42,24 @@ export const POST_CUSTOM_PARAMS = {
   S15: 'S15',
 };
 
-export const SHADER_INSERTS = {
+export const POST_SHADER_INSERTS = {
   INSERT_BEGIN: '',
+  INSERT_BETWEEN_RADIALBLUR_AND_COLOR_PRECISION: '',
   INSERT_BETWEEN_COLOR_DITHERING_AND_DITHER: '',
   INSERT_BETWEEN_DITHER_AND_OUTLINE: '',
   INSERT_BETWEEN_OUTLINE_AND_SHADOW_VOLUME: '',
   INSERT_END: ''
 };
 
-export const SHADER_CUSTOM_PARAMS_COUNT = 16;
-export const SHADER_VERTEX_ATTR_COUNT = 4;
-export const PIPELINE_DESC: any = {
+export const POST_SHADER_CUSTOM_PARAMS_COUNT = 16;
+export const POST_SHADER_VERTEX_ATTR_COUNT = 4;
+export const POST_PIPELINE_DESC: any = {
   label: 'POST pipeline',
   layout: 'auto',
   vertex: {
     entryPoint: 'main',
     buffers: [{
-      arrayStride: SHADER_VERTEX_ATTR_COUNT * 4,
+      arrayStride: POST_SHADER_VERTEX_ATTR_COUNT * 4,
       attributes: [{
         shaderLocation: 0, /*position*/
         offset: 0,
@@ -93,7 +94,7 @@ export const PIPELINE_DESC: any = {
   }
 };
 
-export const VERTEX_SHADER = (data: any): string => /* wgsl */`
+export const POST_VERTEX_SHADER = (data: any): string => /* wgsl */`
 struct VertexOutput {
   @builtin(position) Position: vec4<f32>,
   @location(0) FragUV: vec2<f32>
@@ -110,7 +111,7 @@ fn main(
   return output;
 }`;
 
-export const FRAGMENT_SHADER = (data: any): string => /* wgsl */`
+export const POST_FRAGMENT_SHADER = (data: any): string => /* wgsl */`
 struct Infos {
   RES_WIDTH: f32,
   RES_HEIGHT: f32,
@@ -121,7 +122,7 @@ struct Infos {
 };
 
 struct Params {
-  ${Gfx3RendererAbstract.generateWGSLStructFromEnum(PostParam)}
+  ${Gfx3RendererAbstract.generateWGSLStructFromEnum(Gfx3PostParam)}
   ${data.S00}: f32,
   ${data.S01}: f32,
   ${data.S02}: f32,
@@ -423,4 +424,63 @@ fn LinearizeDepth(depthRaw: f32, near: f32, far: f32) -> f32 {
 // *****************************************************************************************************************
 fn NormalizeDepth(linearDepth: f32, near: f32, far: f32) -> f32 {
   return clamp((linearDepth - near) / (far - near), 0.0, 1.0);
+}`;
+
+export enum Gfx3PostFinalParam {
+  RADIALBLUR_ENABLED,
+  RADIALBLUR_STRENGTH,
+  RADIALBLUR_SAMPLES,
+  RADIALBLUR_CENTER_X,
+  RADIALBLUR_CENTER_Y,
+  COUNT
+};
+
+export const RADIAL_V_SHADER = (data: any): string => /* wgsl */`
+struct VertexOutput {
+  @builtin(position) Position: vec4<f32>,
+  @location(0) FragUV: vec2<f32>,
+};
+
+@vertex
+fn main(@location(0) pos: vec2<f32>, @location(1) uv: vec2<f32>) -> VertexOutput {
+  var output: VertexOutput;
+  output.Position = vec4<f32>(pos, 0.0, 1.0);
+  output.FragUV = uv;
+  return output;
+}`;
+
+export const RADIAL_F_SHADER = (data: any): string => /* wgsl */`
+struct Params {
+  ${Gfx3RendererAbstract.generateWGSLStructFromEnum(Gfx3PostFinalParam)}
+};
+
+@group(0) @binding(0) var<uniform> PARAMS: Params;
+@group(0) @binding(1) var SOURCE_TEXTURE: texture_2d<f32>;
+@group(0) @binding(2) var SOURCE_SAMPLER: sampler;
+
+@fragment
+fn main(
+  @location(0) FragUV: vec2<f32>
+) -> @location(0) vec4<f32> {
+  var outputColor = textureSample(SOURCE_TEXTURE, SOURCE_SAMPLER, FragUV);
+
+  if (PARAMS.RADIALBLUR_ENABLED == 1.0)
+  {
+    let samples = i32(PARAMS.RADIALBLUR_SAMPLES);
+    let center = vec2<f32>(PARAMS.RADIALBLUR_CENTER_X, PARAMS.RADIALBLUR_CENTER_Y);
+    var dir = FragUV - center;
+    var combinedColor = outputColor;
+
+    for (var i = 1; i <= samples; i = i + 1)
+    {
+      let scale = 1.0 - (PARAMS.RADIALBLUR_STRENGTH * f32(i) / f32(samples));
+      let sampleUV = center + dir * scale;
+      var sampleColor = textureSample(SOURCE_TEXTURE, SOURCE_SAMPLER, sampleUV);
+      combinedColor += sampleColor;
+    }
+
+    outputColor = combinedColor / f32(samples + 1);
+  }
+  
+  return outputColor;
 }`;

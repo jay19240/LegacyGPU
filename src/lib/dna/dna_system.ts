@@ -3,7 +3,7 @@ import { DNAComponent } from './dna_component';
 /**
  * A system in a pure ECS data-driven implementation.
  */
-class DNASystem {
+export class DNASystem {
   eids: Array<number>;
   requiredComponentTypenames: Set<string>;
   paused: boolean;
@@ -273,5 +273,3 @@ class DNASystem {
    */
   onEntityUnbind(eid: number): void {}
 }
-
-export { DNASystem };

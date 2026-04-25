@@ -8,7 +8,7 @@ type Constructor<T> = new (...args: any[]) => T;
 /**
  * Singleton pure ECS manager.
  */
-class DNAManager {
+export class DNAManager {
   count: number;
   entities: Map<number, Map<string, DNAComponent>>;
   entitiesSet: Map<number, Set<string>>;
@@ -358,6 +358,4 @@ class DNAManager {
   }
 }
 
-const dnaManager = new DNAManager();
-export { DNAManager };
-export { dnaManager };
+export const dnaManager = new DNAManager();

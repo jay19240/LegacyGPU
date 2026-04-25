@@ -4,7 +4,7 @@ import { Screen } from './screen';
  * Singleton screen manager.
  * Note: requestPush, requestSet and requestPop are all asynchronously method and will be executed safely in the update loop.
  */
-class ScreenManager {
+export class ScreenManager {
   requests: Array<Function>;
   screens: Array<Screen>;
 
@@ -113,5 +113,4 @@ class ScreenManager {
   }
 }
 
-export { ScreenManager };
 export const screenManager = new ScreenManager();

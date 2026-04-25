@@ -13,7 +13,7 @@ interface Instance<T> {
  * Manage a pool of objects, it take a original mesh and make numInstances clones.
  * Note: You can perfectly do without pool but for some cases it is used to keep performance stables.
  */
-class ObjectPool<T extends Poolable<T>> {
+export class ObjectPool<T extends Poolable<T>> {
   instances: Array<Instance<T>>;
   reset: (object: Poolable<T>) => void;
 
@@ -82,5 +82,3 @@ class ObjectPool<T extends Poolable<T>> {
     }
   }
 }
-
-export { ObjectPool };

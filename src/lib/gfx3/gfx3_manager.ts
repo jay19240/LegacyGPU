@@ -5,10 +5,7 @@ import { Gfx3View } from './gfx3_view';
 import { Gfx3Texture, Gfx3RenderingTexture } from './gfx3_texture';
 import { Gfx3StaticGroup, Gfx3DynamicGroup } from './gfx3_group';
 
-const WINDOW = window as any;
-const ALPHA_MODE = WINDOW.__ALPHA_MODE__ ? WINDOW.__ALPHA_MODE__ : 'opaque';
-
-export interface VertexSubBuffer {
+export interface Gfx3VertexSubBuffer {
   vertices: Float32Array;
   offset: number;
 };
@@ -32,9 +29,9 @@ class Gfx3Manager {
   passEncoder: GPURenderPassEncoder;
   pipelines: Map<string, GPURenderPipeline>;
   vertexBuffer: GPUBuffer;
-  vertexSubBuffers: Array<VertexSubBuffer>;
+  vertexSubBuffers: Array<Gfx3VertexSubBuffer>;
   vertexSubBuffersSize: number;
-  vertexSubBuffersChanged: Array<VertexSubBuffer>;
+  vertexSubBuffersChanged: Array<Gfx3VertexSubBuffer>;
   views: Array<Gfx3View>;
   currentView: Gfx3View;
   lastRenderStart: number;
@@ -100,7 +97,7 @@ class Gfx3Manager {
     this.ctx.configure({
       device: this.device,
       format: navigator.gpu.getPreferredCanvasFormat(),
-      alphaMode: ALPHA_MODE
+      alphaMode: 'opaque'
     });
 
     const devicePixelRatio = window.devicePixelRatio || 1;
@@ -287,8 +284,8 @@ class Gfx3Manager {
    * 
    * @param {number} size - The number of vertices.
    */
-  createVertexBuffer(size: number): VertexSubBuffer {
-    const sub: VertexSubBuffer = {
+  createVertexBuffer(size: number): Gfx3VertexSubBuffer {
+    const sub: Gfx3VertexSubBuffer = {
       vertices: new Float32Array(size),
       offset: this.vertexSubBuffersSize
     };
@@ -301,9 +298,9 @@ class Gfx3Manager {
   /**
    * Removes a vertex sub-buffer.
    * 
-   * @param {VertexSubBuffer} sub - The vertex sub-buffer.
+   * @param {Gfx3VertexSubBuffer} sub - The vertex sub-buffer.
    */
-  destroyVertexBuffer(sub: VertexSubBuffer): void {
+  destroyVertexBuffer(sub: Gfx3VertexSubBuffer): void {
     const index = this.vertexSubBuffers.indexOf(sub);
     this.vertexSubBuffers.splice(index, 1);
 
@@ -329,10 +326,10 @@ class Gfx3Manager {
   /**
    * Write data on vertex sub-buffer.
    * 
-   * @param {VertexSubBuffer} sub - The vertex sub-buffer.
+   * @param {Gfx3VertexSubBuffer} sub - The vertex sub-buffer.
    * @param vertices - The vertex data.
    */
-  writeVertexBuffer(sub: VertexSubBuffer, vertices: Array<number>): void {
+  writeVertexBuffer(sub: Gfx3VertexSubBuffer, vertices: Array<number>): void {
     sub.vertices.set(vertices);
     this.vertexSubBuffersChanged.push(sub);
   }
@@ -695,8 +692,5 @@ class Gfx3Manager {
   }
 }
 
-const gfx3Manager = new Gfx3Manager();
+export const gfx3Manager = new Gfx3Manager();
 await gfx3Manager.initialize();
-
-export { Gfx3Manager };
-export { gfx3Manager };

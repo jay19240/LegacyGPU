@@ -3,7 +3,7 @@ import { FormatJTMObject } from './format_jtm';
 /**
  * A tile object.
  */
-class Gfx2TileObject {
+export class Gfx2TileObject {
   id: string;
   position: vec2;
   name: string;
@@ -89,5 +89,3 @@ class Gfx2TileObject {
     return this.properties;
   }
 }
-
-export { Gfx2TileObject };

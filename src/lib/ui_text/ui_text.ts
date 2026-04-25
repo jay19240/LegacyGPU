@@ -3,7 +3,7 @@ import { UIWidget } from '../ui/ui_widget';
 /**
  * A UI widget displaying a simple text.
  */
-class UIText extends UIWidget {
+export class UIText extends UIWidget {
   constructor() {
     super({
       className: 'UIText',
@@ -20,5 +20,3 @@ class UIText extends UIWidget {
     this.node.querySelector('.js-text')!.textContent = text;
   }
 }
-
-export { UIText };

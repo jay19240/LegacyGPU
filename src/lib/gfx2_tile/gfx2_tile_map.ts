@@ -3,7 +3,7 @@ import { FormatJTM, fromSpriteFusion, fromTilekit } from './format_jtm';
 import { Gfx2TileLayer } from './gfx2_tile_layer';
 import { Gfx2Tileset } from './gfx2_tile_set';
 
-interface TileCollision {
+export interface Gfx2TileCollision {
   left: boolean;
   right: boolean;
   top: boolean;
@@ -21,7 +21,7 @@ interface TileCollision {
 /**
  * The tilemap.
  */
-class Gfx2TileMap {
+export class Gfx2TileMap {
   rows: number;
   columns: number;
   tileHeight: number;
@@ -246,13 +246,13 @@ class Gfx2TileMap {
    * @param {number} t - The top side of rectangle.
    * @param {number} b - The bottom side of rectangle.
    */
-  box(mx: number, my: number, layerIndex: number, l: number, r: number, t: number, b: number, gap: number = 0.01): TileCollision {
+  box(mx: number, my: number, layerIndex: number, l: number, r: number, t: number, b: number, gap: number = 0.01): Gfx2TileCollision {
     const bottom = this.getLocationRow(b + my);
     const top = this.getLocationRow(t + my);
     const right = this.getLocationCol(r + mx);
     const left = this.getLocationCol(l + mx);
 
-    const collisions: TileCollision = {
+    const collisions: Gfx2TileCollision = {
       left: false,
       right: false,
       top: false,
@@ -342,6 +342,3 @@ class Gfx2TileMap {
     return collisions;
   }
 }
-
-export type { TileCollision };
-export { Gfx2TileMap };

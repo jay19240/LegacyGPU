@@ -5,7 +5,7 @@ import { Gfx2BoundingRect } from './gfx2_bounding_rect';
 /**
  * A 2D binary tree space partition.
  */
-class Gfx2TreePartition extends TreePartition<Gfx2BoundingRect> {
+export class Gfx2TreePartition extends TreePartition<Gfx2BoundingRect> {
   /**
    * @param {number} maxChildren - The maximum number of children that a node in the tree can have. It determines the branching factor of the tree, i.e.
    * @param {number} maxDepth - The maximum depth or level of the tree partition. It determines how deep the tree can be divided into smaller partitions.
@@ -19,7 +19,7 @@ class Gfx2TreePartition extends TreePartition<Gfx2BoundingRect> {
 /**
  * A 2D binary tree space partition method for quick search intersections.
  */
-class Gfx2TreePartitionMethod implements ITreePartitionMethod<Gfx2BoundingRect> {
+export class Gfx2TreePartitionMethod implements ITreePartitionMethod<Gfx2BoundingRect> {
   rect: Gfx2BoundingRect;
   axis: 'x' | 'y';
 
@@ -128,5 +128,3 @@ class Gfx2TreePartitionMethod implements ITreePartitionMethod<Gfx2BoundingRect> 
     return { left, right, leftMethod, rightMethod };
   }
 }
-
-export { Gfx2TreePartition, Gfx2TreePartitionMethod };

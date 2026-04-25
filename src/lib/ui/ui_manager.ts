@@ -6,7 +6,7 @@ import { UIWidget } from './ui_widget';
  * It emit 'E_FOCUSED' with data { widget }
  * It emit 'E_UNFOCUSED'
  */
-class UIManager {
+export class UIManager {
   root: HTMLDivElement;
   fadeLayer: HTMLDivElement;
   overLayer: HTMLDivElement;
@@ -218,5 +218,4 @@ class UIManager {
   }
 }
 
-export { UIManager };
 export const uiManager = new UIManager();

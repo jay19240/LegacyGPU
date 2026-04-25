@@ -1,11 +1,11 @@
 import { UT } from '../core/utils';
 
-enum Gfx3ProjectionMode {
+export enum Gfx3ProjectionMode {
   PERSPECTIVE = 'PERSPECTIVE',
   ORTHOGRAPHIC = 'ORTHOGRAPHIC'
 };
 
-interface Gfx3Viewport {
+export interface Gfx3Viewport {
   xFactor: number;
   yFactor: number;
   widthFactor: number;
@@ -15,7 +15,7 @@ interface Gfx3Viewport {
 /**
  * A 3D view. Used to manipulate camera, viewport, projection mode, background color, etc...
  */
-class Gfx3View {
+export class Gfx3View {
   cameraMatrix: mat4;
   clipOffset: vec2;
   minClipOffset: vec2;
@@ -499,6 +499,3 @@ class Gfx3View {
     return [pos[0], pos[1]];
   }
 }
-
-export type { Gfx3Viewport };
-export { Gfx3ProjectionMode, Gfx3View };

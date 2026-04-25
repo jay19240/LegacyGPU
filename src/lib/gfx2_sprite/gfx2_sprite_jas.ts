@@ -2,20 +2,19 @@ import { eventManager } from '../core/event_manager';
 import { gfx2Manager } from '../gfx2/gfx2_manager';
 import { FormatJAS, fromAseprite, fromEzSpriteSheet } from '../core/format_jas';
 import { Poolable } from '../core/object_pool';
-import { UT } from '../core/utils';
 import { Gfx2Drawable } from '../gfx2/gfx2_drawable';
 import { Gfx2BoundingRect } from '../gfx2/gfx2_bounding_rect';
 
-interface JASFrame {
+export interface Gfx2JASFrame {
   x: number;
   y: number;
   width: number;
   height: number;
 }
 
-interface JASAnimation {
+export interface Gfx2JASAnimation {
   name: string;
-  frames: Array<JASFrame>;
+  frames: Array<Gfx2JASFrame>;
   frameDuration: number;
   boundingRects: Array<Gfx2BoundingRect>;
 }
@@ -24,26 +23,32 @@ interface JASAnimation {
  * A 2D sprite with animations.
  * It emit 'E_FINISHED'
  */
-class Gfx2SpriteJAS extends Gfx2Drawable implements Poolable<Gfx2SpriteJAS> {
-  animations: Array<JASAnimation>;
+export class Gfx2SpriteJAS extends Gfx2Drawable implements Poolable<Gfx2SpriteJAS> {
+  animations: Array<Gfx2JASAnimation>;
   texture: ImageBitmap | HTMLImageElement;
-  offsetFactor: vec2;
-  currentAnimation: JASAnimation | null;
+  tintedTexture: ImageBitmap | HTMLImageElement;
+  blendColor: vec3;
+  blendColorMode: GlobalCompositeOperation | '';
+  currentAnimation: Gfx2JASAnimation | null;
   currentAnimationFrameIndex: number;
   looped: boolean;
   frameProgress: number;
   finished: boolean;
+  boundingRectDynamicMode: boolean;
 
   constructor() {
     super();
     this.animations = [];
     this.texture = gfx2Manager.getDefaultTexture();
-    this.offsetFactor = [0, 0];
+    this.tintedTexture = gfx2Manager.getDefaultTexture();
+    this.blendColor = [1, 1, 1];
+    this.blendColorMode = '';
     this.currentAnimation = null;
     this.currentAnimationFrameIndex = 0;
     this.looped = false;
     this.frameProgress = 0;
     this.finished = false;
+    this.boundingRectDynamicMode = false;
   }
 
   /**
@@ -95,10 +100,11 @@ class Gfx2SpriteJAS extends Gfx2Drawable implements Poolable<Gfx2SpriteJAS> {
 
     this.offsetFactor[0] = data['OffsetFactorX'] ?? 0;
     this.offsetFactor[1] = data['OffsetFactorY'] ?? 0;
+    this.offsetFactorEnabled = data['OffsetFactorEnabled'] ? true : false;
 
     this.animations = [];
     for (const obj of data['Animations']) {
-      const animation: JASAnimation = {
+      const animation: Gfx2JASAnimation = {
         name: obj['Name'],
         frames: [],
         frameDuration: Number(obj['FrameDuration']),
@@ -137,7 +143,7 @@ class Gfx2SpriteJAS extends Gfx2Drawable implements Poolable<Gfx2SpriteJAS> {
    * @param {number} ts - The timestep.
    */
   update(ts: number): void {
-    if (!this.currentAnimation) {
+    if (!this.currentAnimation || this.finished) {
       return;
     }
 
@@ -151,6 +157,10 @@ class Gfx2SpriteJAS extends Gfx2Drawable implements Poolable<Gfx2SpriteJAS> {
       else {
         this.currentAnimationFrameIndex = this.currentAnimationFrameIndex + 1;
         this.frameProgress = 0;
+      }
+
+      if (this.boundingRectDynamicMode) {
+        this.boundingRect = this.currentAnimation.boundingRects[this.currentAnimationFrameIndex];
       }
     }
     else {
@@ -168,28 +178,37 @@ class Gfx2SpriteJAS extends Gfx2Drawable implements Poolable<Gfx2SpriteJAS> {
 
     const ctx = gfx2Manager.getContext();
     const currentFrame = this.currentAnimation.frames[this.currentAnimationFrameIndex];
+    const destX = this.flip[0] ? currentFrame.width * -1 : 0;
+    const destY = this.flip[1] ? currentFrame.height * -1 : 0;
 
     ctx.scale(this.flip[0] ? -1 : 1, this.flip[1] ? -1 : 1);
 
-    if (this.offsetFactor[0] != 0) {
-      ctx.translate(-currentFrame.width * this.offsetFactor[0], 0);
+    if (this.blendColorMode == '') {
+      ctx.drawImage(
+        this.texture,
+        currentFrame.x,
+        currentFrame.y,
+        currentFrame.width,
+        currentFrame.height,
+        destX,
+        destY,
+        currentFrame.width,
+        currentFrame.height
+      );
     }
-
-    if (this.offsetFactor[1] != 0) {
-      ctx.translate(0, -currentFrame.height * this.offsetFactor[1]);
+    else {
+      ctx.drawImage(
+        this.tintedTexture,
+        currentFrame.x,
+        currentFrame.y,
+        currentFrame.width,
+        currentFrame.height,
+        destX,
+        destY,
+        currentFrame.width,
+        currentFrame.height
+      );
     }
-
-    ctx.drawImage(
-      this.texture,
-      currentFrame.x,
-      currentFrame.y,
-      currentFrame.width,
-      currentFrame.height,
-      this.flip[0] ? currentFrame.width * -1 : 0,
-      this.flip[1] ? currentFrame.height * -1 : 0,
-      currentFrame.width,
-      currentFrame.height
-    );
   }
 
   /**
@@ -219,7 +238,7 @@ class Gfx2SpriteJAS extends Gfx2Drawable implements Poolable<Gfx2SpriteJAS> {
   /**
    * Returns the list of animation descriptors.
    */
-  getAnimations(): Array<JASAnimation> {
+  getAnimations(): Array<Gfx2JASAnimation> {
     return this.animations;
   }
 
@@ -228,14 +247,14 @@ class Gfx2SpriteJAS extends Gfx2Drawable implements Poolable<Gfx2SpriteJAS> {
    * 
    * @param animations - The animations data.
    */
-  setAnimations(animations: Array<JASAnimation>): void {
+  setAnimations(animations: Array<Gfx2JASAnimation>): void {
     this.animations = animations;
   }
 
   /**
    * Returns the current animation or null if there is no current animation.
    */
-  getCurrentAnimation(): JASAnimation | null {
+  getCurrentAnimation(): Gfx2JASAnimation | null {
     return this.currentAnimation;
   }
 
@@ -263,49 +282,48 @@ class Gfx2SpriteJAS extends Gfx2Drawable implements Poolable<Gfx2SpriteJAS> {
   }
 
   /**
-   * Set the normalized offset value.
-   * Note: this offset is independant from the regular drawable pixel based offset.
-   * 
-   * @param {number} offsetXFactor - The normalized x-coordinate offset value.
-   * @param {number} offsetYFactor - The normalized y-coordinate offset value.
+   * Returns the blend color.
    */
-  setOffsetNormalized(offsetXFactor: number, offsetYFactor: number) {
-    this.offsetFactor[0] = offsetXFactor;
-    this.offsetFactor[1] = offsetYFactor;
+  getBlendColor(): vec3 {
+    return this.blendColor;
   }
 
   /**
-   * Returns the bounding rect.
-   * 
-   * @param {boolean} [dynamicMode=false] - Determines if bounding rect fit the current animation.
+   * Returns the blend color mode.
    */
-  getBoundingRect(dynamicMode: boolean = false): Gfx2BoundingRect {
-    if (dynamicMode && this.currentAnimation) {
-      this.currentAnimation.boundingRects[this.currentAnimationFrameIndex];
-    }
-
-    return this.boundingRect;
+  getBlendColorMode(): GlobalCompositeOperation | '' {
+    return this.blendColorMode;
   }
 
   /**
-   * Returns the bounding rect in the world space coordinates.
+   * Set the color filter.
    * 
-   * @param {boolean} [dynamicMode=false] - Determines if bounding rect fit the current animation.
+   * @param {number} r - The red channel.
+   * @param {number} g - The green channel.
+   * @param {number} b - The blue channel.
    */
-  getWorldBoundingRect(dynamicMode: boolean = false): Gfx2BoundingRect {
-    if (dynamicMode && this.currentAnimation) {
-      const rect = this.currentAnimation.boundingRects[this.currentAnimationFrameIndex];
-      const x = this.position[0] - rect.getWidth() * this.offsetFactor[0];
-      const y = this.position[1] - rect.getHeight() * this.offsetFactor[1];
-      return rect.transform(UT.MAT3_TRANSFORM([x, y], this.offset, this.rotation, this.scale));
-    }
-
-    const rect = this.animations[0].boundingRects[0];
-    const x = this.position[0] - rect.getWidth() * this.offsetFactor[0];
-    const y = this.position[1] - rect.getHeight() * this.offsetFactor[1];
-    return this.boundingRect.transform(UT.MAT3_TRANSFORM([x, y], this.offset, this.rotation, this.scale));
+  setBlendColor(r: number, g: number, b: number): void {
+    this.blendColor = [r, g, b];
+    this.blendColorMode = 'multiply';
+    this.tintedTexture = gfx2Manager.getTintedTexture(this.texture, r, g, b);
   }
 
+  /**
+   * Bounding rect fit the sprite size in realtime.
+   * 
+   * @param {boolean} [dynamicMode] - Determines if bounding rect fit the current animation.
+   */
+  setBoundingRectDynamicMode(dynamicMode: boolean) {
+    if (dynamicMode == false) {
+      this.boundingRect = this.animations[0].boundingRects[0];
+    }
+
+    this.boundingRectDynamicMode = dynamicMode;
+  }
+
+  /**
+   * Checks if animation is finished or not.
+   */
   isFinished(): boolean {
     return this.finished;
   }
@@ -320,6 +338,7 @@ class Gfx2SpriteJAS extends Gfx2Drawable implements Poolable<Gfx2SpriteJAS> {
     jas.flip = [this.flip[0], this.flip[1]];
     jas.animations = this.animations;
     jas.texture = this.texture;
+    jas.tintedTexture = this.tintedTexture;
     jas.offsetFactor = [this.offsetFactor[0], this.offsetFactor[1]];
     jas.currentAnimation = null;
     jas.currentAnimationFrameIndex = 0;
@@ -329,5 +348,3 @@ class Gfx2SpriteJAS extends Gfx2Drawable implements Poolable<Gfx2SpriteJAS> {
     return jas;
   }
 }
-
-export { Gfx2SpriteJAS };

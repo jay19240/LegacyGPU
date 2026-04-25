@@ -3,7 +3,7 @@ import { gfx3Manager } from '../gfx3/gfx3_manager';
 /**
  * Abstract class for all 3D renderer.
  */
-abstract class Gfx3RendererAbstract {
+export abstract class Gfx3RendererAbstract {
   pipeline: GPURenderPipeline;
   pipelineId: string;
   data: any;
@@ -45,5 +45,3 @@ abstract class Gfx3RendererAbstract {
       .join('\n  ');
   }
 }
-
-export { Gfx3RendererAbstract };

@@ -1,6 +1,6 @@
 import { eventManager } from './event_manager';
 
-enum SizeMode {
+export enum SizeMode {
   FIT = 0, // Fit the page with scale/distortion
   ADJUST = 1, // Fit the page without distortion (with borders)
   FIXED = 2, // Fixed size without scale/distortion
@@ -12,7 +12,7 @@ enum SizeMode {
  * Used to set the size and resolution of the top-level container.
  * It emit 'E_RESIZE'
  */
-class CoreManager {
+export class CoreManager {
   container: HTMLElement;
   resWidth: number;
   resHeight: number;
@@ -85,17 +85,17 @@ class CoreManager {
   }
 
   /**
-   * Returns the half client-width of the container element.
-   */
-  getHalfWidth(): number {
-    return this.container.clientWidth / 2;
-  }
-
-  /**
    * Returns the client-height of the container element.
    */
   getHeight(): number {
     return this.container.clientHeight;
+  }
+
+  /**
+   * Returns the half client-width of the container element.
+   */
+  getHalfWidth(): number {
+    return this.container.clientWidth / 2;
   }
 
   /**
@@ -202,6 +202,4 @@ class CoreManager {
   }
 }
 
-const coreManager = new CoreManager();
-export { CoreManager };
-export { coreManager, SizeMode };
+export const coreManager = new CoreManager();

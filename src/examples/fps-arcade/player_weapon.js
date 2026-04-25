@@ -1,7 +1,7 @@
 import { gfx3MeshRenderer } from '@lib/gfx3_mesh/gfx3_mesh_renderer';
 import { gfx3TextureManager } from '@lib/gfx3/gfx3_texture_manager';
 import { UT } from '@lib/core/utils';
-import { Gfx3MeshEffect } from '@lib/gfx3/gfx3_drawable';
+import { Gfx3DrawableEffect } from '@lib/gfx3/gfx3_drawable';
 import { Gfx3MeshJSM } from '@lib/gfx3_mesh/gfx3_mesh_jsm';
 import { Gfx3Material } from '@lib/gfx3_mesh/gfx3_mesh_material';
 // ---------------------------------------------------------------------------------------
@@ -35,9 +35,10 @@ export class PlayerWeapon {
 
   async load() {
     this.mesh = new Gfx3MeshJSM();
-    this.mesh.setTag(1.0, 0.0, Gfx3MeshEffect.CHANNEL1);
+    this.mesh.setTag(1.0, 0.0, Gfx3DrawableEffect.CHANNEL1);
     this.mesh.mat.setTexture(await gfx3TextureManager.loadTexture('./examples/fps/weapon.png'));
     await this.mesh.loadFromFile('./examples/fps/weapon.jsm');
+    this.mesh.setBillboard(true, true);
 
     this.bulletMesh = new Gfx3MeshJSM();
     this.bulletMesh.mat.setTexture(await gfx3TextureManager.loadTexture('./examples/fps/bullet.png'));
@@ -55,8 +56,7 @@ export class PlayerWeapon {
     }
 
     const oscillationY = Math.sin(this.oscillation) * PlayerWeapon.OSCILLATION_LENGTH * 0.5;
-    this.mesh.setPosition(this.player.x, this.player.y + 0.5 + oscillationY, this.player.z);
-    this.mesh.setRotation(this.player.rotation[0], this.player.rotation[1], this.player.rotation[2]);
+    this.mesh.setPosition(-0.1, oscillationY - 0.1, 0);
 
     this.mesh.update(ts);
     this.bulletMesh.update(ts);

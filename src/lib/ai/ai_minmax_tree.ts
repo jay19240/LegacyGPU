@@ -1,7 +1,7 @@
 /**
  * The MinMax node abstract class.
  */
-abstract class AIMinMaxTreeAbstract {
+export abstract class AIMinMaxTreeAbstract {
 	visited: boolean;
   data: any;
   value: number;
@@ -64,7 +64,7 @@ abstract class AIMinMaxTreeAbstract {
 /**
  * The MinMax leaf node.
  */
-class AIMinMaxLeaf extends AIMinMaxTreeAbstract {
+export class AIMinMaxLeaf extends AIMinMaxTreeAbstract {
   /**
    * @param value - The value of the leaf.
    */
@@ -77,7 +77,7 @@ class AIMinMaxLeaf extends AIMinMaxTreeAbstract {
 /**
  * The MinMax node.
  */
-class AIMinMaxNode extends AIMinMaxTreeAbstract {
+export class AIMinMaxNode extends AIMinMaxTreeAbstract {
   children: Array<AIMinMaxTreeAbstract>;
 
   /**
@@ -105,5 +105,3 @@ class AIMinMaxNode extends AIMinMaxTreeAbstract {
 		return this.children;
 	}
 }
-
-export { AIMinMaxTreeAbstract, AIMinMaxLeaf, AIMinMaxNode };

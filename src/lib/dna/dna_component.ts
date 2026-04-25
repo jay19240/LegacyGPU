@@ -1,7 +1,7 @@
 /**
  * A component in a pure ECS data-driven implementation.
  */
-class DNAComponent {
+export class DNAComponent {
   typename: string;
 
   /**
@@ -18,5 +18,3 @@ class DNAComponent {
     return this.typename;
   }
 }
-
-export { DNAComponent };

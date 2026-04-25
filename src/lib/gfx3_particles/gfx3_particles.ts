@@ -1,11 +1,12 @@
 import { gfx3ParticlesRenderer } from './gfx3_particles_renderer';
 import { gfx3Manager } from '../gfx3/gfx3_manager';
+import { gfx3TextureManager } from '../gfx3/gfx3_texture_manager';
 import { UT } from '../core/utils';
 import { Tween } from '../core/tween';
 import { Gfx3Drawable } from '../gfx3/gfx3_drawable';
 import { Gfx3Texture } from '../gfx3/gfx3_texture';
 import { Gfx3StaticGroup } from '../gfx3/gfx3_group';
-import { SHADER_VERTEX_ATTR_COUNT } from './gfx3_particles_shader';
+import { PARTICLES_SHADER_VERTEX_ATTR_COUNT } from './gfx3_particles_shader';
 
 const PARTICULES_UV = [[0, 0], [0, 1], [1, 0], [1, 1]];
 const PARTICULES_IDX = [0, 1, 2, 2, 1, 3];
@@ -16,17 +17,17 @@ const PARTICULES_PTS: Array<vec3> = [
   [+1, +1, 0]
 ];
 
-enum Gfx3VelocityStyle {
+export enum Gfx3VelocityStyle {
   CLASSIC = 'CLASSIC',
   EXPLODE = 'EXPLODE'
 };
 
-enum Gfx3PositionStyle {
+export enum Gfx3PositionStyle {
   CUBE = 'CUBE',
   SPHERE = 'SPHERE'
 };
 
-class Particle {
+export class Gfx3Particle {
   position: vec3;
   velocity: vec3; // units per second
   acceleration: vec3;
@@ -93,7 +94,7 @@ class Particle {
   }
 }
 
-interface Gfx3ParticlesOptions {
+export interface Gfx3ParticlesOptions {
   texture: Gfx3Texture;
   positionStyle: Gfx3PositionStyle;
   positionBase: vec3;
@@ -132,7 +133,7 @@ interface Gfx3ParticlesOptions {
 /**
  * The 3D particles diffuser.
  */
-class Gfx3Particles extends Gfx3Drawable {
+export class Gfx3Particles extends Gfx3Drawable implements Gfx3ParticlesOptions {
   positionStyle: Gfx3PositionStyle;
   positionBase: vec3;
   positionSpread: vec3;
@@ -173,13 +174,13 @@ class Gfx3Particles extends Gfx3Drawable {
   emitterAlive: boolean;
   textureChanged: boolean;
   particleAlivedCount: number;
-  particleArray: Array<Particle>;
+  particleArray: Array<Gfx3Particle>;
 
   /**
    * @param options - Various options for configuring the behavior of the particles cloud.
    */
   constructor(options: Partial<Gfx3ParticlesOptions>) {
-    super(SHADER_VERTEX_ATTR_COUNT);
+    super(PARTICLES_SHADER_VERTEX_ATTR_COUNT);
     this.positionStyle = options.positionStyle ?? Gfx3PositionStyle.CUBE;
     this.positionBase = options.positionBase ?? [0, 0, 0];
     this.positionSpread = options.positionSpread ?? [0, 0, 0];
@@ -227,6 +228,61 @@ class Gfx3Particles extends Gfx3Drawable {
     }
 
     this.grp2.allocate();
+  }
+
+  /**
+   * Load asynchronously data and create particles from a json file (prt).
+   * 
+   * @param {string} path - The file path.
+   * @param {string} textureDir - The textures directory.
+   */
+  static async createFromFile(path: string, textureDir: string = ''): Promise<Gfx3Particles> {
+    const response = await fetch(path);
+    const json = await response.json();
+
+    if (!json.hasOwnProperty('Ident') || json['Ident'] != 'PRT') {
+      throw new Error('Gfx3Particles::createFromFile(): File not valid !');
+    }
+
+    const particle = new Gfx3Particles({  
+      texture: json['Texture'] ? await gfx3TextureManager.loadTexture(textureDir + json['Texture']) : undefined,
+      positionStyle: json['PositionStyle'],
+      positionBase: json['PositionBase'],
+      positionSpread: json['PositionSpread'],
+      positionSphereRadiusBase: json['PositionSphereRadiusBase'],
+      positionRadiusSpread: json['PositionRadiusSpread'],
+      velocityStyle: json['VelocityStyle'],
+      velocityBase: json['VelocityBase'],
+      velocitySpread: json['VelocitySpread'],
+      velocityExplodeSpeedBase: json['VelocityExploseSpeedBase'],
+      velocityExplodeSpeedSpread: json['VelocityExploseSpeedSpread'],
+      colorBase: json['ColorBase'],
+      colorSpread: json['ColorSpread'],
+      colorTween: new Tween<vec3>(json['ColorTweenTimes'], json['ColorTweenValues'], json['ColorTweenTransition']),
+      sizeBase: json['SizeBase'],
+      sizeSpread: json['SizeSpread'],
+      sizeTween: new Tween<number>(json['SizeTweenTimes'], json['SizeTweenValues'], json['SizeTweenTransition']),
+      opacityBase: json['OpacityBase'],
+      opacitySpread: json['OpacitySpread'],
+      opacityTween: new Tween<number>(json['OpacityTweenTimes'], json['OpacityTweenValues'], json['OpacityTweenTransition']),
+      accelerationBase: json['AccelerationBase'],
+      accelerationSpread: json['AccelerationSpread'],
+      accelerationTween: new Tween<vec3>(json['AccelerationTweenTimes'], json['AccelerationTweenValues'], json['AccelerationTweenTransition']),
+      angleBase: json['AngleBase'],
+      angleSpread: json['AngleSpread'],
+      angleVelocityBase: json['AngleVelocityBase'],
+      angleVelocitySpread: json['AngleVelocitySpread'],
+      angleAccelerationBase: json['AngleAccelerationBase'],
+      angleAccelerationSpread: json['AngleAccelerationSpread'],
+      particleDeathAge: json['ParticleDeathAge'],
+      particlesPerSecond: json['ParticlesPerSecond'],
+      particleQuantity: json['ParticleQuantity'],
+      emitterDeathAge: json['EmitterDeathAge']
+    });
+
+    particle.setPosition(json['Position'][0], json['Position'][1], json['Position'][2]);
+    particle.setRotation(json['Rotation'][0], json['Rotation'][1], json['Rotation'][2]);
+    return particle;
   }
 
   /**
@@ -318,6 +374,13 @@ class Gfx3Particles extends Gfx3Drawable {
   }
 
   /**
+   * Returns the particle list.
+   */
+  getParticles(): Array<Gfx3Particle> {
+    return this.particleArray;
+  }
+
+  /**
    * Returns the bindgroup(2).
    */
   getGroup02(): Gfx3StaticGroup {
@@ -398,8 +461,8 @@ class Gfx3Particles extends Gfx3Drawable {
     this.endVertices();
   }
 
-  #createParticle(): Particle {
-    const particle = new Particle();
+  #createParticle(): Gfx3Particle {
+    const particle = new Gfx3Particle();
 
     if (this.positionStyle == Gfx3PositionStyle.CUBE) {
       particle.position = UT.VEC3_SPREAD(this.positionBase, this.positionSpread);
@@ -437,6 +500,3 @@ class Gfx3Particles extends Gfx3Drawable {
     return particle;
   }
 }
-
-export type { Gfx3ParticlesOptions };
-export { Gfx3VelocityStyle, Gfx3PositionStyle, Gfx3Particles };

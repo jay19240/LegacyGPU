@@ -4,7 +4,7 @@ import { PH } from '../core/physics';
 import { Gfx3BoundingBox } from '../gfx3/gfx3_bounding_box';
 import { Gfx3TreePartition } from '../gfx3/gfx3_tree_partition';
 
-class Frag extends Gfx3BoundingBox {
+export class Gfx3JNMFrag extends Gfx3BoundingBox {
   index: number;
   v1: vec3;
   v2: vec3;
@@ -24,7 +24,7 @@ class Frag extends Gfx3BoundingBox {
   }
 }
 
-interface ResBox {
+export interface Gfx3JNMResolveBox {
   move: vec3;
   collideFloor: boolean;
   collideTop: boolean;
@@ -32,13 +32,13 @@ interface ResBox {
   fragIndex: number
 };
 
-interface ResRaycast {
+export interface Gfx3JNMResolveRaycast {
   hit: vec3;
   distance: number;
   fragIndex: number;
 };
 
-interface ResElevation {
+export interface Gfx3JNMResolveElevation {
   hit: vec3;
   distance: number;
   fragIndex: number
@@ -47,9 +47,9 @@ interface ResElevation {
 /**
  * A 3D hit mesh.
  */
-class Gfx3PhysicsJNM {
+export class Gfx3PhysicsJNM {
   boundingBox: Gfx3BoundingBox;
-  frags: Array<Frag>;
+  frags: Array<Gfx3JNMFrag>;
   fragColors: Array<vec3>;
   btree: Gfx3TreePartition;
   debugMeshEnabled: boolean;
@@ -92,7 +92,7 @@ class Gfx3PhysicsJNM {
       const v1 = obj[0];
       const v2 = obj[1];
       const v3 = obj[2];
-      const frag = new Frag(i, v1, v2, v3);
+      const frag = new Gfx3JNMFrag(i, v1, v2, v3);
       this.btree.addChild(frag);
       this.frags.push(frag);
     }
@@ -137,7 +137,7 @@ class Gfx3PhysicsJNM {
       const v1: vec3 = [data[offset + (i * 9) + 0], data[offset + (i * 9) + 1], data[offset + (i * 9) + 2]];
       const v2: vec3 = [data[offset + (i * 9) + 3], data[offset + (i * 9) + 4], data[offset + (i * 9) + 5]];
       const v3: vec3 = [data[offset + (i * 9) + 6], data[offset + (i * 9) + 7], data[offset + (i * 9) + 8]];
-      const frag = new Frag(i, v1, v2, v3);
+      const frag = new Gfx3JNMFrag(i, v1, v2, v3);
       this.btree.addChild(frag);
       this.frags.push(frag);
     }
@@ -238,7 +238,7 @@ class Gfx3PhysicsJNM {
    * @param {number} snapFloor - Enable or disable floor snapping.
    * @param {number} snapFloorDistance - Minimum distance to snap the floor.
    */
-  box(x: number, y: number, z: number, size: number, height: number, mx: number, my: number, mz: number, lift: number = 0.2, snapFloor: boolean = true, snapFloorDistance: number = 1): ResBox {
+  box(x: number, y: number, z: number, size: number, height: number, mx: number, my: number, mz: number, lift: number = 0.2, snapFloor: boolean = true, snapFloorDistance: number = 1): Gfx3JNMResolveBox {
     const min: vec3 = [x - size, y - height * 0.5, z - size];
     const max: vec3 = [x + size, y + height * 0.5, z + size];
 
@@ -247,7 +247,7 @@ class Gfx3PhysicsJNM {
     const wallIntersectedFrags = this.btree.search(new Gfx3BoundingBox(
       [min[0] + mx, min[1] + my, min[2] + mz],
       [max[0] + mx, max[1] + my, max[2] + mz]
-    )) as Array<Frag>;
+    )) as Array<Gfx3JNMFrag>;
 
     let fmx = mx; 
     let fmy = my;
@@ -292,7 +292,7 @@ class Gfx3PhysicsJNM {
       const topIntersectedFrags = this.btree.search(new Gfx3BoundingBox(
         [x + fmx, min[1], z + fmz],
         [x + fmx, max[1] + 0.1, z + fmz]
-      )) as Array<Frag>;
+      )) as Array<Gfx3JNMFrag>;
       
       const elevation = this.#getElevation(topIntersectedFrags, [x + fmx, min[1], z + fmz], [0, 1, 0]);
       const delta = elevation ? elevation.value - max[1] : Infinity;
@@ -309,7 +309,7 @@ class Gfx3PhysicsJNM {
     const floorIntersectedFrags = this.btree.search(new Gfx3BoundingBox(
       [x + fmx, min[1] - snapFloorDistance, z + fmz],
       [x + fmx, max[1], z + fmz]
-    )) as Array<Frag>;
+    )) as Array<Gfx3JNMFrag>;
 
     const elevation = this.#getElevation(floorIntersectedFrags, [x + fmx, max[1], z + fmz]);
     const delta = elevation ? min[1] - elevation.value : Infinity; // climbing on negative, descent on positive
@@ -336,12 +336,12 @@ class Gfx3PhysicsJNM {
    * @param {number} size - The size of ray area.
    * @param {number} height - The height of ray area.
    */
-  raycast(origin: vec3, dir: vec3, size: number, height: number, offset: vec3 = [0, 0, 0]): ResRaycast | null {
+  raycast(origin: vec3, dir: vec3, size: number, height: number, offset: vec3 = [0, 0, 0]): Gfx3JNMResolveRaycast | null {
     const o = UT.VEC3_ADD(origin, offset);
     const frags = this.btree.search(new Gfx3BoundingBox(
       [o[0] - size, o[1] - height * 0.5, o[2] - size],
       [o[0] + size, o[1] + height * 0.5, o[2] + size]
-    )) as Array<Frag>;
+    )) as Array<Gfx3JNMFrag>;
 
     let minFrag = null;
     let minFragLength = Infinity;
@@ -375,11 +375,11 @@ class Gfx3PhysicsJNM {
    * @param {number} mx - The movement in x-axis.
    * @param {number} mz - The movement in z-axis.
    */
-  getElevation(x: number, y: number, z: number, size: number, height: number, mx: number, mz: number): ResElevation | null {
+  getElevation(x: number, y: number, z: number, size: number, height: number, mx: number, mz: number): Gfx3JNMResolveElevation | null {
     const floors = this.btree.search(new Gfx3BoundingBox(
       [x - size, y - height * 0.5, z - size],
       [x + size, y + height * 0.5, z + size]
-    )) as Array<Frag>;
+    )) as Array<Gfx3JNMFrag>;
 
     const elevation = this.#getElevation(floors, [x + mx, y + height, z + mz]);
     if (!elevation) {
@@ -437,7 +437,7 @@ class Gfx3PhysicsJNM {
    * 
    * @param {number} fragIndex - The frag index.
    */
-  getFrag(fragIndex: number): Frag {
+  getFrag(fragIndex: number): Gfx3JNMFrag {
     return this.frags[fragIndex];
   }
 
@@ -457,8 +457,8 @@ class Gfx3PhysicsJNM {
     return this.boundingBox;
   }
 
-  #moveXZ(frags: Array<Frag>, point: vec3, move: vec2, i: number = 0 ): { move: vec2 } {
-    let minFrag: Frag | null = null;
+  #moveXZ(frags: Array<Gfx3JNMFrag>, point: vec3, move: vec2, i: number = 0 ): { move: vec2 } {
+    let minFrag: Gfx3JNMFrag | null = null;
     let minPenLength = Infinity;
 
     for (const frag of frags) {
@@ -491,8 +491,8 @@ class Gfx3PhysicsJNM {
     return { move: move };
   }
 
-  #getElevation(frags: Array<Frag>, point: vec3, dir: vec3 = [0, -1, 0]): { value: number, fragIndex: number } | null {
-    let minFrag: Frag | null = null;
+  #getElevation(frags: Array<Gfx3JNMFrag>, point: vec3, dir: vec3 = [0, -1, 0]): { value: number, fragIndex: number } | null {
+    let minFrag: Gfx3JNMFrag | null = null;
     let minFragLength = Infinity;
     let outIntersectPoint: vec3 = [0, 0, 0];
 
@@ -512,8 +512,6 @@ class Gfx3PhysicsJNM {
     return minFrag != null ? { value: outIntersectPoint[1], fragIndex: minFrag.index } : null;
   }
 }
-
-export { Gfx3PhysicsJNM };
 
 // -------------------------------------------------------------------------------------------
 // HELPFUL

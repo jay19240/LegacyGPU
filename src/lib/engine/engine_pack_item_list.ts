@@ -1,11 +1,11 @@
-interface EnginePackItem<T> {
+export interface EnginePackItem<T> {
   name: string;
   ext: string;
   object: T;
   blobUrl: string;
 };
 
-class EnginePackItemList<T> extends Array<EnginePackItem<T>> {
+export class EnginePackItemList<T> extends Array<EnginePackItem<T>> {
   constructor() {
     super();
   }
@@ -28,6 +28,3 @@ class EnginePackItemList<T> extends Array<EnginePackItem<T>> {
     return item.object;
   }
 }
-
-export type { EnginePackItem };
-export { EnginePackItemList };

@@ -5,7 +5,7 @@ import { gfx3TextureManager } from '@lib/gfx3/gfx3_texture_manager';
 import { gfx3Manager } from '@lib/gfx3/gfx3_manager';
 import { Gfx3ProjectionMode } from '@lib/gfx3/gfx3_view';
 import { UT } from '@lib/core/utils';
-import { Gfx3MeshEffect } from '@lib/gfx3/gfx3_drawable';
+import { Gfx3DrawableEffect } from '@lib/gfx3/gfx3_drawable';
 import { Gfx3MeshJSM } from '@lib/gfx3_mesh/gfx3_mesh_jsm';
 import { Gfx3PhysicsJWM } from '@lib/gfx3_physics/gfx3_physics_jwm';
 import { Gfx3Material } from '@lib/gfx3_mesh/gfx3_mesh_material';
@@ -37,7 +37,7 @@ class Room {
     this.description = json['Description'];
 
     this.background = new Gfx3MeshJSM();
-    this.background.setEffects(Gfx3MeshEffect.CHANNEL1);
+    this.background.setEffects(Gfx3DrawableEffect.CHANNEL1);
     await this.background.loadFromFile(json['BackgroundFile']);
     this.background.mat.setTexture(await gfx3TextureManager.loadTexture(json['BackgroundTextureFile'], {
       minFilter: 'nearest',

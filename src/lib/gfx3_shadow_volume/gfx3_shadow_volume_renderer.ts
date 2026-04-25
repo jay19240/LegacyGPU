@@ -4,10 +4,10 @@ import { gfx3Manager } from '../gfx3/gfx3_manager';
 import { UT } from '../core/utils';
 import { Gfx3DynamicGroup } from '../gfx3/gfx3_group';
 import { Gfx3RenderingTexture } from '../gfx3/gfx3_texture';
-import { VERTEX_SHADER, FRAGMENT_SHADER, PIPELINE_CW_DESC, PIPELINE_CCW_DESC } from './gfx3_shadow_volume_shader';
+import { SV_VERTEX_SHADER, SV_FRAGMENT_SHADER, SV_PIPELINE_CW_DESC, SV_PIPELINE_CCW_DESC } from './gfx3_shadow_volume_shader';
 import { Gfx3ShadowVolume } from './gfx3_shadow_volume';
 
-interface Pipeline {
+export interface ShadowVolumePipeline {
   gpu: GPURenderPipeline;
   grp0: Gfx3DynamicGroup;
   shadowTexture: Gfx3RenderingTexture;
@@ -17,22 +17,22 @@ interface Pipeline {
 /*
  * Singleton shadow volume renderer.
  */
-class Gfx3ShadowVolumeRenderer {
-  pipelineCW: Pipeline;
-  pipelineCCW: Pipeline;
+export class Gfx3ShadowVolumeRenderer {
+  pipelineCW: ShadowVolumePipeline;
+  pipelineCCW: ShadowVolumePipeline;
   shadowVolumes: Array<Gfx3ShadowVolume>;
   mvpcMatrix: Float32Array;
 
   constructor() {
     this.pipelineCW = {
-      gpu: gfx3Manager.loadPipeline('SHADOW_VOLUME_CW_PIPELINE', VERTEX_SHADER, FRAGMENT_SHADER, PIPELINE_CW_DESC),
+      gpu: gfx3Manager.loadPipeline('SHADOW_VOLUME_CW_PIPELINE', SV_VERTEX_SHADER, SV_FRAGMENT_SHADER, SV_PIPELINE_CW_DESC),
       grp0: gfx3Manager.createDynamicGroup('SHADOW_VOLUME_CW_PIPELINE', 0),
       shadowTexture: gfx3Manager.createRenderingTexture('rgba16float'),
       depthTexture: gfx3Manager.createRenderingTexture('depth24plus')
     };
 
     this.pipelineCCW = {
-      gpu: gfx3Manager.loadPipeline('SHADOW_VOLUME_CCW_PIPELINE', VERTEX_SHADER, FRAGMENT_SHADER, PIPELINE_CCW_DESC),
+      gpu: gfx3Manager.loadPipeline('SHADOW_VOLUME_CCW_PIPELINE', SV_VERTEX_SHADER, SV_FRAGMENT_SHADER, SV_PIPELINE_CCW_DESC),
       grp0: gfx3Manager.createDynamicGroup('SHADOW_VOLUME_CCW_PIPELINE', 0),
       shadowTexture: gfx3Manager.createRenderingTexture('rgba16float'),
       depthTexture: gfx3Manager.createRenderingTexture('depth24plus')
@@ -87,7 +87,7 @@ class Gfx3ShadowVolumeRenderer {
     return this.pipelineCCW.depthTexture;
   }
 
-  #renderPipeline(pipeline: Pipeline): void {
+  #renderPipeline(pipeline: ShadowVolumePipeline): void {
     const currentView = gfx3Manager.getCurrentView();
     const commandEncoder = gfx3Manager.getCommandEncoder();
     const passEncoder = commandEncoder.beginRenderPass({
@@ -140,5 +140,4 @@ class Gfx3ShadowVolumeRenderer {
   }
 }
 
-export { Gfx3ShadowVolumeRenderer };
 export const gfx3ShadowVolumeRenderer = new Gfx3ShadowVolumeRenderer();

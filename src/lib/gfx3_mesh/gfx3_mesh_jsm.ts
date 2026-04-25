@@ -5,7 +5,7 @@ import { Gfx3Mesh } from './gfx3_mesh';
 /**
  * A 3D static mesh.
  */
-class Gfx3MeshJSM extends Gfx3Mesh implements Poolable<Gfx3MeshJSM> {
+export class Gfx3MeshJSM extends Gfx3Mesh implements Poolable<Gfx3MeshJSM> {
   constructor() {
     super();
   }
@@ -91,5 +91,3 @@ class Gfx3MeshJSM extends Gfx3Mesh implements Poolable<Gfx3MeshJSM> {
     return jsm;
   }
 }
-
-export { Gfx3MeshJSM };

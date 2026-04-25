@@ -1,12 +1,13 @@
 import { gfx3Manager } from '../gfx3/gfx3_manager';
+import { gfx3MeshRenderer } from './gfx3_mesh_renderer';
 import { UT } from '../core/utils';
 import { Gfx3DynamicGroup } from '../gfx3/gfx3_group';
 import { Gfx3RendererAbstract } from '../gfx3/gfx3_renderer_abstract';
 import { Gfx3Texture, Gfx3RenderingTexture } from '../gfx3/gfx3_texture';
 import { Gfx3Mesh } from './gfx3_mesh';
-import { PIPELINE_DESC, VERTEX_SHADER } from './gfx3_mesh_shadow_shader';
+import { MESH_SHADOW_PIPELINE_DESC, MESH_SHADOW_VERTEX_SHADER } from './gfx3_mesh_shadow_shader';
 
-interface MeshCommand {
+interface Gfx3MeshShadowCommand {
   mesh: Gfx3Mesh;
   matrix: mat4;
 };
@@ -14,20 +15,20 @@ interface MeshCommand {
 /*
  * Singleton shadow map renderer.
  */
-class Gfx3MeshShadowRenderer extends Gfx3RendererAbstract {
+export class Gfx3MeshShadowRenderer extends Gfx3RendererAbstract {
   position: vec3;
   target: vec3;
   size: number;
   depth: number;
   depthTextureSize: number;
   depthTexture: Gfx3RenderingTexture;
-  meshCommands: Array<MeshCommand>;
+  meshCommands: Array<Gfx3MeshShadowCommand>;
   grp0: Gfx3DynamicGroup;
   lvpMatrix: Float32Array;
   mMatrix: Float32Array;
 
   constructor() {
-    super('MESH_SHADOW_MAP_PIPELINE', VERTEX_SHADER, () => '', PIPELINE_DESC);
+    super('MESH_SHADOW_MAP_PIPELINE', MESH_SHADOW_VERTEX_SHADER, () => '', MESH_SHADOW_PIPELINE_DESC);
     this.position = [0, 0, 0];
     this.target = [0, 0, 0];
     this.size = 600;
@@ -90,12 +91,20 @@ class Gfx3MeshShadowRenderer extends Gfx3RendererAbstract {
     this.meshCommands.push({ mesh: mesh, matrix: meshMatrix });
   }
 
+  /**
+   * Set the shadow projection.
+   * 
+   * @param {number} position - The position of the center.
+   * @param {number} target - The target position looking by the projector.
+   * @param {number} size - The projector size.
+   * @param {number} depth - The projector depth.
+   */
   setShadowProjection(position: vec3, target: vec3, size: number = 600, depth: number = 200): void {
     this.position = position;
     this.target = target;
     this.size = size;
     this.depth = depth;
-    this.computeShadowProjection();
+    this.#computeShadowProjection();
   }
 
   /**
@@ -107,7 +116,7 @@ class Gfx3MeshShadowRenderer extends Gfx3RendererAbstract {
    */
   setShadowPosition(x: number, y: number, z: number): void {
     this.position = [x, y, z];
-    this.computeShadowProjection();
+    this.#computeShadowProjection();
   }
 
   /**
@@ -119,7 +128,7 @@ class Gfx3MeshShadowRenderer extends Gfx3RendererAbstract {
    */
   setShadowTarget(x: number, y: number, z: number): void {
     this.target = [x, y, z];
-    this.computeShadowProjection();
+    this.#computeShadowProjection();
   }
 
   /**
@@ -129,7 +138,7 @@ class Gfx3MeshShadowRenderer extends Gfx3RendererAbstract {
    */
   setShadowSize(size: number): void {
     this.size = size;
-    this.computeShadowProjection();
+    this.#computeShadowProjection();
   }
 
   /**
@@ -139,7 +148,7 @@ class Gfx3MeshShadowRenderer extends Gfx3RendererAbstract {
    */
   setShadowDepth(depth: number): void {
     this.depth = depth;
-    this.computeShadowProjection();
+    this.#computeShadowProjection();
   }
 
   /**
@@ -149,8 +158,9 @@ class Gfx3MeshShadowRenderer extends Gfx3RendererAbstract {
    * @param {number} depthTextureSize - The size.
    */
   setDepthTextureSize(depthTextureSize: number): void {
-    this.depthTexture = gfx3Manager.createRenderingTexture('depth32float', { magFilter: 'nearest', minFilter: 'nearest', compare: 'less' }, this.depthTextureSize, this.depthTextureSize);
+    this.depthTexture = gfx3Manager.createRenderingTexture('depth32float', { magFilter: 'nearest', minFilter: 'nearest', compare: 'less' }, depthTextureSize, depthTextureSize);
     this.depthTextureSize = depthTextureSize;
+    gfx3MeshRenderer.setShadowMap(this.depthTexture);
   }
 
   /**
@@ -169,18 +179,12 @@ class Gfx3MeshShadowRenderer extends Gfx3RendererAbstract {
 
   /**
    * Compute a shadow projection matrix.
-   * 
-   * @param {vec3} position - The position of shadow coming from.
-   * @param {vec3} target - Determine the direction in which the shadow is pointing.
-   * @param {number} [size=600] - Determines the size of the shadow map that will be generated.
-   * @param {number} [depth=200] - Determines how far the shadow projection extends in the scene.
    */
-  computeShadowProjection(): void {
+  #computeShadowProjection(): void {
     const lightProjectionMatrix = UT.MAT4_ORTHOGRAPHIC(this.size, this.size, this.depth);
     const lightViewMatrix = UT.MAT4_INVERT(UT.MAT4_LOOKAT(this.position, this.target, [0, 1, 0]));
     UT.MAT4_MULTIPLY(lightProjectionMatrix, lightViewMatrix, this.lvpMatrix);
   }
 }
 
-export { Gfx3MeshShadowRenderer };
 export const gfx3MeshShadowRenderer = new Gfx3MeshShadowRenderer();

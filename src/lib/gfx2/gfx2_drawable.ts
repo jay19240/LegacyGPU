@@ -1,18 +1,20 @@
+import { gfx2Manager } from './gfx2_manager';
 import { Poolable } from '../core/object_pool';
 import { UT } from '../core/utils';
 import { Gfx2BoundingRect } from '../gfx2/gfx2_bounding_rect';
-import { gfx2Manager } from './gfx2_manager';
 
 /**
  * A 2D drawable object.
  */
-class Gfx2Drawable implements Poolable<Gfx2Drawable> {
+export class Gfx2Drawable implements Poolable<Gfx2Drawable> {
   tag: number;
   position: vec2;
   rotation: number;
   scale: vec2;
   flip: [boolean, boolean];
   offset: vec2;
+  offsetFactor: vec2;
+  offsetFactorEnabled: boolean;
   visible: boolean;
   opacity: number;
   z: number;
@@ -26,6 +28,8 @@ class Gfx2Drawable implements Poolable<Gfx2Drawable> {
     this.scale = [1, 1];
     this.flip = [false, false];
     this.offset = [0, 0];
+    this.offsetFactor = [0, 0];
+    this.offsetFactorEnabled = false;
     this.visible = true;
     this.opacity = 1;
     this.z = 0;
@@ -53,8 +57,12 @@ class Gfx2Drawable implements Poolable<Gfx2Drawable> {
       return;
     }
 
-    const ctx = gfx2Manager.getContext();
+    if (this.offsetFactorEnabled) {
+      this.offset[0] = this.boundingRect.getWidth() * this.offsetFactor[0];
+      this.offset[1] = this.boundingRect.getHeight() * this.offsetFactor[1];
+    }
 
+    const ctx = gfx2Manager.getContext();
     ctx.save();
     ctx.globalAlpha = this.opacity;
     ctx.translate(-this.offset[0], -this.offset[1]);
@@ -121,10 +129,20 @@ class Gfx2Drawable implements Poolable<Gfx2Drawable> {
     this.position[1] = y;
   }
 
+  /**
+   * Set the x-component of the position.
+   * 
+   * @param {number} x - The X coordinate of the position.
+   */
   setPositionX(x: number) {
     this.position[0] = x;
   }
 
+  /**
+   * Set the y-component of the position.
+   * 
+   * @param {number} y - The Y coordinate of the position.
+   */
   setPositionY(y: number) {
     this.position[1] = y;
   }
@@ -194,6 +212,24 @@ class Gfx2Drawable implements Poolable<Gfx2Drawable> {
    */
   setScale(x: number, y: number): void {
     this.scale[0] = x;
+    this.scale[1] = y;
+  }
+
+  /**
+   * Set the x-component of the scale.
+   * 
+   * @param {number} x - The X coordinate of the scale.
+   */
+  setScaleX(x: number) {
+    this.scale[0] = x;
+  }
+
+  /**
+   * Set the y-component of the scale.
+   * 
+   * @param {number} y - The Y coordinate of the scale.
+   */
+  setScaleY(y: number) {
     this.scale[1] = y;
   }
 
@@ -277,6 +313,73 @@ class Gfx2Drawable implements Poolable<Gfx2Drawable> {
   setOffset(x: number, y: number): void {
     this.offset[0] = x;
     this.offset[1] = y;
+    this.offsetFactorEnabled = false;
+  }
+
+  /**
+   * Set the horizontal origin offset value.
+   * 
+   * @param {number} x - The x-offset.
+   */
+  setOffsetX(x: number): void {
+    this.offset[0] = x;
+    this.offsetFactorEnabled = false;
+  }
+
+  /**
+   * Set the vertical origin offset value.
+   * 
+   * @param {number} y - The y-offset.
+   */
+  setOffsetY(y: number): void {
+    this.offset[1] = y;
+    this.offsetFactorEnabled = false;
+  }
+
+  /**
+   * Returns the vertical normalized offset.
+   */
+  getNormalizedOffsetX(): number {
+    return this.offsetFactor[0]
+  }
+
+  /**
+   * Returns the horizontal normalized offset.
+   */
+  getNormalizedOffsetY(): number {
+    return this.offsetFactor[1];
+  }
+
+  /**
+   * Set the normalized offset value.
+   * 
+   * @param {number} offsetXFactor - The normalized x-coordinate offset value.
+   * @param {number} offsetYFactor - The normalized y-coordinate offset value.
+   */
+  setNormalizedOffset(offsetXFactor: number, offsetYFactor: number) {
+    this.offsetFactor[0] = offsetXFactor;
+    this.offsetFactor[1] = offsetYFactor;
+    this.offsetFactorEnabled = true;
+  }
+
+  /**
+   * Set the horizontal origin normalized offset value.
+   * 
+   * @param {number} x - The x-offset.
+   */
+  setNormalizedOffsetX(x: number): void {
+    this.offsetFactor[0] = x;
+    this.offsetFactorEnabled = true;
+  }
+
+  /**
+   * Set the vertical origin normalized offset value.
+   * 
+   * @param {number} y - The y-offset.
+   */
+  setNormalizedOffsetY(y: number): void {
+    this.offsetFactor[1] = y;
+    this.offsetFactorEnabled = true;
   }
 
   /**
@@ -368,6 +471,9 @@ class Gfx2Drawable implements Poolable<Gfx2Drawable> {
     return this.boundingRect.transform(UT.MAT3_TRANSFORM(this.position, this.offset, this.rotation, this.scale));
   }
 
+  /**
+   * Check if it collide with a drawable.
+   */
   isCollideAsRect(drawable: Gfx2Drawable): boolean {
     return this.getWorldBoundingRect().intersectBoundingRect(drawable.getWorldBoundingRect());
   }
@@ -390,5 +496,3 @@ class Gfx2Drawable implements Poolable<Gfx2Drawable> {
     return drawable;
   }
 }
-
-export { Gfx2Drawable };

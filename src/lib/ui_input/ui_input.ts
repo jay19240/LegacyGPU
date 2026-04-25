@@ -5,7 +5,7 @@ import { UIWidget } from '../ui/ui_widget';
  * A UI widget displaying a simple text input.
  * It emit 'E_VALUE_CHANGED' with data { value }
  */
-class UIInput extends UIWidget {
+export class UIInput extends UIWidget {
   name: string;
   label: string;
   maxLength: number;
@@ -206,5 +206,3 @@ class UIInput extends UIWidget {
     }
   }
 }
-
-export { UIInput };

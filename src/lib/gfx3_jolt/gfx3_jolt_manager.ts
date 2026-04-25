@@ -6,9 +6,9 @@ export const bodyFilter = new Gfx3Jolt.BodyFilter();
 export const shapeFilter = new Gfx3Jolt.ShapeFilter();
 // ---------------------------------------------------------------------------------------
 import { gfx3DebugRenderer } from '../gfx3/gfx3_debug_renderer';
-import { Gfx3JoltCharacterManager } from './gfx3_jolt_character_manager';
-import { Gfx3JoltCarManager } from './gfx3_jolt_car_manager';
-import { Gfx3JoltMotorcycleManager } from './gfx3_jolt_motorcycle_manager';
+import { Gfx3JoltCharacterManager, Gfx3JoltCharacter, Gfx3JoltCharacterOptions } from './gfx3_jolt_character_manager';
+import { Gfx3JoltCarManager, Gfx3JoltCar, Gfx3JoltCarOptions } from './gfx3_jolt_car_manager';
+import { Gfx3JoltMotorcycleManager, Gfx3JoltMotorcycle, Gfx3JoltMotorcycleOptions } from './gfx3_jolt_motorcycle_manager';
 // ---------------------------------------------------------------------------------------
 
 // Jolt constants
@@ -54,7 +54,7 @@ export interface Gfx3JoltRayCast {
 }
 
 export interface Gfx3JoltEntity {
-  type: string; // 'primitive' | 'character' | 'car' | 'motorcycle';
+  type: 'primitive' | 'character' | 'car' | 'motorcycle';
   bodyId: number;
   body: Jolt.Body;
   color: vec3;
@@ -64,7 +64,7 @@ export interface Gfx3JoltEntity {
 /**
  * Singleton 3D physics manager that wrap the Jolt physics engine.
  */
-class Gfx3JoltManager {
+export class Gfx3JoltManager {
   inter: Jolt.JoltInterface;
   system: Jolt.PhysicsSystem;
   bodyInterface: Jolt.BodyInterface;
@@ -75,7 +75,7 @@ class Gfx3JoltManager {
   raycastBodyFilter: Jolt.BodyFilter;
   raycastShapeFilter: Jolt.ShapeFilter;
   showDebug: boolean;
-  entitiesMap: Map<number, Gfx3JoltEntity>;
+  entityMap: Map<number, Gfx3JoltEntity>;
   entities: Array<Gfx3JoltEntity>;
   // ----------------------------------------------------
   characterManager: Gfx3JoltCharacterManager;
@@ -103,9 +103,9 @@ class Gfx3JoltManager {
     this.raycastBodyFilter = new Gfx3Jolt.BodyFilter();
     this.raycastShapeFilter = new Gfx3Jolt.ShapeFilter();
     this.showDebug = true;
-    this.entitiesMap = new Map();
+    this.entityMap = new Map();
     this.entities = [];
-    
+
     this.characterManager = new Gfx3JoltCharacterManager(this.system, this.inter, this.bodyInterface, this.movingBPFilter, this.movingLayerFilter);
     this.carManager = new Gfx3JoltCarManager(this.system, this.inter, this.bodyInterface, this.movingBPFilter, this.movingLayerFilter);
     this.motorcycleManager = new Gfx3JoltMotorcycleManager(this.system, this.inter, this.bodyInterface, this.movingBPFilter, this.movingLayerFilter);
@@ -113,31 +113,56 @@ class Gfx3JoltManager {
     this.system.SetGravity(new Gfx3Jolt.Vec3(0, JOLT_GRAVITY, 0));
   }
 
+  /**
+   * Add a box shape.
+   * 
+   * @param {Gfx3JoltCreatePrimitiveOptions & { width: number, height: number, depth: number }} options - The options of a box shape.
+   */
   addBox(options: Gfx3JoltCreatePrimitiveOptions & { width: number, height: number, depth: number }): Gfx3JoltEntity {
     const ext = new Gfx3Jolt.Vec3(options.width / 2, options.height / 2, options.depth / 2);
     const shape = new Gfx3Jolt.BoxShape(ext, 0.05);
-    const entity = this.addEntity(shape, options);
+    const entity = this.addShape(shape, options);
     return entity;
   }
 
+  /**
+   * Add a sphere shape.
+   * 
+   * @param {Gfx3JoltCreatePrimitiveOptions & { radius: number }} options - The options of a sphere shape.
+   */
   addSphere(options: Gfx3JoltCreatePrimitiveOptions & { radius: number }): Gfx3JoltEntity {
     const shape = new Gfx3Jolt.SphereShape(options.radius);
-    const entity = this.addEntity(shape, options);
+    const entity = this.addShape(shape, options);
     return entity;
   }
 
+  /**
+   * Add a cylinder shape.
+   * 
+   * @param {Gfx3JoltCreatePrimitiveOptions & { radius: number, height: number }} options - The options of a cylinder shape.
+   */
   addCylinder(options: Gfx3JoltCreatePrimitiveOptions & { radius: number, height: number }): Gfx3JoltEntity {
     const shape = new Gfx3Jolt.CylinderShape(options.height / 2, options.radius, 0.05);
-    const entity = this.addEntity(shape, options);
+    const entity = this.addShape(shape, options);
     return entity;
   }
 
+  /**
+   * Add a capsule shape.
+   * 
+   * @param {Gfx3JoltCreatePrimitiveOptions & { radius: number, height: number }} options - The options of a capsule shape.
+   */
   addCapsule(options: Gfx3JoltCreatePrimitiveOptions & { radius: number, height: number }): Gfx3JoltEntity {
     const shape = new Gfx3Jolt.CapsuleShape(options.height / 2, options.radius);
-    const entity = this.addEntity(shape, options);
+    const entity = this.addShape(shape, options);
     return entity;
   }
 
+  /**
+   * Add a polygon shape.
+   * 
+   * @param {Gfx3JoltCreatePrimitiveOptions & { vertices: Array<number>, indexes: Array<number> }} options - The options of a polygon shape.
+   */
   addPolygonShape(options: Gfx3JoltCreatePrimitiveOptions & { vertices: Array<number>, indexes: Array<number> }): Gfx3JoltEntity {
     const indexesArray = new Gfx3Jolt.IndexedTriangleList();
     const vertexArray = new Gfx3Jolt.VertexList();
@@ -163,11 +188,53 @@ class Gfx3JoltManager {
     }
 
     const shape = result.Get();
-    const entity = this.addEntity(shape, options);
+    const entity = this.addShape(shape, options);
     return entity;
   }
 
-  addEntity(shape: Jolt.Shape, options: Gfx3JoltCreatePrimitiveOptions = {}): Gfx3JoltEntity {
+  /**
+   * Add a car.
+   * 
+   * @param {Gfx3JoltCarOptions} options - The options to create a car.
+   */
+  addCar(options: Gfx3JoltCarOptions): Gfx3JoltCar {
+    const entity = this.carManager.add(options);
+    this.entityMap.set(entity.bodyId, entity);
+    this.entities.push(entity);
+    return entity;
+  }
+
+  /**
+   * Add a motorcycle.
+   * 
+   * @param {Gfx3JoltMotorcycleOptions} options - The options to create a motorcycle.
+   */
+  addMotorcycle(options: Gfx3JoltMotorcycleOptions): Gfx3JoltMotorcycle {
+    const entity = this.motorcycleManager.add(options);
+    this.entityMap.set(entity.bodyId, entity);
+    this.entities.push(entity);
+    return entity;
+  }
+
+  /**
+   * Add a character controller.
+   * 
+   * @param {Gfx3JoltCharacterOptions} options - The options to create a character controller.
+   */
+  addCharacter(options: Gfx3JoltCharacterOptions): Gfx3JoltCharacter {
+    const entity = this.characterManager.add(options);
+    this.entityMap.set(entity.bodyId, entity);
+    this.entities.push(entity);
+    return entity;
+  }
+
+  /**
+   * Add a primitive shape.
+   * 
+   * @param {Jolt.Shape} shape - The options to create a character controller.
+   * @param { Gfx3JoltCreatePrimitiveOptions } options - The options to create a primitive shape.
+   */
+  addShape(shape: Jolt.Shape, options: Gfx3JoltCreatePrimitiveOptions = {}): Gfx3JoltEntity {
     const pos = new Gfx3Jolt.RVec3(options.x ?? 0, options.y ?? 0, options.z ?? 0);
     const rot = options.rotation ?? Gfx3Jolt.Quat.prototype.sIdentity();
     const creationSettings = new Gfx3Jolt.BodyCreationSettings(shape, pos, rot, options.motionType ?? Gfx3Jolt.EMotionType_Static, options.layer ?? JOLT_LAYER_NON_MOVING);
@@ -185,20 +252,30 @@ class Gfx3JoltManager {
     Gfx3Jolt.destroy(creationSettings);
 
     const bodyId = body.GetID().GetIndex();
-    const entity = { type: 'primitive', bodyId: bodyId, body: body, color: options.color ?? [0, 1, 0], meta: options.meta };
     this.bodyInterface.AddBody(body.GetID(), Gfx3Jolt.EActivation_Activate);
-    
-    this.entitiesMap.set(bodyId, entity);
+
+    const entity: Gfx3JoltEntity = { type: 'primitive', bodyId: bodyId, body: body, color: options.color ?? [0, 1, 0], meta: options.meta };
+    this.entityMap.set(bodyId, entity);
     this.entities.push(entity);
     return entity;
   }
 
+  /**
+   * Returns the entity from the given body identifier.
+   * 
+   * @param {number} bodyId - The body identifier.
+   */
   get(bodyId: number): Gfx3JoltEntity | undefined {
-    return this.entitiesMap.get(bodyId);
+    return this.entityMap.get(bodyId);
   }
 
+  /**
+   * Returns entity metadata from the given body identifier.
+   * 
+   * @param {number} bodyId - The body identifier.
+   */
   getMeta(bodyId: number): any {
-    const e = this.entitiesMap.get(bodyId);
+    const e = this.entityMap.get(bodyId);
     if (!e) {
       return undefined;
     }
@@ -206,25 +283,50 @@ class Gfx3JoltManager {
     return e.meta;
   }
 
+  /**
+   * Remove an entity from the given body identifier.
+   * 
+   * @param {number} bodyId - The body identifier.
+   */
   remove(bodyId: number) {
-    const e = this.entitiesMap.get(bodyId);
+    const e = this.entityMap.get(bodyId);
     if (!e) {
       return;
     }
 
-    const id = e.body.GetID();
-    this.entitiesMap.delete(bodyId);
+    if (e.type == 'primitive') {
+      const id = e.body.GetID();
+      this.bodyInterface.RemoveBody(id);
+      this.bodyInterface.DestroyBody(id);
+    }
+    else if (e.type == 'car') {
+      this.carManager.remove(e.bodyId);
+    }
+    else if (e.type == 'motorcycle') {
+      this.motorcycleManager.remove(e.bodyId);
+    }
+    else if (e.type == 'character') {
+      this.characterManager.remove(e.bodyId);
+    }
+
+    this.entityMap.delete(bodyId);
     this.entities.splice(this.entities.indexOf(e), 1);
-    this.bodyInterface.RemoveBody(id);
-    this.bodyInterface.DestroyBody(id);
   }
 
+  /**
+   * Remove all entities.
+   */
   clear() {
     for (const e of this.entities) {
       this.remove(e.bodyId);
     }
   }
 
+  /**
+   * The update function.
+   * 
+   * @param {number} ts - The timestep.
+   */
   update(ts: number): void {
     const clampedDeltaMs = Math.min(ts / 1000, JOLT_MAX_TIMESTEP);
 
@@ -235,6 +337,9 @@ class Gfx3JoltManager {
     this.inter.Step(clampedDeltaMs, clampedDeltaMs > 1.0 / 55.0 ? 2 : 1);
   }
 
+  /**
+   * The draw function.
+   */
   draw() {
     if (!this.showDebug) {
       return;
@@ -245,11 +350,23 @@ class Gfx3JoltManager {
     this.motorcycleManager.draw();
 
     for (const e of this.entities) {
-      this.drawShape(e.body.GetShape(), e.body.GetWorldTransform(), e.color);
+      if (e.type == 'primitive') {
+        this.drawShape(e.body.GetShape(), e.body.GetWorldTransform(), e.color);
+      }
     }
   }
 
-  createRay(startX: number, startY: number, startZ: number, endX: number, endY: number, endZ: number): Gfx3JoltRayCast {
+  /**
+   * Send a raycast from start point to end point.
+   * 
+   * @param {number} startX - The x position of the ray beginning.
+   * @param {number} startY - The y position of the ray beginning.
+   * @param {number} startZ - The z position of the ray beginning.
+   * @param {number} endX - The x position of the ray ending.
+   * @param {number} endY - The y position of the ray ending.
+   * @param {number} endZ - The z position of the ray ending.
+   */
+  rayCast(startX: number, startY: number, startZ: number, endX: number, endY: number, endZ: number): Gfx3JoltRayCast {
     let body: Jolt.Body | null = null;
     let rayCastResult: Jolt.RayCastResult | null = null;
     let fraction = Infinity;
@@ -289,18 +406,32 @@ class Gfx3JoltManager {
     };
   }
 
+  /**
+   * Show or not the debug print.
+   * 
+   * @param {boolean} showDebug - The boolean flag.
+   */
   setShowDebug(showDebug: boolean): void {
     this.showDebug = showDebug;
   }
 
+  /**
+   * Return the car manager.
+   */
   get cars() {
     return this.carManager;
   }
 
+  /**
+   * Return the motorcycle manager.
+   */
   get motorcycles() {
     return this.motorcycleManager;
   }
 
+  /**
+   * Return the character controller manager.
+   */
   get characters() {
     return this.characterManager;
   }
@@ -410,8 +541,6 @@ class Gfx3JoltManager {
   }
 }
 
-const gfx3JoltManager = new Gfx3JoltManager();
-export { Gfx3JoltManager };
-export { gfx3JoltManager };
+export const gfx3JoltManager = new Gfx3JoltManager();
 export { Gfx3Jolt };
 export { Jolt };

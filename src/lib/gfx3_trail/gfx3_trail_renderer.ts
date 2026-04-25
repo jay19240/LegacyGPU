@@ -4,12 +4,12 @@ import { Gfx3RendererAbstract } from '../gfx3/gfx3_renderer_abstract';
 import { Gfx3StaticGroup, Gfx3DynamicGroup } from '../gfx3/gfx3_group';
 import { Gfx3RenderingTexture } from '../gfx3/gfx3_texture';
 import { Gfx3Trail } from './gfx3_trail';
-import { PIPELINE_DESC, VERTEX_SHADER, FRAGMENT_SHADER, SHADER_INSERTS } from './gfx3_trail_shader';
+import { TRAIL_PIPELINE_DESC, TRAIL_VERTEX_SHADER, TRAIL_FRAGMENT_SHADER, TRAIL_SHADER_INSERTS } from './gfx3_trail_shader';
 
 /**
  * Singleton trail renderer.
  */
-class Gfx3TrailRenderer extends Gfx3RendererAbstract {
+export class Gfx3TrailRenderer extends Gfx3RendererAbstract {
   trailList: Array<Gfx3Trail>;
   grp0: Gfx3StaticGroup;
   vpcMatrix: Float32Array;
@@ -17,7 +17,7 @@ class Gfx3TrailRenderer extends Gfx3RendererAbstract {
   tag: Float32Array;
 
   constructor() {
-    super('TRAIL_PIPELINE', VERTEX_SHADER, FRAGMENT_SHADER, PIPELINE_DESC, SHADER_INSERTS);
+    super('TRAIL_PIPELINE', TRAIL_VERTEX_SHADER, TRAIL_FRAGMENT_SHADER, TRAIL_PIPELINE_DESC, TRAIL_SHADER_INSERTS);
     this.trailList = [];
 
     this.grp0 = gfx3Manager.createStaticGroup('TRAIL_PIPELINE', 0);
@@ -86,10 +86,10 @@ class Gfx3TrailRenderer extends Gfx3RendererAbstract {
    * Set insertion of code in the shader.
    * This method will reload the pipeline.
    *
-   * @param {Partial<typeof SHADER_INSERTS>} data - The custom data used by the shader template.
+   * @param {Partial<typeof TRAIL_SHADER_INSERTS>} data - The custom data used by the shader template.
    */
-  setShaderInserts(data: Partial<typeof SHADER_INSERTS> = {}): void {
-    super.reload(VERTEX_SHADER, FRAGMENT_SHADER, PIPELINE_DESC, Object.assign(SHADER_INSERTS, data));
+  setShaderInserts(data: Partial<typeof TRAIL_SHADER_INSERTS> = {}): void {
+    super.reload(TRAIL_VERTEX_SHADER, TRAIL_FRAGMENT_SHADER, TRAIL_PIPELINE_DESC, Object.assign(TRAIL_SHADER_INSERTS, data));
     this.grp0.setPipeline(this.pipeline);
     this.grp1.setPipeline(this.pipeline);
     this.grp0.allocate();
@@ -106,5 +106,4 @@ class Gfx3TrailRenderer extends Gfx3RendererAbstract {
   }
 }
 
-export { Gfx3TrailRenderer };
 export const gfx3TrailRenderer = new Gfx3TrailRenderer();

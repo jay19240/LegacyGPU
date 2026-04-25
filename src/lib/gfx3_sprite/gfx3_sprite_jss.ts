@@ -7,7 +7,7 @@ import { Gfx3Sprite } from './gfx3_sprite';
 /**
  * A 3D static sprite (without animations).
  */
-class Gfx3SpriteJSS extends Gfx3Sprite implements Poolable<Gfx3SpriteJSS> {
+export class Gfx3SpriteJSS extends Gfx3Sprite implements Poolable<Gfx3SpriteJSS> {
   textureRect: vec4;
 
   constructor() {
@@ -41,6 +41,7 @@ class Gfx3SpriteJSS extends Gfx3Sprite implements Poolable<Gfx3SpriteJSS> {
 
     this.offsetFactor[0] = json['OffsetFactorX'] ?? 0;
     this.offsetFactor[1] = json['OffsetFactorY'] ?? 0;
+    this.offsetFactorEnabled = json['OffsetFactorEnabled'] ? true : false;
 
     this.boundingBox = Gfx3BoundingBox.createFromCoord(
       json['X'],
@@ -91,12 +92,9 @@ class Gfx3SpriteJSS extends Gfx3Sprite implements Poolable<Gfx3SpriteJSS> {
       this.frameChanged = false;
     }
 
-    if (this.offsetFactor[0] != 0) {
+    if (this.offsetFactorEnabled) {
       this.offset[0] = this.textureRect[2] * this.offsetFactor[0];
-    }
-
-    if (this.offsetFactor[1] != 0) {
-      this.offset[1] = this.textureRect[3] * this.offsetFactor[1];
+      this.offset[1] = this.textureRect[3] * this.offsetFactor[1];      
     }
   }
 
@@ -131,6 +129,7 @@ class Gfx3SpriteJSS extends Gfx3Sprite implements Poolable<Gfx3SpriteJSS> {
    */
   setTextureRect(left: number, top: number, width: number, height: number): void {
     this.textureRect = [left, top, width, height];
+    this.boundingBox = Gfx3BoundingBox.createFromCoord(this.textureRect[0], this.textureRect[1], 0, this.textureRect[2], this.textureRect[3], 0);
     this.frameChanged = true;
   }
 
@@ -164,5 +163,3 @@ class Gfx3SpriteJSS extends Gfx3Sprite implements Poolable<Gfx3SpriteJSS> {
     return jss;
   }
 }
-
-export { Gfx3SpriteJSS };

@@ -1,13 +1,13 @@
 import { eventManager } from '../core/event_manager';
 import { UIWidget } from '../ui/ui_widget';
-import { MenuAxis } from '../ui_menu/ui_menu';
+import { UIMenuAxis } from '../ui_menu/ui_menu';
 import { UIMenuText } from '../ui_menu_text/ui_menu_text';
 
 /**
  * A UI widget displaying prompt with a text content and a menu of actions.
  * It emit 'E_ITEM_SELECTED' with data { id, index }
  */
-class UIPrompt extends UIWidget {
+export class UIPrompt extends UIWidget {
   uiMenu: UIMenuText;
 
   constructor() {
@@ -18,7 +18,7 @@ class UIPrompt extends UIWidget {
       <div class="UIPrompt-menu js-menu"></div>`
     });
 
-    this.uiMenu = new UIMenuText({ axis: MenuAxis.X });
+    this.uiMenu = new UIMenuText({ axis: UIMenuAxis.X });
     this.node.querySelector('.js-menu')!.replaceWith(this.uiMenu.getNode());
     eventManager.subscribe(this.uiMenu, 'E_ITEM_SELECTED', this, this.#handleMenuItemSelected);
   }
@@ -96,5 +96,3 @@ class UIPrompt extends UIWidget {
     eventManager.emit(this, 'E_ITEM_SELECTED', data);
   }
 }
-
-export { UIPrompt };

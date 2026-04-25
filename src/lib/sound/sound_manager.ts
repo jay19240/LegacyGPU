@@ -1,9 +1,9 @@
-interface Sound {
+export interface Sound {
   buffer: AudioBuffer;
   groupId: string;
 };
 
-interface SoundGroup {
+export interface SoundGroup {
   muted: boolean;
   volume: number;
 };
@@ -14,7 +14,7 @@ const DEFAULT_GROUP = { muted: false, volume: 1 };
 /**
  * Singleton sound manager using Web Audio API.
  */
-class SoundManager {
+export class SoundManager {
   audioContext: AudioContext;
   sounds: Map<string, Sound>;
   soundGroups: Map<string, SoundGroup>;
@@ -28,7 +28,7 @@ class SoundManager {
   }
 
   update(ts: number) {
-
+    // empty.
   }
 
   /**
@@ -278,6 +278,4 @@ class SoundManager {
   }
 }
 
-export type { Sound };
-export { SoundManager };
 export const soundManager = new SoundManager();

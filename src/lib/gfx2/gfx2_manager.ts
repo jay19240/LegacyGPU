@@ -1,37 +1,50 @@
 import { UT } from '../core/utils';
 import { Gfx2Drawable } from './gfx2_drawable';
 
-enum Gfx2RenderingMode {
+export enum Gfx2RenderingMode {
   ISOMETRIC = 'ISOMETRIC',
   ORTHOGRAPHIC = 'ORTHOGRAPHIC'
 };
 
+export interface Gfx2DebugLine {
+  from: vec2;
+  to: vec2;
+  color: string;
+  width: number;
+}
+
 /**
  * Singleton 2D graphics manager.
  */
-class Gfx2Manager {
+export class Gfx2Manager {
   canvas: HTMLCanvasElement;
   ctx: CanvasRenderingContext2D;
   drawables: Array<Gfx2Drawable>;
   drawCommands: Array<(ctx: CanvasRenderingContext2D) => void>;
+  drawDebugLines: Array<Gfx2DebugLine>;
   mode: Gfx2RenderingMode;
   cameraTransform: mat3;
   cameraScale: vec2;
   cameraRotation: number;
   cameraPosition: vec2;
   bgColor: vec4;
+  offCanvas: OffscreenCanvas;
+  offCtx: OffscreenCanvasRenderingContext2D;
 
   constructor() {
     this.canvas = <HTMLCanvasElement>document.getElementById('CANVAS_2D')!;
     this.ctx = this.canvas.getContext('2d')!;
     this.drawables = [];
     this.drawCommands = [];
+    this.drawDebugLines = [];
     this.mode = Gfx2RenderingMode.ORTHOGRAPHIC;
     this.cameraTransform = UT.MAT3_IDENTITY();
     this.cameraScale = [1, 1];
     this.cameraRotation = 0;
     this.cameraPosition = [0, 0];
     this.bgColor = [0, 0, 0, 1];
+    this.offCanvas = new OffscreenCanvas(this.canvas.clientWidth, this.canvas.clientHeight);
+    this.offCtx = this.offCanvas.getContext('2d', { willReadFrequently: true })!;
 
     if (!this.ctx) {
       UT.FAIL('This browser does not support canvas');
@@ -54,6 +67,8 @@ class Gfx2Manager {
     if (this.canvas.width != this.canvas.clientWidth || this.canvas.height != this.canvas.clientHeight) {
       this.canvas.width = this.canvas.clientWidth;
       this.canvas.height = this.canvas.clientHeight;
+      this.offCanvas.width = this.canvas.clientWidth;
+      this.offCanvas.height = this.canvas.clientHeight;
     }
 
     this.ctx.imageSmoothingEnabled = false;
@@ -85,6 +100,17 @@ class Gfx2Manager {
     for (const drawCmd of this.drawCommands) {
       drawCmd(this.ctx);
     }
+
+    for (const line of this.drawDebugLines) {
+      this.ctx.beginPath();
+      this.ctx.strokeStyle = line.color;
+      this.ctx.lineWidth = line.width;
+      this.ctx.moveTo(line.from[0], line.from[1]);
+      this.ctx.lineTo(line.to[0], line.to[1]);
+      this.ctx.stroke();
+    }
+
+    this.drawDebugLines = [];
   }
 
   /**
@@ -103,6 +129,25 @@ class Gfx2Manager {
    */
   draw(drawable: Gfx2Drawable): void {
     this.drawables.push(drawable);
+  }
+
+  /**
+   * Draw a debug line.
+   * 
+   * @param {number} x1 - The line x-begin.
+   * @param {number} y1 - The line y-begin.
+   * @param {number} x2 - The line x-end.
+   * @param {number} y2 - The line y-end.
+   * @param {number} color - The line color.
+   * @param {number} width - The line width.
+   */
+  drawDebugLine(x1: number, y1: number, x2: number, y2: number, color: string = 'red', width: number = 0.05) {
+    this.drawDebugLines.push({
+      from: [x1, y1],
+      to: [x2, y2],
+      color: color,
+      width: width
+    });
   }
 
   /**
@@ -324,10 +369,29 @@ class Gfx2Manager {
     image.src = 'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==';
     return image;
   }
+
+  /**
+   * Returns a new texture tinted by the color multiplication.
+   */
+  getTintedTexture(texture: HTMLImageElement | ImageBitmap, r: number, g: number, b: number): ImageBitmap {
+    this.offCanvas.width = texture.width;
+    this.offCanvas.height = texture.height;
+    this.offCtx.drawImage(texture, 0, 0);
+
+    const imageData = this.offCtx.getImageData(0, 0, texture.width, texture.height);
+    const data = imageData.data;
+
+    for (let i = 0; i < data.length; i += 4) {
+      data[i + 0] *= r;
+      data[i + 1] *= g;
+      data[i + 2] *= b;
+    }
+
+    this.offCtx.putImageData(imageData, 0, 0);
+    return this.offCanvas.transferToImageBitmap();
+  }
 }
 
-export type { Gfx2RenderingMode };
-export { Gfx2Manager };
 export const gfx2Manager = new Gfx2Manager();
 
 // -------------------------------------------------------------------------------------------

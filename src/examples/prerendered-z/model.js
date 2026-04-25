@@ -5,7 +5,6 @@ import { PH } from '@lib/core/physics';
 import { Gfx3Transformable } from '@lib/gfx3/gfx3_transformable';
 import { Gfx3MeshJAM } from '@lib/gfx3_mesh/gfx3_mesh_jam';
 import { Gfx3Material } from '@lib/gfx3_mesh/gfx3_mesh_material';
-import { Gfx3MeshEffect } from '@lib/gfx3/gfx3_drawable';
 // ---------------------------------------------------------------------------------------
 
 class Model extends Gfx3Transformable {
@@ -19,7 +18,7 @@ class Model extends Gfx3Transformable {
 
   async loadFromData(data) {
     await this.jam.loadFromFile(data['JAMFile']);
-    this.jam.setTag(2.0, 0.0, 0.0, 1.0);
+    this.jam.setTag(2.0, 0.0, 0.0);
     this.jam.mat.setTexture(await gfx3TextureManager.loadTexture(data['TextureFile']));
     this.jam.play('IDLE', true);
 

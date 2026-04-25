@@ -24,8 +24,10 @@
   "scripts": {
     "dev": "vite",
     "dev:tauri": "tauri dev",
+    "build:tauri": "tauri build",
     "preview": "vite preview",
     "build": "vite build",
+    "build:desktop": "vite build",
     "build:2d": "vite build -c vite/vite.config.2d.ts",
     "build:2d:with:physics": "vite build -c vite/vite.config.2d.with.physics.ts",
     "build:3d": "vite build -c vite/vite.config.3d.ts",
@@ -51,6 +53,7 @@
   "dependencies": {
     "@tauri-apps/api": "^1",
     "@types/stats": "^0.16.30",
+    "@types/stats.js": "^0.17.4",
     "@webgpu/types": "^0.1.21",
     "bdfparser": "^2.2.5",
     "box2d-wasm": "^7.0.0",

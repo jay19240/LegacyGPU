@@ -4,19 +4,19 @@ import { Gfx3RendererAbstract } from '../gfx3/gfx3_renderer_abstract';
 import { Gfx3StaticGroup } from '../gfx3/gfx3_group';
 import { Gfx3RenderingTexture } from '../gfx3/gfx3_texture';
 import { Gfx3Skybox } from './gfx3_skybox';
-import { PIPELINE_DESC, VERTEX_SHADER, FRAGMENT_SHADER } from './gfx3_skybox_shader';
+import { SKYBOX_PIPELINE_DESC, SKYBOX_VERTEX_SHADER, SKYBOX_FRAGMENT_SHADER, SKYBOX_SHADER_INSERTS } from './gfx3_skybox_shader';
 
 /**
  * Singleton skybox renderer.
  */
-class Gfx3SkyboxRenderer extends Gfx3RendererAbstract {
+export class Gfx3SkyboxRenderer extends Gfx3RendererAbstract {
   skybox: Gfx3Skybox | null;
   grp0: Gfx3StaticGroup;
   vpcInverseMatrix: Float32Array;
   tag: Float32Array;
 
   constructor() {
-    super('SKYBOX_PIPELINE', VERTEX_SHADER, FRAGMENT_SHADER, PIPELINE_DESC);
+    super('SKYBOX_PIPELINE', SKYBOX_VERTEX_SHADER, SKYBOX_FRAGMENT_SHADER, SKYBOX_PIPELINE_DESC, { ...SKYBOX_SHADER_INSERTS });
     this.skybox = null;
     this.grp0 = gfx3Manager.createStaticGroup('SKYBOX_PIPELINE', 0);
     this.vpcInverseMatrix = this.grp0.setFloat(0, 'VPC_INVERSE_MATRIX', 16);
@@ -66,6 +66,18 @@ class Gfx3SkyboxRenderer extends Gfx3RendererAbstract {
   }
 
   /**
+   * Set insertion of code in the shader.
+   * This method will reload the pipeline.
+   * 
+   * @param {Partial<typeof SHADER_INSERTS>} data - The custom data used by the shader template.
+   */
+  setShaderInserts(data: Partial<typeof SKYBOX_SHADER_INSERTS> = {}): void {
+    super.reload(SKYBOX_VERTEX_SHADER, SKYBOX_FRAGMENT_SHADER, SKYBOX_PIPELINE_DESC, Object.assign(SKYBOX_SHADER_INSERTS, data));
+    this.grp0.setPipeline(this.pipeline);
+    this.grp0.allocate();
+  }
+
+  /**
    * Draw a skybox.
    * 
    * @param {Gfx3Skybox} skybox - The skybox.
@@ -75,5 +87,4 @@ class Gfx3SkyboxRenderer extends Gfx3RendererAbstract {
   }
 }
 
-export { Gfx3SkyboxRenderer };
 export const gfx3SkyboxRenderer = new Gfx3SkyboxRenderer();

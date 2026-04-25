@@ -1,6 +1,6 @@
 import { eventManager } from './event_manager';
 
-enum StraightFlowState {
+export enum StraightFlowState {
   CANCEL = 'CANCEL',
   CONTINUE = 'CONTINUE'
 };
@@ -8,7 +8,7 @@ enum StraightFlowState {
 /**
  * Manage a straight flow entries.
  */
-class StraightFlow {
+export class StraightFlow {
   entries: Array<StraightFlowEntry>;
   currentEntryIndex: number;
 
@@ -74,7 +74,7 @@ class StraightFlow {
 /**
  * An abstract flow entry.
  */
-abstract class StraightFlowEntry {
+export abstract class StraightFlowEntry {
   state: StraightFlowState | null;
 
   constructor() {
@@ -101,6 +101,3 @@ abstract class StraightFlowEntry {
    */
   abstract draw(): void;
 }
-
-export type { StraightFlowState };
-export { StraightFlowEntry, StraightFlow };

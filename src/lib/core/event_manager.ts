@@ -1,4 +1,4 @@
-interface EventSubscriber {
+export interface EventSubscriber {
   emitter: any;
   type: string;
   listener: any;
@@ -9,7 +9,7 @@ interface EventSubscriber {
 /**
  * Singleton managing subscribing to and emitting events.
  */
-class EventManager {
+export class EventManager {
   subscribers: Array<EventSubscriber>;
 
   constructor() {
@@ -122,5 +122,4 @@ class EventManager {
   }
 }
 
-export { EventManager };
 export const eventManager = new EventManager();

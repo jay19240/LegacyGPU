@@ -92,7 +92,7 @@ class BattleAreaFighter extends Gfx3Transformable {
   async handleEffectInflict(data) {
     this.effectVisible = true;
     this.effectSprite.play(data.effect.getSpriteAnimationName());
-    this.effectSprite.setOffsetNormalized(0.5, 0.5);
+    this.effectSprite.setNormalizedOffset(0.5, 0.5);
     await eventManager.wait(this.effectSprite, 'E_FINISHED');
     this.effectVisible = false;
   }

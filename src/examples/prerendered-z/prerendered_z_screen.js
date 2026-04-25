@@ -2,7 +2,7 @@ import { coreManager } from '@lib/core/core_manager';
 import { gfx3Manager } from '@lib/gfx3/gfx3_manager';
 import { gfx3DebugRenderer } from '@lib/gfx3/gfx3_debug_renderer';
 import { gfx3MeshRenderer } from '@lib/gfx3_mesh/gfx3_mesh_renderer';
-import { gfx3PostRenderer, PostParam } from '@lib/gfx3_post/gfx3_post_renderer';
+import { gfx3PostRenderer } from '@lib/gfx3_post/gfx3_post_renderer';
 import { Screen } from '@lib/screen/screen';
 // ---------------------------------------------------------------------------------------
 import { Room } from './room';

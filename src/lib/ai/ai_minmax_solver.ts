@@ -3,7 +3,7 @@ import { AIMinMaxLeaf, AIMinMaxNode, AIMinMaxTreeAbstract } from './ai_minmax_tr
 /**
  * Solves an MinMax tree.
  */
-class AIMinMaxSolver {
+export class AIMinMaxSolver {
   /**
    * Solves MinMax tree and return the node with the maximum value among its direct children.
    * 
@@ -69,5 +69,3 @@ class AIMinMaxSolver {
     return parentNode;
   }
 }
-
-export { AIMinMaxSolver };

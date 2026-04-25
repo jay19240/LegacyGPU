@@ -1,12 +1,11 @@
-import { gfx3Manager, VertexSubBuffer } from './gfx3_manager';
+import { gfx3Manager, Gfx3VertexSubBuffer } from './gfx3_manager';
 import { UT } from '../core/utils';
 import { Poolable } from '../core/object_pool';
 import { Gfx3Transformable } from './gfx3_transformable';
 import { Gfx3BoundingBox } from './gfx3_bounding_box';
 import { Gfx3BoundingCylinder } from './gfx3_bounding_cylinder';
-import { Quaternion } from '../core/quaternion';
 
-enum Gfx3MeshEffect {
+export enum Gfx3DrawableEffect {
   NONE = 0,
   PIXELATION = 2,
   COLOR_LIMITATION = 4,
@@ -19,9 +18,9 @@ enum Gfx3MeshEffect {
 /**
  * A 3D drawable object.
  */
-class Gfx3Drawable extends Gfx3Transformable implements Poolable<Gfx3Drawable> {
+export class Gfx3Drawable extends Gfx3Transformable implements Poolable<Gfx3Drawable> {
   tag: vec4;
-  vertexSubBuffer: VertexSubBuffer;
+  vertexSubBuffer: Gfx3VertexSubBuffer;
   vertices: Array<number>;
   vertexCount: number;
   vertexStride: number;
@@ -101,7 +100,7 @@ class Gfx3Drawable extends Gfx3Transformable implements Poolable<Gfx3Drawable> {
   }
 
   /**
-   * Set and send new vertices values.
+   * Set and send new vertices values to GPU.
    * 
    * @param vertices - The list of vertices.
    */
@@ -154,9 +153,9 @@ class Gfx3Drawable extends Gfx3Transformable implements Poolable<Gfx3Drawable> {
    * 
    * @param {number} groupId - Identifies group of objects (e.g. category).
    * @param {number} meshId - Identifies this specific mesh within its group.
-   * @param {Gfx3MeshEffect|number} effects - Apply differents post-processing effects.
+   * @param {Gfx3DrawableEffect|number} effects - Apply differents post-processing effects.
    */
-  setTag(groupId: number, meshId: number = 0, effects: Gfx3MeshEffect = 0): void {
+  setTag(groupId: number, meshId: number = 0, effects: Gfx3DrawableEffect = 0): void {
     this.tag = [groupId, meshId, effects, 1.0];
   }
 
@@ -294,10 +293,7 @@ class Gfx3Drawable extends Gfx3Transformable implements Poolable<Gfx3Drawable> {
    * @param {mat4} transformMatrix - The transformation matrix.
    */
   clone(drawable: Gfx3Drawable = new Gfx3Drawable(this.vertexStride), transformMatrix: mat4 = UT.MAT4_IDENTITY()): Gfx3Drawable {
-    drawable.position = [this.position[0], this.position[1], this.position[2]];
-    drawable.rotation = [this.rotation[0], this.rotation[1], this.rotation[2]];
-    drawable.scale = [this.scale[0], this.scale[1], this.scale[2]];
-    drawable.quaternion = new Quaternion(this.quaternion.w, this.quaternion.x, this.quaternion.y, this.quaternion.z);
+    super.clone(drawable);
     drawable.tag = this.tag;
     drawable.boundingBox = new Gfx3BoundingBox(this.boundingBox.min, this.boundingBox.max);
     drawable.boundingCylinder = new Gfx3BoundingCylinder(this.boundingCylinder.position, this.boundingCylinder.height, this.boundingCylinder.radius);
@@ -313,5 +309,3 @@ class Gfx3Drawable extends Gfx3Transformable implements Poolable<Gfx3Drawable> {
     return drawable;
   }
 }
-
-export { Gfx3Drawable, Gfx3MeshEffect };

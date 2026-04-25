@@ -11,24 +11,6 @@ from pathlib import Path
 from math import pi, atan, degrees
 # ----------------------------------------------------------------------------------
 INFINITY = sys.float_info.max
-MATERIAL_FILE_PROPS = [
-  "texture",
-  "secondary_texture",
-  "displacement_map",
-  "dissolve_map",
-  "diffuse_map",
-  "specular_map",
-  "emissive_map",
-  "normal_map",
-  "env_map_right",
-  "env_map_left",
-  "env_map_top",
-  "env_map_bottom",
-  "env_map_front",
-  "env_map_back",
-  "toon_map",
-  "thune_map"
-]
 
 # ----------------------------------------------------------------------------------
 # JAM
@@ -59,11 +41,7 @@ def jam_export(selected_obj):
     dg.update()
     obj_eval = selected_obj.evaluated_get(dg)
     mesh = obj_eval.to_mesh()
-
-    # Transform to correct coordinate system
     mesh.transform(bpy.context.object.matrix_world)
-    mesh.transform(mathutils.Matrix.Rotation(pi/2, 4, 'X')) 
-    mesh.transform(mathutils.Matrix.Rotation(pi, 4, 'Z')) 
 
     vertices = []
     normals = [] 
@@ -73,10 +51,12 @@ def jam_export(selected_obj):
       if len(tri.loop_indices) != 3: raise NameError('Object not triangulate !')
       for li in tri.loop_indices:
         vert = mesh.vertices[mesh.loops[li].vertex_index]
-        for i in range(0, 3):
-          vertices.append(round(vert.co[i], 4))
-          normals.append(round(vert.normal[i], 4))
-        #endfor
+        vertices.append(utils.get_xyz_transformed(vert.co, 0))
+        vertices.append(utils.get_xyz_transformed(vert.co, 1))
+        vertices.append(utils.get_xyz_transformed(vert.co, 2))
+        normals.append(utils.get_xyz_transformed(vert.normal, 0))
+        normals.append(utils.get_xyz_transformed(vert.normal, 1))
+        normals.append(utils.get_xyz_transformed(vert.normal, 2))
       #endfor
     #endfor
 
@@ -187,11 +167,7 @@ def jwm_export(selected_obj):
   dg.update()
   obj_eval = selected_obj.evaluated_get(dg)
   mesh = obj_eval.to_mesh()
-
-  # Transform to correct coordinate system
   mesh.transform(bpy.context.object.matrix_world)
-  mesh.transform(mathutils.Matrix.Rotation(pi/2, 4, 'X')) 
-  mesh.transform(mathutils.Matrix.Rotation(pi, 4, 'Z')) 
 
   # Minimum and maximum base
   minimum = [INFINITY, INFINITY, INFINITY]
@@ -208,14 +184,15 @@ def jwm_export(selected_obj):
       secVertexColor = []
 
       if (len(mesh.vertex_colors) > 0):
-        for i in range(0, 3):
-          secVertexColor.append(mesh.vertex_colors[0].data[li].color[i])
-        #endfor
+        secVertexColor.append(mesh.vertex_colors[0].data[li].color[0]) #r
+        secVertexColor.append(mesh.vertex_colors[0].data[li].color[1]) #g
+        secVertexColor.append(mesh.vertex_colors[0].data[li].color[2]) #b
       #endif
 
       vert = mesh.vertices[mesh.loops[li].vertex_index]
+
       for i in range(0, 3):
-        v = round(vert.co[i], 4)
+        v = utils.get_xyz_transformed(vert.co, i)
         minimum[i] = min(v, minimum[i])
         maximum[i] = max(v, maximum[i])
         secVertex.append(v)
@@ -342,11 +319,7 @@ def jnm_export(selected_obj):
   dg.update()
   obj_eval = selected_obj.evaluated_get(dg)
   mesh = obj_eval.to_mesh()
-
-  # Transform to correct coordinate system
   mesh.transform(bpy.context.object.matrix_world)
-  mesh.transform(mathutils.Matrix.Rotation(pi/2, 4, 'X')) 
-  mesh.transform(mathutils.Matrix.Rotation(pi, 4, 'Z')) 
 
   # Minimum and maximum base
   minimum = [INFINITY, INFINITY, INFINITY]
@@ -363,14 +336,14 @@ def jnm_export(selected_obj):
       fragVertexColor = []
 
       if (len(mesh.vertex_colors) > 0):
-        for i in range(0, 3):
-          fragVertexColor.append(mesh.vertex_colors[0].data[li].color[i])
-        #endfor
+        fragVertexColor.append(mesh.vertex_colors[0].data[li].color[0])
+        fragVertexColor.append(mesh.vertex_colors[0].data[li].color[1])
+        fragVertexColor.append(mesh.vertex_colors[0].data[li].color[2])
       #endif
 
       vert = mesh.vertices[mesh.loops[li].vertex_index]
       for i in range(0, 3):
-        v = round(vert.co[i], 4)
+        v = utils.get_xyz_transformed(vert.co, i)
         minimum[i] = min(v, minimum[i])
         maximum[i] = max(v, maximum[i])
         fragVertex.append(v)
@@ -456,28 +429,25 @@ def jsm_export(selected_obj):
   dg.update()
   obj_eval = selected_obj.evaluated_get(dg)
   mesh = obj_eval.to_mesh()
-
-  # Transform to correct coordinate system
   mesh.transform(bpy.context.object.matrix_world)
-  mesh.transform(mathutils.Matrix.Rotation(pi/2, 4, 'X')) 
-  mesh.transform(mathutils.Matrix.Rotation(pi, 4, 'Z')) 
 
   # Vertices, Normals, Colors
   for tri in mesh.polygons:
     if len(tri.loop_indices) != 3: raise NameError('Object not triangulate !')
     for li in tri.loop_indices:
       if (len(mesh.vertex_colors) > 0):
-        color = mesh.vertex_colors[0].data[li].color
-        for i in range(0, 3):
-          obj["Colors"].append(round(color[i], 4))
-        #endfor
+        obj["Colors"].append(mesh.vertex_colors[0].data[li].color[0])
+        obj["Colors"].append(mesh.vertex_colors[0].data[li].color[1])
+        obj["Colors"].append(mesh.vertex_colors[0].data[li].color[2])
       #endif
 
       vert = mesh.vertices[mesh.loops[li].vertex_index]
-      for i in range(0, 3):
-        obj["Vertices"].append(round(vert.co[i], 4))
-        obj["Normals"].append(round(vert.normal[i], 4))
-      #endfor
+      obj["Vertices"].append(utils.get_xyz_transformed(vert.co, 0))
+      obj["Vertices"].append(utils.get_xyz_transformed(vert.co, 1))
+      obj["Vertices"].append(utils.get_xyz_transformed(vert.co, 2))
+      obj["Normals"].append(utils.get_xyz_transformed(vert.normal, 0))
+      obj["Normals"].append(utils.get_xyz_transformed(vert.normal, 1))
+      obj["Normals"].append(utils.get_xyz_transformed(vert.normal, 2))
     #endfor
   #endfor
 
@@ -550,20 +520,15 @@ def jlm_export(selected_obj):
     "Points": []
   }
 
-  mw = selected_obj.matrix_world.copy()
-  rot_x = mathutils.Matrix.Rotation(pi/2, 4, 'X')
-  rot_z = mathutils.Matrix.Rotation(pi, 4, 'Z')
-  transform = mw @ rot_x @ rot_z
-
   if selected_obj.type == 'CURVE':
+    mw = selected_obj.matrix_world.copy()
     for spline in selected_obj.data.splines:
       for p in spline.points:
-        co = mathutils.Vector((p.co.x, p.co.y, p.co.z))
-        co_world = transform @ co
+        co_world = mw @ mathutils.Vector([p.co.x, p.co.y, p.co.z])
         obj["Points"].append([
-          co_world.x,
-          co_world.y,
-          co_world.z
+          utils.get_xyz_transformed(co_world, 0),
+          utils.get_xyz_transformed(co_world, 1),
+          utils.get_xyz_transformed(co_world, 2)
         ])
       #endfor
     #endfor
@@ -572,17 +537,13 @@ def jlm_export(selected_obj):
     dg.update()
     obj_eval = selected_obj.evaluated_get(dg)
     mesh = obj_eval.to_mesh()
-
-    # Transform to correct coordinate system
     mesh.transform(bpy.context.object.matrix_world)
-    mesh.transform(mathutils.Matrix.Rotation(pi/2, 4, 'X')) 
-    mesh.transform(mathutils.Matrix.Rotation(pi, 4, 'Z')) 
 
     for vertex in mesh.vertices:
       obj["Points"].append([
-        vertex.co.x,
-        vertex.co.y,
-        vertex.co.z
+        utils.get_xyz_transformed(vertex.co, 0),
+        utils.get_xyz_transformed(vertex.co, 1),
+        utils.get_xyz_transformed(vertex.co, 2)
       ])
     #endfor
   # endif
@@ -633,11 +594,7 @@ def jsv_export(selected_obj):
   dg.update()
   obj_eval = selected_obj.evaluated_get(dg)
   mesh = obj_eval.to_mesh()
-
-  # Transform to correct coordinate system
   mesh.transform(bpy.context.object.matrix_world)
-  mesh.transform(mathutils.Matrix.Rotation(pi/2, 4, 'X')) 
-  mesh.transform(mathutils.Matrix.Rotation(pi, 4, 'Z'))
 
   # Vertices, Colors
   for tri in mesh.polygons:
@@ -646,11 +603,12 @@ def jsv_export(selected_obj):
       if (len(mesh.vertex_colors) == 0): raise NameError('Object is not colored !')
       color = mesh.vertex_colors[0].data[li].color
       vert = mesh.vertices[mesh.loops[li].vertex_index]
-
-      for i in range(0, 3):
-        obj["Vertices"].append(round(vert.co[i], 4))
-        obj["Colors"].append(round(color[i], 4))
-      #endfor
+      obj["Vertices"].append(utils.get_xyz_transformed(vert.co, 0))
+      obj["Vertices"].append(utils.get_xyz_transformed(vert.co, 1))
+      obj["Vertices"].append(utils.get_xyz_transformed(vert.co, 2))
+      obj["Colors"].append(round(color[0], 4))
+      obj["Colors"].append(round(color[1], 4))
+      obj["Colors"].append(round(color[2], 4))
     #endfor
   #endfor
 
@@ -699,16 +657,24 @@ def jlt_export(selected_obj):
   obj = {
     "Ident": "JLT",
     "Type": "POINT",
-    "Position": [],
-    "DiffuseColor": [],
-    "SpecularColor": [],
+    "PositionX": 0,
+    "PositionY": 0,
+    "PositionZ": 0,
+    "DiffuseColorR": 0,
+    "DiffuseColorG": 0,
+    "DiffuseColorB": 0,
+    "SpecularColorR": 0,
+    "SpecularColorG": 0,
+    "SpecularColorB": 0,
     "Intensity": -1,
     "Constant": 1,
     "Linear": 0,
     "Exp": 0,
     "GroupId": 0,
     "SpotCutoff": 0,
-    "SpotDirection": [0, -1, 0]    
+    "SpotDirectionX": 0,    
+    "SpotDirectionY": -1,    
+    "SpotDirectionZ": 0
   }
 
   # Check for valid object
@@ -719,24 +685,29 @@ def jlt_export(selected_obj):
   elif selected_obj.data.type == 'SPOT': obj["Type"] = "SPOT"
   else: raise NameError('Object is not a valid light')
 
-  diffuse = selected_obj.light_properties.diffuse
-  specular = selected_obj.light_properties.specular
-
   local_dir = Vector((0, 0, -1))
   world_dir = selected_obj.matrix_world.to_3x3() @ local_dir
   world_dir.normalize()
 
   # Fill json object
-  obj["Position"] = [-selected_obj.location.x, selected_obj.location.z, selected_obj.location.y]
-  obj["DiffuseColor"] = [diffuse.r, diffuse.g, diffuse.b]
-  obj["SpecularColor"] = [specular.r, specular.g, specular.b]
+  obj["PositionX"] = utils.get_xyz_transformed(selected_obj.location, 0)
+  obj["PositionY"] = utils.get_xyz_transformed(selected_obj.location, 1)
+  obj["PositionZ"] = utils.get_xyz_transformed(selected_obj.location, 2)
+  obj["DiffuseColorR"] = selected_obj.light_properties.diffuse.r
+  obj["DiffuseColorG"] = selected_obj.light_properties.diffuse.g
+  obj["DiffuseColorB"] = selected_obj.light_properties.diffuse.b
+  obj["SpecularColorR"] = selected_obj.light_properties.specular.r
+  obj["SpecularColorG"] = selected_obj.light_properties.specular.g
+  obj["SpecularColorB"] = selected_obj.light_properties.specular.b
   obj["Intensity"] = selected_obj.light_properties.intensity
   obj["Constant"] = selected_obj.light_properties.constant
   obj["Linear"] = selected_obj.light_properties.linear
   obj["Exp"] = selected_obj.light_properties.exp
-  obj["GroupId"] = selected_obj.light_properties.group_id
+  obj["GroupId"] = selected_obj.light_properties.group
   obj["SpotCutoff"] = selected_obj.light_properties.spot_cutoff_angle
-  obj["SpotDirection"] = [-world_dir.x, world_dir.z, world_dir.y]
+  obj["SpotDirectionX"] = utils.get_xyz_transformed(world_dir, 0)
+  obj["SpotDirectionY"] = utils.get_xyz_transformed(world_dir, 1)
+  obj["SpotDirectionZ"] = utils.get_xyz_transformed(world_dir, 2)
 
   # Fill json custom props
   for k, v in selected_obj.items():
@@ -748,67 +719,6 @@ def jlt_export(selected_obj):
 def jlt_export_json(selected_obj, path, filename):
   file = utils.get_available_filename(path, filename, 'jlt')
   data = jlt_export(selected_obj)
-
-  with open(file, 'w', encoding='utf-8') as f:
-    json.dump(data, f, ensure_ascii=False)
-  #endwith
-
-
-# ----------------------------------------------------------------------------------
-# SUN
-# ----------------------------------------------------------------------------------
-def sun_export(selected_obj):
-  obj = {
-    "Ident": "SUN",
-    "Position": [],
-    "DiffuseColor": [],
-    "SpecularColor": [],
-    "Intensity": -1,
-    "Constant": 1,
-    "Linear": 0,
-    "Exp": 0,
-    "GroupId": 0,
-    "SpotCutoff": 0,
-    "SpotDirection": [0, -1, 0]    
-  }
-
-  diffuse = selected_obj.light_properties.diffuse
-  specular = selected_obj.light_properties.specular
-
-  local_dir = Vector((0, 0, -1))
-  world_dir = selected_obj.matrix_world.to_3x3() @ local_dir
-  world_dir.normalize()
-
-  # Fill json object
-  # ----------------------------------------------------------------------------------
-  obj["SunEnabled"] = bpy.context.scene.world_properties.sun_enabled
-  obj["SunPositionX"] = bpy.context.scene.world_properties.sun_position[0]
-  obj["SunPositionY"] = bpy.context.scene.world_properties.sun_position[1]
-  obj["SunPositionZ"] = bpy.context.scene.world_properties.sun_position[2]
-  obj["SunTargetX"] = bpy.context.scene.world_properties.sun_target[0]
-  obj["SunTargetY"] = bpy.context.scene.world_properties.sun_target[1]
-  obj["SunTargetZ"] = bpy.context.scene.world_properties.sun_target[2]
-  obj["SunDiffuseR"] = bpy.context.scene.world_properties.sun_diffuse[0]
-  obj["SunDiffuseG"] = bpy.context.scene.world_properties.sun_diffuse[1]
-  obj["SunDiffuseB"] = bpy.context.scene.world_properties.sun_diffuse[2]
-  obj["SunSpecularR"] = bpy.context.scene.world_properties.sun_specular[0]
-  obj["SunSpecularG"] = bpy.context.scene.world_properties.sun_specular[1]
-  obj["SunSpecularB"] = bpy.context.scene.world_properties.sun_specular[2]
-  obj["SunIntensity"] = bpy.context.scene.world_properties.sun_intensity
-  obj["GroupId"] = bpy.context.scene.world_properties.sun_light_group_id
-
-
-
-  # Fill json custom props
-  for k, v in selected_obj.items():
-    obj[k] = v
-  #endfor
-  return obj
-
-
-def sun_export_json(selected_obj, path, filename):
-  file = utils.get_available_filename(path, filename, 'jlt')
-  data = sun_export(selected_obj)
 
   with open(file, 'w', encoding='utf-8') as f:
     json.dump(data, f, ensure_ascii=False)
@@ -829,6 +739,7 @@ def grf_export(selected_obj):
   utils.triangulate_mesh(selected_obj)
 
   # Fetch mesh data
+  world_matrix = selected_obj.matrix_world
   bm = bmesh.new()
   bm.from_mesh(selected_obj.data)
 
@@ -840,8 +751,12 @@ def grf_export(selected_obj):
 
   # build the graph
   for vert in bm.verts:
+    world_coords = world_matrix @ vert.co
+    x = utils.get_xyz_transformed(world_coords, 0)
+    y = utils.get_xyz_transformed(world_coords, 1)
+    z = utils.get_xyz_transformed(world_coords, 2)
     obj["Nodes"][vert.index] = {}
-    obj["Nodes"][vert.index]["Pos"] = [-vert.co.x, vert.co.z, vert.co.y]
+    obj["Nodes"][vert.index]["Pos"] = [x, y, z]
     obj["Nodes"][vert.index]["G"] = 0
     obj["Nodes"][vert.index]["H"] = 0
     obj["Nodes"][vert.index]["F"] = 0
@@ -873,56 +788,6 @@ def grf_export_json(selected_obj, path, filename):
 
 
 # ----------------------------------------------------------------------------------
-# ANY
-# ----------------------------------------------------------------------------------
-def any_export(selected_obj):
-  obj = {
-    "Ident": "ANY",
-    "Name": "",
-    "Type": "",
-    "Position": [],
-    "Rotation": [],
-    "Scale": [],
-    "Width": -1,
-    "Height": -1,
-    "Depth": -1
-  }
-
-  pos = selected_obj.matrix_world.to_translation();
-  rot = selected_obj.matrix_world.to_euler('YXZ');
-  sca = selected_obj.scale
-
-  # Fill json object
-  obj["Name"] = selected_obj.name
-  obj["Type"] = selected_obj.name.split('.')[0]
-  obj["Position"] = [-pos.x, pos.z, pos.y]
-  obj["Rotation"] = [rot.x, -rot.z, rot.y]
-  obj["Scale"] = [sca.x, sca.z, sca.y]
-  obj["Width"] = selected_obj.dimensions.x
-  obj["Height"] = selected_obj.dimensions.z
-  obj["Depth"] = selected_obj.dimensions.y
-
-  # Fill json custom props
-  for k, v in selected_obj.items():
-    if isinstance(v, (int, float, str, bool)):
-      obj[k] = v
-    elif hasattr(v, "to_list") and hasattr(v, "__getitem__"):
-      obj[k] = v[:]
-    # obj[k] = v
-  #endfor
-  return obj
-
-
-def any_export_json(selected_obj, path, filename):
-  file = utils.get_available_filename(path, filename, 'any')
-  data = any_export(selected_obj)
-
-  with open(file, 'w', encoding='utf-8') as f:
-    json.dump(data, f, ensure_ascii=False)
-  #endwith
-
-
-# ----------------------------------------------------------------------------------
 # MAT
 # ----------------------------------------------------------------------------------
 def mat_export(selected_obj):
@@ -937,6 +802,7 @@ def mat_export(selected_obj):
   obj["Opacity"] = selected_obj.mat_properties.opacity
   # ----------------------------------------------------------------------------------
   obj["ShadowEnabled"] = selected_obj.mat_properties.shadow_enabled
+  obj["ShadowCasting"] = selected_obj.mat_properties.shadow_casting
   # ----------------------------------------------------------------------------------
   obj["DecalEnabled"] = selected_obj.mat_properties.decal_enabled
   obj["DecalGroup"] = selected_obj.mat_properties.decal_group
@@ -944,6 +810,20 @@ def mat_export(selected_obj):
   obj["LightEnabled"] = selected_obj.mat_properties.light_enabled
   obj["LightGroup"] = selected_obj.mat_properties.light_group
   obj["LightGouraudShadingEnabled"] = selected_obj.mat_properties.light_gouraud_shading_enabled
+  obj["LightEmissiveFactor"] = selected_obj.mat_properties.light_emissive_factor
+  obj["LightEmissiveR"] = selected_obj.mat_properties.light_emissive_color[0]
+  obj["LightEmissiveG"] = selected_obj.mat_properties.light_emissive_color[1]
+  obj["LightEmissiveB"] = selected_obj.mat_properties.light_emissive_color[2]
+  obj["LightAmbientR"] = selected_obj.mat_properties.light_ambient_color[0]
+  obj["LightAmbientG"] = selected_obj.mat_properties.light_ambient_color[1]
+  obj["LightAmbientB"] = selected_obj.mat_properties.light_ambient_color[2]
+  obj["LightDiffuseR"] = selected_obj.mat_properties.light_diffuse_color[0]
+  obj["LightDiffuseG"] = selected_obj.mat_properties.light_diffuse_color[1]
+  obj["LightDiffuseB"] = selected_obj.mat_properties.light_diffuse_color[2]
+  obj["LightSpecularFactor"] = selected_obj.mat_properties.light_specular_factor
+  obj["LightSpecularR"] = selected_obj.mat_properties.light_specular_color[0]
+  obj["LightSpecularG"] = selected_obj.mat_properties.light_specular_color[1]
+  obj["LightSpecularB"] = selected_obj.mat_properties.light_specular_color[2]
   # ----------------------------------------------------------------------------------
   obj["Texture"] = bpy.path.basename(selected_obj.mat_properties.texture)
   obj["TextureScrollAngle"] = selected_obj.mat_properties.texture_scroll_angle
@@ -976,6 +856,7 @@ def mat_export(selected_obj):
   obj["SecondaryTextureBlendColorMode"] = selected_obj.mat_properties.secondary_texture_blend_color_mode
   obj["SecondaryTextureBlendColorMix"] = selected_obj.mat_properties.secondary_texture_blend_color_mix
   # ----------------------------------------------------------------------------------
+  obj["EnvMapName"] = bpy.path.basename(selected_obj.mat_properties.env_map_name)
   obj["EnvMapRight"] = bpy.path.basename(selected_obj.mat_properties.env_map_right)
   obj["EnvMapLeft"] = bpy.path.basename(selected_obj.mat_properties.env_map_left)
   obj["EnvMapTop"] = bpy.path.basename(selected_obj.mat_properties.env_map_top)
@@ -1033,6 +914,7 @@ def mat_export(selected_obj):
   obj["ToonLightDirY"] = selected_obj.mat_properties.toon_light_dir[1]
   obj["ToonLightDirZ"] = selected_obj.mat_properties.toon_light_dir[2]
   # ----------------------------------------------------------------------------------
+  obj["AlphaBlendEnabled"] = selected_obj.mat_properties.alpha_blend_enabled
   obj["AlphaBlendFacing"] = selected_obj.mat_properties.alpha_blend_facing
   obj["AlphaBlendDistance"] = selected_obj.mat_properties.alpha_blend_distance
   # ----------------------------------------------------------------------------------
@@ -1048,25 +930,10 @@ def mat_export(selected_obj):
   obj["ArcadeSharpColorB"] = selected_obj.mat_properties.arcade_sharp_color[2]
   # ----------------------------------------------------------------------------------
   obj["EmissiveMap"] = bpy.path.basename(selected_obj.mat_properties.emissive_map)
-  obj["EmissiveFactor"] = selected_obj.mat_properties.emissive_factor
-  obj["EmissiveR"] = selected_obj.mat_properties.emissive[0]
-  obj["EmissiveG"] = selected_obj.mat_properties.emissive[1]
-  obj["EmissiveB"] = selected_obj.mat_properties.emissive[2]
-  # ----------------------------------------------------------------------------------
-  obj["AmbientR"] = selected_obj.mat_properties.ambient[0]
-  obj["AmbientG"] = selected_obj.mat_properties.ambient[1]
-  obj["AmbientB"] = selected_obj.mat_properties.ambient[2]
   # ----------------------------------------------------------------------------------
   obj["DiffuseMap"] = bpy.path.basename(selected_obj.mat_properties.diffuse_map)
-  obj["DiffuseR"] = selected_obj.mat_properties.diffuse[0]
-  obj["DiffuseG"] = selected_obj.mat_properties.diffuse[1]
-  obj["DiffuseB"] = selected_obj.mat_properties.diffuse[2]
   # ----------------------------------------------------------------------------------
   obj["SpecularMap"] = bpy.path.basename(selected_obj.mat_properties.specular_map)
-  obj["SpecularFactor"] = selected_obj.mat_properties.specular_factor
-  obj["SpecularR"] = selected_obj.mat_properties.specular[0]
-  obj["SpecularG"] = selected_obj.mat_properties.specular[1]
-  obj["SpecularB"] = selected_obj.mat_properties.specular[2]
   # ----------------------------------------------------------------------------------
   obj["ThuneMap"] = bpy.path.basename(selected_obj.mat_properties.thune_map)
   obj["ThuneMapShininessEnabled"] = selected_obj.mat_properties.thune_map_shininess_enabled
@@ -1112,13 +979,7 @@ def mat_export_json(selected_obj, path, filename):
   resources_files = []
   file = utils.get_available_filename(path, filename, 'mat')
   data = mat_export(selected_obj)
-
-  for key, value in selected_obj.mat_properties.items():
-    if key in MATERIAL_FILE_PROPS and value != "":
-      shutil.copy(bpy.path.abspath(value), path + bpy.path.basename(value))
-      resources_files.append(path + bpy.path.basename(value))
-    #endif
-  #endfor
+  utils.copy_texture_file(path, resources_files, selected_obj.mat_properties)
 
   with open(file, 'w', encoding='utf-8') as f:
     json.dump(data, f, ensure_ascii=False)
@@ -1129,11 +990,23 @@ def mat_export_json(selected_obj, path, filename):
 # ----------------------------------------------------------------------------------
 # OBJ
 # ----------------------------------------------------------------------------------
-def export_obj(selected_obj, path, filename):
-  resources_files = []
-  file = utils.get_available_filename(path, filename, 'obj')
-  obj_exporter(selected_obj, path, selected_obj.name)
-  return resources_files
+def obj_export(path, name):
+  FORWARD_AXIS = '-Z'
+  UP_AXIS = 'Y'
+
+  filepath = os.path.join(path, name + ".obj")
+  bpy.ops.wm.obj_export(
+    filepath=filepath,
+    export_selected_objects=True,
+    forward_axis=FORWARD_AXIS,
+    up_axis=UP_AXIS,
+    export_uv=True,
+    export_normals=True,
+    export_smooth_groups=True,
+    export_materials=True,
+    export_triangulated_mesh=True,
+    global_scale=1.0
+  )
 
 
 # ----------------------------------------------------------------------------------
@@ -1145,9 +1018,9 @@ def camera_export_json(path, filename):
   }
 
   camera = bpy.data.objects["Camera"]
-  pos = camera.matrix_world.to_translation()
-  matrix = utils.get_camera_matrix_converted_for_engine(camera)
-  rotation = matrix.to_euler('YXZ')
+  pos = utils.get_position_of_object(camera)
+  rot = utils.get_rotation_of_camera(camera)
+  matrix = utils.get_object_matrix_converted_for_engine(camera)  
   fovy = camera.data.angle_y
 
   if camera.data.sensor_fit == 'VERTICAL':
@@ -1159,12 +1032,12 @@ def camera_export_json(path, filename):
 
   # Fill json object
   obj["ProjectionMode"] = "PERSPECTIVE" if camera.data.type == 'PERSP' else "ORTHOGRAPHIC"
-  obj["PositionX"] = -pos.x
-  obj["PositionY"] = pos.z
-  obj["PositionZ"] = pos.y
-  obj["RotationX"] = rotation.x
-  obj["RotationY"] = rotation.y
-  obj["RotationZ"] = rotation.z
+  obj["PositionX"] = pos[0]
+  obj["PositionY"] = pos[1]
+  obj["PositionZ"] = pos[2]
+  obj["RotationX"] = rot[0]
+  obj["RotationY"] = rot[1]
+  obj["RotationZ"] = rot[2]
   obj["PerspectiveFovy"] = fovy
   obj["PerspectiveNear"] = camera.data.clip_start
   obj["PerspectiveFar"] = camera.data.clip_end
@@ -1190,19 +1063,44 @@ def camera_export_json(path, filename):
 # ----------------------------------------------------------------------------------
 def world_export_json(path, filename):
   obj = {
-    "Ident": "WORLD"
+    "Ident": "WRD"
   }
 
   # Fill json object
-  obj["ShadowEnabled"] = bpy.context.scene.world_properties.shadow_enabled
-  obj["ShadowPositionX"] = bpy.context.scene.world_properties.shadow_position[0]
-  obj["ShadowPositionY"] = bpy.context.scene.world_properties.shadow_position[1]
-  obj["ShadowPositionZ"] = bpy.context.scene.world_properties.shadow_position[2]
-  obj["ShadowTargetX"] = bpy.context.scene.world_properties.shadow_target[0]
-  obj["ShadowTargetY"] = bpy.context.scene.world_properties.shadow_target[1]
-  obj["ShadowTargetZ"] = bpy.context.scene.world_properties.shadow_target[2]
-  obj["ShadowSize"] = bpy.context.scene.world_properties.shadow_size
-  obj["ShadowDepth"] = bpy.context.scene.world_properties.shadow_depth
+  # ----------------------------------------------------------------------------------
+  if "Sun" in bpy.data.objects:
+    sun = bpy.data.objects["Sun"]
+    rot_matrix = sun.matrix_world.to_3x3().normalized()
+    obj["SunEnabled"] = True
+    obj["SunDirectionX"] = utils.get_xyz_transformed(rot_matrix.col[2], 0)
+    obj["SunDirectionY"] = utils.get_xyz_transformed(rot_matrix.col[2], 1)
+    obj["SunDirectionZ"] = utils.get_xyz_transformed(rot_matrix.col[2], 2)
+    obj["SunDiffuseColorR"] = sun.sun_properties.diffuse[0]
+    obj["SunDiffuseColorG"] = sun.sun_properties.diffuse[1]
+    obj["SunDiffuseColorB"] = sun.sun_properties.diffuse[2]
+    obj["SunSpecularColorR"] = sun.sun_properties.specular[0]
+    obj["SunSpecularColorG"] = sun.sun_properties.specular[1]
+    obj["SunSpecularColorB"] = sun.sun_properties.specular[2]
+    obj["SunIntensity"] = sun.sun_properties.intensity
+    obj["SunGroupId"] = sun.sun_properties.group
+  #endif
+  # ----------------------------------------------------------------------------------
+  if "ShadowProjector" in bpy.data.objects and "ShadowProjectorTarget" in bpy.data.objects:
+    shadow = bpy.data.objects["ShadowProjector"]
+    target = bpy.data.objects["ShadowProjectorTarget"]
+    shadow_pos = utils.get_position_of_object(shadow)
+    target_pos = utils.get_position_of_object(target)
+    obj["ShadowEnabled"] = True
+    obj["ShadowPositionX"] = shadow_pos[0]
+    obj["ShadowPositionY"] = shadow_pos[1]
+    obj["ShadowPositionZ"] = shadow_pos[2]
+    obj["ShadowTargetX"] = target_pos[0]
+    obj["ShadowTargetY"] = target_pos[1]
+    obj["ShadowTargetZ"] = target_pos[2]
+    obj["ShadowSize"] = shadow.shadow_properties.size
+    obj["ShadowDepth"] = shadow.shadow_properties.depth
+    obj["ShadowTextureSize"] = shadow.shadow_properties.texture_size
+  #endif
   # ----------------------------------------------------------------------------------
   obj["FogEnabled"] = bpy.context.scene.world_properties.fog_enabled
   obj["FogNear"] = bpy.context.scene.world_properties.fog_near
@@ -1235,35 +1133,169 @@ def world_export_json(path, filename):
   obj["CustomParams"].append({ "Name": bpy.context.scene.world_properties.world_s14_name, "Value": bpy.context.scene.world_properties.world_s14_value })
   obj["CustomParams"].append({ "Name": bpy.context.scene.world_properties.world_s15_name, "Value": bpy.context.scene.world_properties.world_s15_value })
 
-  file = utils.get_available_filename(path, filename, 'world')
+  file = utils.get_available_filename(path, filename, 'wrd')
   with open(file, 'w', encoding='utf-8') as f:
     json.dump(obj, f, ensure_ascii=False)
   #endwith
 
 
 # ----------------------------------------------------------------------------------
-# SAMPLER
+# SPECIAL
 # ----------------------------------------------------------------------------------
-def sampler_export_json(selected_obj, path, filename):
+def special_export_dcl_json(selected_obj, path, filename):
   obj = {
-    "Ident": "TEX",
+    "Ident": "DCL"
   }
 
-  # Fill json object
-  obj["AddressModeU"] = selected_obj.mat_properties.sampler_address_mode_u
-  obj["AddressModeV"] = selected_obj.mat_properties.sampler_address_mode_v
-  obj["AddressModeW"] = selected_obj.mat_properties.sampler_address_mode_w
-  obj["MagFilter"] = selected_obj.mat_properties.sampler_mag_filter
-  obj["MinFilter"] = selected_obj.mat_properties.sampler_min_filter
-  obj["MipMapFilter"] = selected_obj.mat_properties.sampler_mipmap_filter
-  obj["LodMinClamp"] = selected_obj.mat_properties.sampler_lod_min_clamp
-  obj["LodMaxClamp"] = selected_obj.mat_properties.sampler_lod_max_clamp
-  obj["MaxAnisotropy"] = selected_obj.mat_properties.sampler_max_anisotropy
-  obj["Type"] = selected_obj.mat_properties.sampler_type
+  pos = utils.get_position_of_object(selected_obj)
+  rot = utils.get_rotation_of_object(selected_obj)
 
-  file = utils.get_available_filename(path, filename, 'tex')
+  obj["PositionX"] = pos[0]
+  obj["PositionY"] = pos[1]
+  obj["PositionZ"] = pos[2]
+  obj["RotationX"] = rot[0]
+  obj["RotationY"] = rot[1]
+  obj["RotationZ"] = rot[2]
+  obj["SizeX"] = selected_obj.decal_properties.size[0]
+  obj["SizeY"] = selected_obj.decal_properties.size[1]
+  obj["SizeZ"] = selected_obj.decal_properties.size[2]
+  obj["GroupId"] = selected_obj.decal_properties.group
+  obj["SourceX"] = selected_obj.decal_properties.source_position[0]
+  obj["SourceY"] = selected_obj.decal_properties.source_position[1]
+  obj["SourceWidth"] = selected_obj.decal_properties.source_size[0]
+  obj["SourceHeight"] = selected_obj.decal_properties.source_size[1]
+  obj["Opacity"] = selected_obj.decal_properties.opacity
+
+  file = utils.get_available_filename(path, filename, 'dcl')
   with open(file, 'w', encoding='utf-8') as f:
     json.dump(obj, f, ensure_ascii=False)
+  #endwith
+
+
+def special_export_sky_json(selected_obj, path, filename):
+  obj = {
+    "Ident": "SKY"
+  }
+
+  obj["Name"] = selected_obj.skybox_properties.name
+  obj["Right"] = bpy.path.basename(selected_obj.skybox_properties.right)
+  obj["Left"] = bpy.path.basename(selected_obj.skybox_properties.left)
+  obj["Top"] = bpy.path.basename(selected_obj.skybox_properties.top)
+  obj["Bottom"] = bpy.path.basename(selected_obj.skybox_properties.bottom)
+  obj["Front"] = bpy.path.basename(selected_obj.skybox_properties.front)
+  obj["Back"] = bpy.path.basename(selected_obj.skybox_properties.back)
+
+  file = utils.get_available_filename(path, filename, 'sky')
+  with open(file, 'w', encoding='utf-8') as f:
+    json.dump(obj, f, ensure_ascii=False)
+  #endwith
+
+
+def special_export_prt_json(selected_obj, path, filename):
+  obj = {
+    "Ident": "PRT"
+  }
+
+  obj["Position"] = list(utils.get_position_of_object(selected_obj))
+  obj["Rotation"] = list(utils.get_rotation_of_object(selected_obj))
+  obj["Texture"] = bpy.path.basename(selected_obj.particles_properties.texture)
+  obj["PositionStyle"] = selected_obj.particles_properties.position_style
+  obj["PositionBase"] = list(selected_obj.particles_properties.position_base)
+  obj["PositionSpread"] = list(selected_obj.particles_properties.position_spread)
+  obj["PositionSphereRadiusBase"] = selected_obj.particles_properties.position_sphere_radius_base
+  obj["PositionRadiusSpread"] = selected_obj.particles_properties.position_radius_spread
+  obj["VelocityStyle"] = selected_obj.particles_properties.velocity_style
+  obj["VelocityBase"] = list(selected_obj.particles_properties.velocity_base)
+  obj["VelocitySpread"] = list(selected_obj.particles_properties.velocity_spread)
+  obj["VelocityExplodeSpeedBase"] = selected_obj.particles_properties.velocity_explode_speed_base
+  obj["VelocityExplodeSpeedSpread"] = selected_obj.particles_properties.velocity_explode_speed_spread
+  obj["ColorBase"] = list(selected_obj.particles_properties.color_base)
+  obj["ColorSpread"] = list(selected_obj.particles_properties.color_spread)
+  obj["SizeBase"] = selected_obj.particles_properties.size_base
+  obj["SizeSpread"] = selected_obj.particles_properties.size_spread
+  obj["OpacityBase"] = selected_obj.particles_properties.opacity_base
+  obj["OpacitySpread"] = selected_obj.particles_properties.opacity_spread
+  obj["AccelerationBase"] = list(selected_obj.particles_properties.acceleration_base)
+  obj["AccelerationSpread"] = list(selected_obj.particles_properties.acceleration_spread)
+  obj["AngleBase"] = selected_obj.particles_properties.angle_base
+  obj["AngleSpread"] = selected_obj.particles_properties.angle_spread
+  obj["AngleVelocityBase"] = selected_obj.particles_properties.angle_velocity_base
+  obj["AngleVelocitySpread"] = selected_obj.particles_properties.angle_velocity_spread
+  obj["AngleAccelerationBase"] = selected_obj.particles_properties.angle_acceleration_base
+  obj["AngleAccelerationSpread"] = selected_obj.particles_properties.angle_acceleration_spread
+  obj["ParticleDeathAge"] = selected_obj.particles_properties.particle_death_age
+  obj["ParticlesPerSecond"] = selected_obj.particles_properties.particles_per_second
+  obj["ParticlesQuantity"] = selected_obj.particles_properties.particles_quantity
+  obj["EmitterDeathAge"] = selected_obj.particles_properties.emitter_death_age
+
+  utils.process_tween_vector(selected_obj.particles_properties.tweens_color, "ColorTween", obj)
+  utils.process_tween_number(selected_obj.particles_properties.tweens_size, "SizeTween", obj)
+  utils.process_tween_number(selected_obj.particles_properties.tweens_opacity, "OpacityTween", obj)
+  utils.process_tween_vector(selected_obj.particles_properties.tweens_acceleration, "AccelerationTween", obj)
+
+  file = utils.get_available_filename(path, filename, 'prt')
+  with open(file, 'w', encoding='utf-8') as f:
+    json.dump(obj, f, ensure_ascii=False)
+  #endwith
+
+
+# ----------------------------------------------------------------------------------
+# ENT
+# ----------------------------------------------------------------------------------
+def ent_export(selected_obj):
+  obj = {
+    "Ident": "ENT"
+  }
+
+  pos = utils.get_position_of_object(selected_obj)
+  rot = utils.get_rotation_of_object(selected_obj)
+  sca = utils.get_scale_of_object(selected_obj)
+
+  obj["Name"] = selected_obj.name
+  obj["Type"] = selected_obj.entity_properties.type
+  obj["Shape"] = selected_obj.get("entity_shape", "UNKNOWN")
+  obj["PositionX"] = pos[0]
+  obj["PositionY"] = pos[1]
+  obj["PositionZ"] = pos[2]
+  obj["RotationX"] = rot[0]
+  obj["RotationY"] = rot[1]
+  obj["RotationZ"] = rot[2]
+  obj["ScaleX"] = sca[0]
+  obj["ScaleY"] = sca[1]
+  obj["ScaleZ"] = sca[2]
+  obj["Width"] = selected_obj.dimensions.x
+  obj["Height"] = selected_obj.dimensions.z
+  obj["Depth"] = selected_obj.dimensions.y
+  obj["CustomParams"] = []
+  obj["CustomParams"].append({ "Name": selected_obj.entity_properties.s00_name, "Value": selected_obj.entity_properties.s00_value })
+  obj["CustomParams"].append({ "Name": selected_obj.entity_properties.s01_name, "Value": selected_obj.entity_properties.s01_value })
+  obj["CustomParams"].append({ "Name": selected_obj.entity_properties.s02_name, "Value": selected_obj.entity_properties.s02_value })
+  obj["CustomParams"].append({ "Name": selected_obj.entity_properties.s03_name, "Value": selected_obj.entity_properties.s03_value })
+  obj["CustomParams"].append({ "Name": selected_obj.entity_properties.s04_name, "Value": selected_obj.entity_properties.s04_value })
+  obj["CustomParams"].append({ "Name": selected_obj.entity_properties.s05_name, "Value": selected_obj.entity_properties.s05_value })
+  obj["CustomParams"].append({ "Name": selected_obj.entity_properties.s06_name, "Value": selected_obj.entity_properties.s06_value })
+  obj["CustomParams"].append({ "Name": selected_obj.entity_properties.s07_name, "Value": selected_obj.entity_properties.s07_value })
+  obj["CustomParams"].append({ "Name": selected_obj.entity_properties.s08_name, "Value": selected_obj.entity_properties.s08_value })
+  obj["CustomParams"].append({ "Name": selected_obj.entity_properties.s09_name, "Value": selected_obj.entity_properties.s09_value })
+  obj["CustomParams"].append({ "Name": selected_obj.entity_properties.s10_name, "Value": selected_obj.entity_properties.s10_value })
+  obj["CustomParams"].append({ "Name": selected_obj.entity_properties.s11_name, "Value": selected_obj.entity_properties.s11_value })
+  obj["CustomParams"].append({ "Name": selected_obj.entity_properties.s12_name, "Value": selected_obj.entity_properties.s12_value })
+  obj["CustomParams"].append({ "Name": selected_obj.entity_properties.s13_name, "Value": selected_obj.entity_properties.s13_value })
+  obj["CustomParams"].append({ "Name": selected_obj.entity_properties.s14_name, "Value": selected_obj.entity_properties.s14_value })
+  obj["CustomParams"].append({ "Name": selected_obj.entity_properties.s15_name, "Value": selected_obj.entity_properties.s15_value })
+
+  if selected_obj.data.name in ["SPHERE", "CYLINDER", "CIRCLE"]:
+    obj["Radius"] = selected_obj.dimensions.x / 2
+  #endif
+  return obj
+
+
+def ent_export_json(selected_obj, path, filename):
+  file = utils.get_available_filename(path, filename, 'ent')
+  data = ent_export(selected_obj)
+
+  with open(file, 'w', encoding='utf-8') as f:
+    json.dump(data, f, ensure_ascii=False)
   #endwith
 
 
@@ -1275,7 +1307,7 @@ def pack(path, context):
   path_list = []
 
   world_export_json(path, "scene")
-  path_list.append(path + 'scene.world')
+  path_list.append(path + 'scene.wrd')
 
   camera_export_json(path, "scene")
   path_list.append(path + 'scene.cam')
@@ -1364,13 +1396,6 @@ def pack(path, context):
       #endfor
     #endif
 
-    if (collection.name == "GRF"):
-      for obj in collection.objects:
-        grf_export_json(obj, path, obj.name)
-        path_list.append(path + obj.name + '.grf')
-      #endfor
-    #endif
-
     if (collection.name == "OBJ"):
       for obj in collection.objects:
         obj_exporter(obj, path, obj.name)
@@ -1379,57 +1404,56 @@ def pack(path, context):
       #endfor
     #endif
 
-    if (collection.name == "ANY"):
+    if (collection.name == "GRF"):
       for obj in collection.objects:
-        any_export_json(obj, path, obj.name)
-        path_list.append(path + obj.name + '.any')
+        grf_export_json(obj, path, obj.name)
+        path_list.append(path + obj.name + '.grf')
       #endfor
     #endif
 
-    # textures
-    for obj in collection.objects:
-      for key, value in obj.mat_properties.items():
-        if key in MATERIAL_FILE_PROPS and value != "":
-          dest_path = path + bpy.path.basename(value)
-          shutil.copyfile(bpy.path.abspath(value), dest_path)
-          
-          if dest_path not in path_list:
-            path_list.append(dest_path)
-          #endif
-        #endif
-      #endfor
-    #endfor
+    # specials ----------------------------------------------------------------------------------
 
-    # samplers
-    for obj in collection.objects:
-      for key, value in obj.mat_properties.items():
-        if key in MATERIAL_FILE_PROPS and value != "" and obj.mat_properties.sampler_enabled:
-          filename_only = Path(value).stem
-          dest_path = path + filename_only + '.tex'
-          sampler_export_json(obj, path, filename_only)
-
-          if dest_path not in path_list:
-            path_list.append(dest_path)
-          #endif
-        #endif
+    if (collection.name == "DCL"):
+      for obj in collection.objects:
+        special_export_dcl_json(obj, path, obj.name)
+        path_list.append(path + obj.name + '.dcl')
       #endfor
+    #endif
+
+    if (collection.name == "SKY"):
+      for obj in collection.objects:
+        special_export_sky_json(obj, path, obj.name)
+        path_list.append(path + obj.name + '.sky')
+      #endfor
+    #endif
+
+    if (collection.name == "PRT"):
+      for obj in collection.objects:
+        special_export_prt_json(obj, path, obj.name)
+        path_list.append(path + obj.name + '.prt')
+      #endfor
+    #endif
+
+    if (collection.name == "ENT"):
+      for obj in collection.objects:
+        ent_export_json(obj, path, obj.name)
+        path_list.append(path + obj.name + '.ent')
+      #endfor
+    #endif
+
+    for obj in collection.objects:
+      utils.copy_texture_file(path, path_list, obj.mat_properties)
+      utils.copy_texture_file(path, path_list, obj.skybox_properties)
+      utils.copy_texture_file(path, path_list, obj.particles_properties)
+      utils.copy_sampler_file(path, path_list, obj, obj.mat_properties, obj.mat_properties.sampler_enabled)
     #endfor
   #endfor
 
-  if context.scene.world_properties.decal_atlas:
-    value = context.scene.world_properties.decal_atlas
-    dest_path = path + bpy.path.basename(value)
-    shutil.copyfile(bpy.path.abspath(value), dest_path)
-
-    if dest_path not in path_list:
-      path_list.append(dest_path)
-    #endif
-  #endif
+  utils.copy_texture_file(path, path_list, context.scene.world_properties)
 
   scene_name = os.path.basename(bpy.data.filepath)
   utils.zip_files(path_list, path + scene_name + '.pak')
 
   for file in path_list:
-    
     os.remove(file)
   #endfor

@@ -5,7 +5,7 @@ import { Gfx3Flare } from './gfx3_flare';
 
 const CENTER_SCREEN: vec2 = [0.5, 0.5];
 
-export interface LensFlareItem {
+export interface Gfx3FlareSunItem {
   texture: Gfx3Texture;
   scale: number;
   step: number
@@ -14,11 +14,11 @@ export interface LensFlareItem {
 /**
  * A lens flare handler.
  */
-class Gfx3FlareSun {
+export class Gfx3FlareSun {
   flares: Array<Gfx3Flare>;
-  flareItems: Array<LensFlareItem>;
+  flareItems: Array<Gfx3FlareSunItem>;
   sunFlare: Gfx3Flare;
-  sunItem: LensFlareItem | null;
+  sunItem: Gfx3FlareSunItem | null;
   sunWorldPos: vec3;
   scaleStepFactor: number;
   maxDistanceBrightness: number;
@@ -38,7 +38,7 @@ class Gfx3FlareSun {
    * 
    * @param {number} spacing - The space between flares
    */
-  async startup(sunPos: vec3, sun: LensFlareItem, items: Array<LensFlareItem>): Promise<void> {
+  async startup(sunPos: vec3, sun: Gfx3FlareSunItem, items: Array<Gfx3FlareSunItem>): Promise<void> {
     this.flareItems = items;
     this.sunItem = sun;
     this.sunWorldPos = sunPos;
@@ -133,5 +133,3 @@ class Gfx3FlareSun {
     this.flares = flares;
   }
 }
-
-export { Gfx3FlareSun };

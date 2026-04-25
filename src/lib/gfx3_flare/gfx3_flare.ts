@@ -3,12 +3,12 @@ import { gfx3FlareRenderer } from './gfx3_flare_renderer';
 import { Gfx3StaticGroup } from '../gfx3/gfx3_group';
 import { Gfx3Drawable } from '../gfx3/gfx3_drawable';
 import { Gfx3Texture } from '../gfx3/gfx3_texture';
-import { SHADER_VERTEX_ATTR_COUNT } from './gfx3_flare_shader';
+import { FLARE_SHADER_VERTEX_ATTR_COUNT } from './gfx3_flare_shader';
 
 /**
  * A flare drawable object.
  */
-class Gfx3Flare extends Gfx3Drawable {
+export class Gfx3Flare extends Gfx3Drawable {
   textureChanged: boolean;
   size2D: vec2;
   position2D: vec2;
@@ -20,7 +20,7 @@ class Gfx3Flare extends Gfx3Drawable {
   texture: Gfx3Texture;
 
   constructor() {
-    super(SHADER_VERTEX_ATTR_COUNT);
+    super(FLARE_SHADER_VERTEX_ATTR_COUNT);
     this.textureChanged = false;
     this.size2D = [0, 0];
     this.position2D = [0.0, 0.0];
@@ -216,5 +216,3 @@ class Gfx3Flare extends Gfx3Drawable {
     return this.grp2;
   }
 }
-
-export { Gfx3Flare };

@@ -7,7 +7,7 @@ import { UIWidget } from '../ui/ui_widget';
  * It emit 'E_PRINT_FINISHED'
  * It emit 'E_OK'
  */
-class UIPrint extends UIWidget {
+export class UIPrint extends UIWidget {
   text: string;
   stepDuration: number;
   currentTextOffset: number;
@@ -100,5 +100,3 @@ class UIPrint extends UIWidget {
     }
   }
 }
-
-export { UIPrint };

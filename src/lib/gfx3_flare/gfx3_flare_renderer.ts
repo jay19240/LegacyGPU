@@ -4,14 +4,14 @@ import { Gfx3RendererAbstract } from '../gfx3/gfx3_renderer_abstract';
 import { Gfx3StaticGroup, Gfx3DynamicGroup } from '../gfx3/gfx3_group';
 import { Gfx3RenderingTexture } from '../gfx3/gfx3_texture';
 import { Gfx3Flare } from './gfx3_flare';
-import { PIPELINE_DESC, VERTEX_SHADER, FRAGMENT_SHADER } from './gfx3_flare_shader';
+import { FLARE_PIPELINE_DESC, FLARE_VERTEX_SHADER, FLARE_FRAGMENT_SHADER } from './gfx3_flare_shader';
 
 /**
  * Singleton flare renderer.
  * It is ideal for lens-flare effect, rain, snow or every effect on the screen focal.
  * Note: The top-left corner is at coordinates 0, 0 on the screen.
  */
-class Gfx3FlareRenderer extends Gfx3RendererAbstract {
+export class Gfx3FlareRenderer extends Gfx3RendererAbstract {
   flares: Array<Gfx3Flare>;
   grp0: Gfx3StaticGroup;
   resolution: Float32Array;
@@ -25,7 +25,7 @@ class Gfx3FlareRenderer extends Gfx3RendererAbstract {
   color: Float32Array;
 
   constructor() {
-    super('FLARE_PIPELINE', VERTEX_SHADER, FRAGMENT_SHADER, PIPELINE_DESC);
+    super('FLARE_PIPELINE', FLARE_VERTEX_SHADER, FLARE_FRAGMENT_SHADER, FLARE_PIPELINE_DESC);
     this.flares = [];
 
     this.grp0 = gfx3Manager.createStaticGroup('FLARE_PIPELINE', 0);
@@ -107,5 +107,4 @@ class Gfx3FlareRenderer extends Gfx3RendererAbstract {
   }
 }
 
-export { Gfx3FlareRenderer };
 export const gfx3FlareRenderer = new Gfx3FlareRenderer();

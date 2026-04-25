@@ -1,7 +1,7 @@
 /**
  * Singleton files manager.
  */
-class FileManager {
+export class FileManager {
   files: Map<string, any>;
   urls: Map<string, string>;
   blobs: Map<string, Blob>;
@@ -126,5 +126,4 @@ class FileManager {
   }
 }
 
-export { FileManager };
 export const fileManager = new FileManager();

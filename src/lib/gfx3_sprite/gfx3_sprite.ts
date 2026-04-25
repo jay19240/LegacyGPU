@@ -5,18 +5,19 @@ import { Gfx3StaticGroup } from '../gfx3/gfx3_group';
 import { UT } from '../core/utils';
 import { Gfx3Drawable } from '../gfx3/gfx3_drawable';
 import { Gfx3Texture } from '../gfx3/gfx3_texture';
-import { SHADER_VERTEX_ATTR_COUNT } from './gfx3_sprite_shader';
+import { SPRITE_SHADER_VERTEX_ATTR_COUNT } from './gfx3_sprite_shader';
 
 /**
  * A 3D base sprite object.
  */
-class Gfx3Sprite extends Gfx3Drawable implements Poolable<Gfx3Sprite> {
+export class Gfx3Sprite extends Gfx3Drawable implements Poolable<Gfx3Sprite> {
   textureChanged: boolean;
   frameChanged: boolean;
   blendColor: vec4;
   blendColorMode: number;
   offset: vec2;
   offsetFactor: vec2;
+  offsetFactorEnabled: boolean;
   flip: [boolean, boolean];
   pixelsPerUnit: number;
   billboardMode: boolean;
@@ -24,13 +25,14 @@ class Gfx3Sprite extends Gfx3Drawable implements Poolable<Gfx3Sprite> {
   texture: Gfx3Texture;
 
   constructor() {
-    super(SHADER_VERTEX_ATTR_COUNT);
+    super(SPRITE_SHADER_VERTEX_ATTR_COUNT);
     this.textureChanged = false;
     this.frameChanged = false;
     this.blendColor = [1, 1, 1, 1];
     this.blendColorMode = 1.0;
     this.offset = [0, 0];
     this.offsetFactor = [0, 0];
+    this.offsetFactorEnabled = false;
     this.flip = [false, false];
     this.pixelsPerUnit = 100;
     this.billboardMode = false;
@@ -53,6 +55,11 @@ class Gfx3Sprite extends Gfx3Drawable implements Poolable<Gfx3Sprite> {
    * The draw function.
    */
   draw(): void {
+    if (this.offsetFactorEnabled) {
+      this.offset[0] = this.boundingBox.getWidth() * this.offsetFactor[0];
+      this.offset[1] = this.boundingBox.getHeight() * this.offsetFactor[1];
+    }
+
     gfx3SpriteRenderer.drawSprite(this);
   }
 
@@ -128,6 +135,7 @@ class Gfx3Sprite extends Gfx3Drawable implements Poolable<Gfx3Sprite> {
    */
   setOffset(offsetX: number, offsetY: number): void {
     this.offset = [offsetX, offsetY];
+    this.offsetFactorEnabled = false;
   }
 
   /**
@@ -136,10 +144,10 @@ class Gfx3Sprite extends Gfx3Drawable implements Poolable<Gfx3Sprite> {
    * @param {number} offsetXFactor - The normalized x-coordinate offset value.
    * @param {number} offsetYFactor - The normalized y-coordinate offset value.
    */
-  setOffsetNormalized(offsetXFactor: number, offsetYFactor: number) {
+  setNormalizedOffset(offsetXFactor: number, offsetYFactor: number) {
     this.offsetFactor[0] = offsetXFactor;
     this.offsetFactor[1] = offsetYFactor;
-    this.frameChanged = true;
+    this.offsetFactorEnabled = true;
   }
 
   /**
@@ -242,7 +250,11 @@ class Gfx3Sprite extends Gfx3Drawable implements Poolable<Gfx3Sprite> {
     super.clone(sprite, transformMatrix);
     sprite.textureChanged = true;
     sprite.frameChanged = true;
+    sprite.blendColor = [this.blendColor[0], this.blendColor[1], this.blendColor[2], this.blendColor[3]];
+    sprite.blendColorMode = this.blendColorMode;
     sprite.offset = [this.offset[0], this.offset[1]];
+    sprite.offsetFactor = [this.offsetFactor[0], this.offsetFactor[1]];
+    sprite.offsetFactorEnabled = this.offsetFactorEnabled;
     sprite.flip = [this.flip[0], this.flip[1]];
     sprite.pixelsPerUnit = this.pixelsPerUnit;
     sprite.billboardMode = this.billboardMode;
@@ -250,5 +262,3 @@ class Gfx3Sprite extends Gfx3Drawable implements Poolable<Gfx3Sprite> {
     return sprite;
   }
 }
-
-export { Gfx3Sprite };

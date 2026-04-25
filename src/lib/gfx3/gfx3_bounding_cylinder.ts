@@ -5,7 +5,7 @@ import { Gfx3BoundingBox } from './gfx3_bounding_box';
 /**
  * A 3D bounding cylinder.
  */
-class Gfx3BoundingCylinder {
+export class Gfx3BoundingCylinder {
   position: vec3;
   height: number;
   radius: number;
@@ -272,5 +272,3 @@ class Gfx3BoundingCylinder {
     this.radius = radius;
   }
 }
-
-export { Gfx3BoundingCylinder };

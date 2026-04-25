@@ -3,7 +3,7 @@ import { UIWidget } from '../ui/ui_widget';
 /**
  * A UI widget for displaying a list of items with labels and values.
  */
-class UIDescriptionList extends UIWidget {
+export class UIDescriptionList extends UIWidget {
   constructor() {
     super({
       className: 'UIDescriptionList'
@@ -113,5 +113,3 @@ class UIDescriptionList extends UIWidget {
     this.node.innerHTML = '';
   }
 }
-
-export { UIDescriptionList };

@@ -26,21 +26,23 @@ class CurveScreen extends Screen {
 
   async onEnter() {
     this.obj = new Gfx3MeshOBJ();
-    await this.obj.loadFromFile('./examples/curve/level.obj', './examples/curve/level.mtl');
+    await this.obj.loadFromFile('./examples/curve/scene.blend.obj', './examples/curve/scene.blend.mtl');
 
     this.skySphere = new Gfx3MeshJSM();
     this.skySphere.mat.setTexture(await gfx3TextureManager.loadTexture('./examples/curve/sky_sphere.jpg'));
     await this.skySphere.loadFromFile('./examples/curve/sky_sphere.jsm');
 
-    this.curve = await Curve.createFromFile('./examples/curve/curve.json');
+    this.curve = await Curve.createFromFile('./examples/curve/curve.jlm');
 
-    for (let t = 0; t <= 0.99; t += 0.01) {
+    for (let t = 0; t <= 0.99; t += 0.001) {
       const p0 = this.curve.getPointAt(t);
-      const p1 = this.curve.getPointAt(t + 0.01);
+      const p1 = this.curve.getPointAt(t + 0.001);
       this.curveVertices.push(p0[0], p0[1], p0[2], 1, 1, 1);
       this.curveVertices.push(p1[0], p1[1], p1[2], 1, 1, 1);
       this.curveVertexCount += 2;
     }
+
+    gfx3MeshRenderer.setDirLight(true, [0, -1, 0], [1, 1, 1], [0, 0, 0]);
   }
 
   update(ts) {
@@ -52,14 +54,13 @@ class CurveScreen extends Screen {
       const tangent = UT.VEC3_NORMALIZE(this.curve.getTangentAt(this.t));
       this.camera.setPosition(position[0], position[1] + 0.1, position[2]);
       this.camera.lookAt(position[0] + tangent[0], position[1] + tangent[1], position[2] + tangent[2]);
-      this.t += ts / 10000;
+      this.t += ts / 20000;
     }
   }
 
   draw() {
     gfx3Manager.beginDrawing();
     gfx3DebugRenderer.drawVertices(this.curveVertices, this.curveVertexCount);
-    gfx3MeshRenderer.drawDirLight([0, -1, 0], [1, 1, 1], [0, 0, 0]);
     this.obj.draw();
     this.skySphere.draw();
     gfx3Manager.endDrawing();

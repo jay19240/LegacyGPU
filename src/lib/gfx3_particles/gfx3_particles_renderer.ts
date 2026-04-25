@@ -4,12 +4,12 @@ import { Gfx3RendererAbstract } from '../gfx3/gfx3_renderer_abstract';
 import { Gfx3StaticGroup, Gfx3DynamicGroup } from '../gfx3/gfx3_group';
 import { Gfx3RenderingTexture } from '../gfx3/gfx3_texture';
 import { Gfx3Particles } from './gfx3_particles';
-import { PIPELINE_DESC, VERTEX_SHADER, FRAGMENT_SHADER, SHADER_INSERTS } from './gfx3_particles_shader';
+import { PARTICLES_PIPELINE_DESC, PARTICLES_VERTEX_SHADER, PARTICLES_FRAGMENT_SHADER, PARTICLES_SHADER_INSERTS } from './gfx3_particles_shader';
 
 /**
  * Singleton particules renderer.
  */
-class Gfx3ParticlesRenderer extends Gfx3RendererAbstract {
+export class Gfx3ParticlesRenderer extends Gfx3RendererAbstract {
   particlesList: Array<Gfx3Particles>;
   grp0: Gfx3StaticGroup;
   vMatrix: Float32Array;
@@ -18,7 +18,7 @@ class Gfx3ParticlesRenderer extends Gfx3RendererAbstract {
   tag: Float32Array;
 
   constructor() {
-    super('PARTICLES_PIPELINE', VERTEX_SHADER, FRAGMENT_SHADER, PIPELINE_DESC, SHADER_INSERTS);
+    super('PARTICLES_PIPELINE', PARTICLES_VERTEX_SHADER, PARTICLES_FRAGMENT_SHADER, PARTICLES_PIPELINE_DESC, PARTICLES_SHADER_INSERTS);
     this.particlesList = [];
 
     this.grp0 = gfx3Manager.createStaticGroup('PARTICLES_PIPELINE', 0);
@@ -87,8 +87,8 @@ class Gfx3ParticlesRenderer extends Gfx3RendererAbstract {
    * 
    * @param {Partial<typeof SHADER_INSERTS>} data - The custom data used by the shader template.
    */
-  setShaderInserts(data: Partial<typeof SHADER_INSERTS> = {}): void {
-    super.reload(VERTEX_SHADER, FRAGMENT_SHADER, PIPELINE_DESC, Object.assign(SHADER_INSERTS, data));
+  setShaderInserts(data: Partial<typeof PARTICLES_SHADER_INSERTS> = {}): void {
+    super.reload(PARTICLES_VERTEX_SHADER, PARTICLES_FRAGMENT_SHADER, PARTICLES_PIPELINE_DESC, Object.assign(PARTICLES_SHADER_INSERTS, data));
     this.grp0.setPipeline(this.pipeline);
     this.grp1.setPipeline(this.pipeline);
     this.grp0.allocate();
@@ -105,5 +105,4 @@ class Gfx3ParticlesRenderer extends Gfx3RendererAbstract {
   }
 }
 
-export { Gfx3ParticlesRenderer };
 export const gfx3ParticlesRenderer = new Gfx3ParticlesRenderer();

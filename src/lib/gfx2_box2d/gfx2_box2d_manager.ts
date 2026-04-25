@@ -23,7 +23,7 @@ export interface Gfx2Box2DCreatePrimitiveOptions {
   angle?: number;
   dynamic?: boolean;
   density?: number;
-  metaData?: any;
+  meta?: any;
 }
 
 export interface Gfx2Box2DDebugLine {
@@ -33,7 +33,7 @@ export interface Gfx2Box2DDebugLine {
   width: number;
 }
 
-interface Gfx2Box2DRayCast {
+export interface Gfx2Box2DRayCast {
   fixture: Box2D.b2Fixture | null;
   point: Box2D.b2Vec2;
   normal: Box2D.b2Vec2;
@@ -55,10 +55,10 @@ export interface Gfx2Box2DCharacterOptions {
   jumpImpulse?: number;
   airJump?: boolean;
   canControlAir?: boolean;
-  metaData?: any;
+  meta?: any;
 }
 
-export class Gfx2Box2DCharacter {
+export class Gfx2Box2DCharacter implements Gfx2Box2DCharacterOptions {
   x: number;
   y: number;
   shapeType: 'circle' | 'capsule';
@@ -73,7 +73,7 @@ export class Gfx2Box2DCharacter {
   jumpImpulse: number;
   airJump: boolean;
   canControlAir: boolean;
-  metaData: any;
+  meta: any;
   inputDir: vec2;
   inputJump: boolean;
   body: Box2D.b2Body | null;
@@ -96,7 +96,7 @@ export class Gfx2Box2DCharacter {
     this.jumpImpulse = options.jumpImpulse ?? -5;
     this.airJump = options.airJump ?? false;
     this.canControlAir = options.canControlAir ?? true;
-    this.metaData = {};
+    this.meta = {};
     this.inputDir = [0, 0];
     this.inputJump = false;
     this.body = null;
@@ -115,7 +115,7 @@ export class Gfx2Box2DCharacter {
 /**
  * Singleton 2D physics manager that wrap the Box2D physics engine.
  */
-class Gfx2Box2DManager {
+export class Gfx2Box2DManager {
   world: Box2D.b2World;
   velocityIterations: number;
   positionIterations: number;
@@ -123,7 +123,7 @@ class Gfx2Box2DManager {
   debugDraw: Box2D.JSDraw;
   drawDebugLines: Array<Gfx2Box2DDebugLine>;
   characters: Gfx2Box2DCharacter[];
-  metaData: any;
+  meta: any;
 
   constructor() {
     // Initialize Box2D
@@ -134,28 +134,54 @@ class Gfx2Box2DManager {
     this.debugDraw = makeDebugDraw(gfx2Manager.getContext(), BOX2D_PPM, Gfx2Box2D);
     this.drawDebugLines = [];
     this.characters = [];
-    this.metaData = {};
+    this.meta = {};
 
     // Initialize Box2D Debug
     this.world.SetDebugDraw(this.debugDraw);
   }
 
+  /**
+   * Show or not the debug print.
+   * 
+   * @param {boolean} showDebug - The boolean flag.
+   */
   setShowDebug(showDebug: boolean) {
     this.showDebug = showDebug;
   }
 
+  /**
+   * Set what object you want display on the debug print.
+   * 
+   * @param {number} flags - The boolean flag.
+   * e_shapeBit = 1, e_jointBit = 2, e_aabbBit = 4, e_pairBit = 8, e_centerOfMassBit = 10
+   */
   setDebugDrawFlags(flags: number) {
     this.debugDraw.SetFlags(flags);
   }
 
+  /**
+   * Set the number of iterations per update for velocity resolutions.
+   * 
+   * @param {number} velocityIterations - The number of iterations.
+   */
   setVelocityIterations(velocityIterations: number) {
     this.velocityIterations = velocityIterations;
   }
 
+  /**
+   * Set the number of iterations per update for position resolutions.
+   * 
+   * @param {number} positionIterations - The number of iterations.
+   */
   setPositionIterations(positionIterations: number) {
     this.positionIterations = positionIterations;
   }
 
+  /**
+   * Add a box shape.
+   * 
+   * @param {Gfx2Box2DCreatePrimitiveOptions & { width: number, height: number }} options - The options of a box shape.
+   */
   addBox(options: Gfx2Box2DCreatePrimitiveOptions & { width: number, height: number }): Box2D.b2Body {
     const shape = new Gfx2Box2D.b2PolygonShape();
     shape.SetAsBox(options.width / 2, options.height / 2);
@@ -163,10 +189,15 @@ class Gfx2Box2DManager {
     const body = this.#createBody(options.x, options.y, options.angle, options.dynamic);
     body.CreateFixture(shape, options.density ?? 1.0);
 
-    this.metaData[Gfx2Box2D.getPointer(body)] = options.metaData;
+    this.meta[Gfx2Box2D.getPointer(body)] = options.meta;
     return body;
   }
 
+  /**
+   * Add a circle shape.
+   * 
+   * @param {Gfx2Box2DCreatePrimitiveOptions & { radius: number }} options - The options of a circle shape.
+   */
   addCircle(options: Gfx2Box2DCreatePrimitiveOptions & { radius: number }): Box2D.b2Body {
     const shape = new Gfx2Box2D.b2CircleShape();
     shape.set_m_radius(options.radius);
@@ -174,10 +205,15 @@ class Gfx2Box2DManager {
     const body = this.#createBody(options.x, options.y, options.angle, options.dynamic);
     body.CreateFixture(shape, options.density ?? 1.0);
 
-    this.metaData[Gfx2Box2D.getPointer(body)] = options.metaData;
+    this.meta[Gfx2Box2D.getPointer(body)] = options.meta;
     return body;
   }
 
+  /**
+   * Add a polygon shape.
+   * 
+   * @param {Gfx2Box2DCreatePrimitiveOptions & { points: Array<vec2> }} options - The options of a polygon shape.
+   */
   addPolygon(options: Gfx2Box2DCreatePrimitiveOptions & { points: Array<vec2> }): Box2D.b2Body {
     const shape = new Gfx2Box2D.b2PolygonShape();
     const vertices = options.points.map(p => new Gfx2Box2D.b2Vec2(p[0], p[1]));
@@ -186,10 +222,15 @@ class Gfx2Box2DManager {
     const body = this.#createBody(options.x, options.y, options.angle, options.dynamic);
     body.CreateFixture(shape, options.density ?? 1.0);
 
-    this.metaData[Gfx2Box2D.getPointer(body)] = options.metaData;
+    this.meta[Gfx2Box2D.getPointer(body)] = options.meta;
     return body;
   }
 
+  /**
+   * Add a edge shape.
+   * 
+   * @param {Gfx2Box2DCreatePrimitiveOptions & { startX: number, startY: number, endX: number, endY: number }} options - The options of a edge shape.
+   */
   addEdge(options: Gfx2Box2DCreatePrimitiveOptions & { startX: number, startY: number, endX: number, endY: number }): Box2D.b2Body {
     const shape = new Gfx2Box2D.b2EdgeShape();
     shape.SetTwoSided(new Gfx2Box2D.b2Vec2(options.startX, options.startY), new Gfx2Box2D.b2Vec2(options.endX, options.endY));
@@ -197,10 +238,15 @@ class Gfx2Box2DManager {
     const body = this.#createBody(options.x, options.y, options.angle, false);
     body.CreateFixture(shape, 0);
 
-    this.metaData[Gfx2Box2D.getPointer(body)] = options.metaData;
+    this.meta[Gfx2Box2D.getPointer(body)] = options.meta;
     return body;
   }
 
+  /**
+   * Add a chain shape.
+   * 
+   * @param {Gfx2Box2DCreatePrimitiveOptions & { points: Array<vec2>, loop?: boolean }} options - The options of a chain shape.
+   */
   addChain(options: Gfx2Box2DCreatePrimitiveOptions & { points: Array<vec2>, loop?: boolean }): Box2D.b2Body {
     const shape = new Gfx2Box2D.b2ChainShape();
     const vertices = options.points.map(p => new Gfx2Box2D.b2Vec2(p[0], p[1]));
@@ -215,10 +261,15 @@ class Gfx2Box2DManager {
     const body = this.#createBody(options.x, options.y, options.angle, false);
     body.CreateFixture(shape, 0);
 
-    this.metaData[Gfx2Box2D.getPointer(body)] = options.metaData;
+    this.meta[Gfx2Box2D.getPointer(body)] = options.meta;
     return body;
   }
 
+  /**
+   * Add a character physics representation.
+   * 
+   * @param {Gfx2Box2DCharacter} character - The character options.
+   */
   addCharacter(character: Gfx2Box2DCharacter): Gfx2Box2DCharacter {
     const bodyDef = new Gfx2Box2D.b2BodyDef();
     bodyDef.set_type(Gfx2Box2D.b2_dynamicBody);
@@ -255,21 +306,26 @@ class Gfx2Box2DManager {
     character.body = body;
     character.body.SetLinearDamping(0);
 
-    this.metaData[Gfx2Box2D.getPointer(character.body)] = character.metaData;
+    this.meta[Gfx2Box2D.getPointer(character.body)] = character.meta;
     this.characters.push(character);
     return character;
   }
 
+  /**
+   * Remove a physics entity (Body or Character)
+   * 
+   * @param {Box2D.b2Body | Gfx2Box2DCharacter} element - The body shape or character object.
+   */
   remove(element: Box2D.b2Body | Gfx2Box2DCharacter): void {
     if (element instanceof Box2D.b2Body) {
-      this.metaData[Gfx2Box2D.getPointer(element)] = undefined;
+      this.meta[Gfx2Box2D.getPointer(element)] = undefined;
       this.world.DestroyBody(element);
     }
     else if (element instanceof Gfx2Box2DCharacter) {
       const foundIndex = this.characters.findIndex(c => c === element);
       if (foundIndex >= 0 && element.body) {
         this.characters.splice(foundIndex, 1);
-        this.metaData[Gfx2Box2D.getPointer(element.body)] = undefined;
+        this.meta[Gfx2Box2D.getPointer(element.body)] = undefined;
         this.world.DestroyBody(element.body);
       }
     }
@@ -278,10 +334,23 @@ class Gfx2Box2DManager {
     }
   }
 
-  getMetaData(body: Box2D.b2Body): any {
-    return this.metaData[Gfx2Box2D.getPointer(body)];
+  /**
+   * Return metadata associated to physics body.
+   * 
+   * @param {Box2D.b2Body} body - The body shape.
+   */
+  getMeta(body: Box2D.b2Body): any {
+    return this.meta[Gfx2Box2D.getPointer(body)];
   }
 
+  /**
+   * Send a raycast from start point to end point.
+   * 
+   * @param {number} startX - The x position of the ray beginning.
+   * @param {number} startY - The y position of the ray beginning.
+   * @param {number} endX - The x position of the ray ending.
+   * @param {number} endY - The y position of the ray ending.
+   */
   rayCast(startX: number, startY: number, endX: number, endY: number): Gfx2Box2DRayCast {
     const rayStart = new Gfx2Box2D.b2Vec2(startX, startY);
     const rayEnd = new Gfx2Box2D.b2Vec2(endX, endY);
@@ -314,6 +383,16 @@ class Gfx2Box2DManager {
     };
   }
 
+  /**
+   * Send a raycast from a physics body.
+   * That method excluding the body source of the raycast result.
+   * 
+   * @param {Box2D.b2Body} body - The body 
+   * @param {number} dirX - The y position of the ray beginning.
+   * @param {number} dirY - The x position of the ray ending.
+   * @param {number} offsetX - The y position of the ray ending.
+   * @param {number} offsetY - The y position of the ray ending.
+   */
   rayCastFromBody(body: Box2D.b2Body, dirX: number, dirY: number, offsetX: number = 0, offsetY: number = 0): Gfx2Box2DRayCast {
     const pos = body.GetPosition();
     const ray = this.rayCast(
@@ -333,6 +412,16 @@ class Gfx2Box2DManager {
     };
   }
 
+  /**
+   * Draw a debug line in the Box2D space.
+   * 
+   * @param {number} x1 - The line x-begin.
+   * @param {number} y1 - The line y-begin.
+   * @param {number} x2 - The line x-end.
+   * @param {number} y2 - The line y-end.
+   * @param {number} color - The line color.
+   * @param {number} width - The line width.
+   */
   drawDebugLine(x1: number, y1: number, x2: number, y2: number, color: string = 'red', width: number = 0.05) {
     this.drawDebugLines.push({
       from: [x1, y1],
@@ -342,6 +431,11 @@ class Gfx2Box2DManager {
     });
   }
 
+  /**
+   * The update function.
+   * 
+   * @param {number} ts - The timestep.
+   */
   update(ts: number) {
     for (const character of this.characters) {
       this.#updateCharacter(character);
@@ -351,6 +445,9 @@ class Gfx2Box2DManager {
     this.world.Step(clampedDelta, this.velocityIterations, this.positionIterations);
   }
 
+  /**
+   * The drawing method.
+   */
   draw() {
     if (!this.showDebug) {
       return;
@@ -377,6 +474,9 @@ class Gfx2Box2DManager {
     });
   }
 
+  /**
+   * Returns the Box2D world.
+   */
   get box2DWorld(): Box2D.b2World {
     return this.world;
   }
@@ -431,7 +531,5 @@ class Gfx2Box2DManager {
   }
 }
 
-const gfx2Box2DManager = new Gfx2Box2DManager();
-export { Gfx2Box2DManager };
-export { gfx2Box2DManager };
+export const gfx2Box2DManager = new Gfx2Box2DManager();
 export { Gfx2Box2D };

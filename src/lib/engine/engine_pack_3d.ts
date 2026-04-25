@@ -1,6 +1,7 @@
 import JSZip from 'jszip';
 // -----------------------------------------------------------------------------------------------
 import { gfx3TextureManager } from '../gfx3/gfx3_texture_manager';
+import { gfx3MeshRenderer } from '../gfx3_mesh/gfx3_mesh_renderer';
 import { soundManager } from '../sound/sound_manager';
 import { spritesheetManager } from '../core/spritesheet_manager';
 import { fileManager } from '../core/file_manager';
@@ -11,6 +12,7 @@ import { Curve, CurveInterpolator } from '../core/curve';
 import { Gfx3MeshJAM } from '../gfx3_mesh/gfx3_mesh_jam';
 import { Gfx3MeshJSM } from '../gfx3_mesh/gfx3_mesh_jsm';
 import { Gfx3MeshOBJ } from '../gfx3_mesh/gfx3_mesh_obj';
+import { Gfx3MeshDecal } from '../gfx3_mesh/gfx3_mesh_decal';
 import { Gfx3PhysicsJWM } from '../gfx3_physics/gfx3_physics_jwm';
 import { Gfx3PhysicsJNM } from '../gfx3_physics/gfx3_physics_jnm';
 import { Gfx3ShadowVolume } from '../gfx3_shadow_volume/gfx3_shadow_volume';
@@ -21,13 +23,15 @@ import { Gfx3Texture } from '../gfx3/gfx3_texture';
 import { Gfx3Material } from '../gfx3_mesh/gfx3_mesh_material';
 import { Gfx3SpriteJAS } from '../gfx3_sprite/gfx3_sprite_jas';
 import { Gfx3SpriteJSS } from '../gfx3_sprite/gfx3_sprite_jss';
+import { Gfx3Skybox } from '../gfx3_skybox/gfx3_skybox';
+import { Gfx3Particles } from '../gfx3_particles/gfx3_particles';
 import { Sound } from '../sound/sound_manager';
 import { Motion } from '../motion/motion';
 import { ScriptMachine } from '../script/script_machine';
 import { EnginePackItem, EnginePackItemList } from './engine_pack_item_list';
-
-import { gfx3MeshRenderer } from '../gfx3_mesh/gfx3_mesh_renderer';
-import { gfx3MeshShadowRenderer } from '../gfx3_mesh/gfx3_mesh_shadow_renderer';
+import { Gfx3CameraWASD } from '../gfx3_camera/gfx3_camera_wasd';
+import { Gfx3CameraOrbit } from '../gfx3_camera/gfx3_camera_orbit';
+import { EngineEntity, createEntityFromFile } from './engine_entity';
 
 /**
  * A package manager for 3D assets.
@@ -42,8 +46,11 @@ class EnginePack3D {
   jam: EnginePackItemList<Gfx3MeshJAM>;
   jsm: EnginePackItemList<Gfx3MeshJSM>;
   obj: EnginePackItemList<Gfx3MeshOBJ>;
+  dcl: EnginePackItemList<Gfx3MeshDecal>;
   jas: EnginePackItemList<Gfx3SpriteJAS>;
   jss: EnginePackItemList<Gfx3SpriteJSS>;
+  sky: EnginePackItemList<Gfx3Skybox>;
+  prt: EnginePackItemList<Gfx3Particles>;
   jwm: EnginePackItemList<Gfx3PhysicsJWM>;
   jnm: EnginePackItemList<Gfx3PhysicsJNM>;
   jlm: EnginePackItemList<Motion>;
@@ -52,14 +59,14 @@ class EnginePack3D {
   jlt: EnginePackItemList<Gfx3MeshLight>;
   grf: EnginePackItemList<AIPathGraph3D>;
   grd: EnginePackItemList<AIPathGrid3D>;
-  any: EnginePackItemList<any>;
+  ent: EnginePackItemList<EngineEntity>;
   // --------------------------------------------
   camera: Gfx3Camera;
   // --------------------------------------------
   updateItems: Array<EnginePackItem<any>>;
   drawItems: Array<EnginePackItem<any>>;
 
-  constructor() {
+  constructor(cameraType: 'wasd' | 'orbit' | 'classic' = 'classic') {
     this.bin = new EnginePackItemList<Blob>;
     this.sst = new EnginePackItemList<FormatJAS>;
     this.jsc = new EnginePackItemList<ScriptMachine>;
@@ -69,8 +76,11 @@ class EnginePack3D {
     this.jam = new EnginePackItemList<Gfx3MeshJAM>;
     this.jsm = new EnginePackItemList<Gfx3MeshJSM>;
     this.obj = new EnginePackItemList<Gfx3MeshOBJ>;
+    this.dcl = new EnginePackItemList<Gfx3MeshDecal>;
     this.jas = new EnginePackItemList<Gfx3SpriteJAS>;
     this.jss = new EnginePackItemList<Gfx3SpriteJSS>;
+    this.sky = new EnginePackItemList<Gfx3Skybox>;
+    this.prt = new EnginePackItemList<Gfx3Particles>;
     this.jwm = new EnginePackItemList<Gfx3PhysicsJWM>;
     this.jnm = new EnginePackItemList<Gfx3PhysicsJNM>;
     this.jlm = new EnginePackItemList<Motion>;
@@ -79,9 +89,17 @@ class EnginePack3D {
     this.jlt = new EnginePackItemList<Gfx3MeshLight>;
     this.grf = new EnginePackItemList<AIPathGraph3D>;
     this.grd = new EnginePackItemList<AIPathGrid3D>;
-    this.any = new EnginePackItemList<any>;
+    this.ent = new EnginePackItemList<EngineEntity>;
 
-    this.camera = new Gfx3Camera(0);
+    if (cameraType == 'wasd') {
+      this.camera = new Gfx3CameraWASD(0);
+    }
+    else if (cameraType == 'orbit') {
+      this.camera = new Gfx3CameraOrbit(0);
+    }
+    else {
+      this.camera = new Gfx3Camera(0);
+    }
 
     this.updateItems = [];
     this.drawItems = [];
@@ -93,10 +111,10 @@ class EnginePack3D {
    * 
    * @param {string} path - The archive file path.
    */
-  static async createFromFile(path: string): Promise<EnginePack3D> {
+  static async createFromFile(cameraType: 'wasd' | 'orbit' | 'classic', path: string): Promise<EnginePack3D> {
     const res = await fetch(path);
     const zip = await JSZip.loadAsync(await res.blob());
-    const pack = new EnginePack3D();
+    const pack = new EnginePack3D(cameraType);
 
     // load textures first
     for (const entry of zip.file(/\.(jpg|jpeg|png|bmp)/)) {
@@ -141,34 +159,9 @@ class EnginePack3D {
       const infos = UT.GET_FILENAME_INFOS(entry.name);
       const file = zip.file(entry.name);
 
-      if (file != null && infos.ext == 'world') {
-        const data = JSON.parse(await file.async('string'));
-
-        if (data['ShadowEnabled']) {
-          gfx3MeshRenderer.enableShadow(data['ShadowEnabled']);
-          gfx3MeshShadowRenderer.setShadowPosition(data['ShadowPositionX'], data['ShadowPositionY'], data['ShadowPositionZ']);
-          gfx3MeshShadowRenderer.setShadowTarget(data['ShadowTargetX'], data['ShadowTargetY'], data['ShadowTargetZ']);
-          gfx3MeshShadowRenderer.setShadowSize(data['ShadowSize']);
-          gfx3MeshShadowRenderer.setShadowDepth(data['ShadowDepth']);
-        }
-        // ---------------------------------------------------------------------------------------
-        if (data['FogEnabled']) {
-          gfx3MeshRenderer.enableFog(data['FogEnabled']);
-          gfx3MeshRenderer.setFogNear(data['FogNear']);
-          gfx3MeshRenderer.setFogFar(data['FogFar']);
-          gfx3MeshRenderer.setFogColor([data['FogColorR'], data['FogColorG'], data['FogColorB']]);
-        }
-        // ---------------------------------------------------------------------------------------
-        gfx3MeshRenderer.setAmbientColor([data['AmbientR'], data['AmbientG'], data['AmbientB']]);
-        // ---------------------------------------------------------------------------------------
-        if (data['DecalAtlas']) {
-          const textureFound = pack.tex.find(t => t.name + '.' + t.ext == data['DecalAtlas']);
-          if (textureFound) gfx3MeshRenderer.setDecalAtlas(textureFound.object);
-        }
-        // ---------------------------------------------------------------------------------------
-        for (const obj of data['CustomParams']) {
-          gfx3MeshRenderer.setCustomParamValue(obj['Name'], obj['Value']);
-        }
+      if (file != null && infos.ext == 'wrd') {
+        const url = URL.createObjectURL(await file.async('blob'));
+        await gfx3MeshRenderer.loadFromFile(url);
       }
       else if (file != null && infos.ext == 'cam') {
         const url = URL.createObjectURL(await file.async('blob'));
@@ -234,6 +227,12 @@ class EnginePack3D {
           pack.obj.push({ name: infos.name, ext: 'obj', object: obj, blobUrl: url });
         }
       }
+      else if (file != null && infos.ext == 'dcl') {
+        const url = URL.createObjectURL(await file.async('blob'));
+        const dcl = new Gfx3MeshDecal();
+        await dcl.loadFromFile(url);
+        pack.dcl.push({ name: infos.name, ext: 'dcl', object: dcl, blobUrl: url });
+      }
       else if (file != null && infos.ext == 'jas') {
         const url = URL.createObjectURL(await file.async('blob'));
         const jas = new Gfx3SpriteJAS();
@@ -245,6 +244,17 @@ class EnginePack3D {
         const jss = new Gfx3SpriteJSS();
         await jss.loadFromFile(url);
         pack.jss.push({ name: infos.name, ext: 'jss', object: jss, blobUrl: url });
+      }
+      else if (file != null && infos.ext == 'sky') {
+        const url = URL.createObjectURL(await file.async('blob'));
+        const sky = new Gfx3Skybox();
+        await sky.loadFromFile(url);
+        pack.sky.push({ name: infos.name, ext: 'sky', object: sky, blobUrl: url });
+      }
+      else if (file != null && infos.ext == 'prt') {
+        const url = URL.createObjectURL(await file.async('blob'));
+        const prt = await Gfx3Particles.createFromFile(url);
+        pack.prt.push({ name: infos.name, ext: 'prt', object: prt, blobUrl: url });
       }
       else if (file != null && infos.ext == 'jwm') {
         const url = URL.createObjectURL(await file.async('blob'));
@@ -317,9 +327,10 @@ class EnginePack3D {
         await grd.loadFromFile(url);
         pack.grd.push({ name: infos.name, ext: 'grd', object: grd, blobUrl: url });
       }
-      else if (file != null && infos.ext == 'any') {
-        const data = JSON.parse(await file.async('string'));
-        pack.any.push({ name: infos.name, ext: 'any', object: data, blobUrl: '' });
+      else if (file != null && infos.ext == 'ent') {
+        const url = URL.createObjectURL(await file.async('blob'));
+        const entity = await createEntityFromFile(url);
+        pack.ent.push({ name: infos.name, ext: 'ent', object: entity, blobUrl: url });
       }
       else if (file != null) {
         const url = URL.createObjectURL(await file.async('blob'));
@@ -333,12 +344,14 @@ class EnginePack3D {
       item.object.setMaterial(material);
     }
 
-    pack.updateItems.push(...pack.jsc, ...pack.jam, ...pack.jsm, ...pack.obj, ...pack.jas, ...pack.jss, ...pack.jwm, ...pack.jnm, ...pack.jlm, ...pack.jsv);
-    pack.drawItems.push(...pack.jam, ...pack.jsm, ...pack.obj, ...pack.jas, ...pack.jss, ...pack.jwm, ...pack.jnm, ...pack.jlm, ...pack.jsv, ...pack.jlt);
+    pack.updateItems.push(...pack.jsc, ...pack.jam, ...pack.jsm, ...pack.obj, ...pack.jas, ...pack.jss, ...pack.jwm, ...pack.jnm, ...pack.jlm, ...pack.jsv, ...pack.prt);
+    pack.drawItems.push(...pack.jam, ...pack.jsm, ...pack.obj, ...pack.dcl, ...pack.jas, ...pack.jss, ...pack.sky, ...pack.jwm, ...pack.jnm, ...pack.jlm, ...pack.jsv, ...pack.jlt, ...pack.prt);
     return pack;
   }
 
   update(ts: number) {
+    this.camera.update(ts);
+
     for (const item of this.updateItems) {
       item.object.update(ts);
     }
@@ -348,6 +361,14 @@ class EnginePack3D {
     for (const item of this.drawItems) {
       item.object.draw();
     }
+  }
+
+  setUpdateList(updateItems: Array<EnginePackItem<any>>): void {
+    this.updateItems = updateItems;
+  }
+
+  setDrawList(drawItems: Array<EnginePackItem<any>>): void {
+    this.drawItems = drawItems;
   }
 }
 

@@ -4,9 +4,18 @@ import { UT } from '../core/utils';
 import { Gfx3Drawable } from '../gfx3/gfx3_drawable';
 import { Gfx3Texture } from '../gfx3/gfx3_texture';
 import { Gfx3StaticGroup } from '../gfx3/gfx3_group';
-import { SHADER_VERTEX_ATTR_COUNT } from './gfx3_trail_shader';
+import { TRAIL_SHADER_VERTEX_ATTR_COUNT } from './gfx3_trail_shader';
 
-class TrailPoint {
+export interface Gfx3TrailOptions {
+  texture: Gfx3Texture;
+  maxPoints: number;
+  width: number;
+  color: vec3;
+  opacity: number;
+  defaultPointLifetime: number;
+};
+
+export class Gfx3TrailPoint {
   position: vec3;
   age: number;
   lifetime: number;
@@ -18,26 +27,17 @@ class TrailPoint {
   }
 }
 
-interface Gfx3TrailOptions {
-  texture: Gfx3Texture;
-  maxPoints: number;
-  width: number;
-  color: vec3;
-  opacity: number;
-  defaultPointLifetime: number;
-};
-
 /**
  * A 3D ribbon trail.
  * Add points each frame to create a trail effect.
  */
-class Gfx3Trail extends Gfx3Drawable {
+export class Gfx3Trail extends Gfx3Drawable implements Gfx3TrailOptions {
   maxPoints: number;
   width: number;
   color: vec3;
   opacity: number;
   defaultPointLifetime: number;
-  points: Array<TrailPoint>;
+  points: Array<Gfx3TrailPoint>;
   grp2: Gfx3StaticGroup;
   texture: Gfx3Texture;
   textureChanged: boolean;
@@ -46,7 +46,7 @@ class Gfx3Trail extends Gfx3Drawable {
    * @param options - Options to configure the trail.
    */
   constructor(options: Partial<Gfx3TrailOptions> = {}) {
-    super(SHADER_VERTEX_ATTR_COUNT);
+    super(TRAIL_SHADER_VERTEX_ATTR_COUNT);
     this.maxPoints = options.maxPoints ?? 32;
     this.width = options.width ?? 1.0;
     this.color = options.color ?? [1, 1, 1];
@@ -102,7 +102,7 @@ class Gfx3Trail extends Gfx3Drawable {
    * @param {number} [lifetime] - How long (in seconds) the point lives before disappearing.
    */
   addPoint(position: vec3, lifetime?: number): void {
-    this.points.unshift(new TrailPoint(position, lifetime ?? this.defaultPointLifetime));
+    this.points.unshift(new Gfx3TrailPoint(position, lifetime ?? this.defaultPointLifetime));
     if (this.points.length > this.maxPoints) {
       this.points.pop();
     }
@@ -221,7 +221,3 @@ class Gfx3Trail extends Gfx3Drawable {
     this.endVertices();
   }
 }
-
-export type { Gfx3TrailOptions };
-export { Gfx3Trail };
-

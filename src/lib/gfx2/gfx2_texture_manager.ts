@@ -1,7 +1,7 @@
 /**
  * Singleton textures manager.
  */
-class Gfx2TextureManager {
+export class Gfx2TextureManager {
   textures: Map<string, ImageBitmap>;
   urls: Map<string, string>;
   blobs: Map<string, Blob>;
@@ -117,5 +117,4 @@ class Gfx2TextureManager {
   }
 }
 
-export { Gfx2TextureManager };
 export const gfx2TextureManager = new Gfx2TextureManager();

@@ -12,7 +12,7 @@ import { Velocity } from '../components/velocity';
 export const spawnPlatform = async (x: number, y: number, from: vec2, to: vec2) => {
   const sprite = new Gfx2SpriteJSS();
   sprite.setTexture(await gfx2TextureManager.loadTexture('examples/platformer/platform.png'));
-  sprite.setOffsetNormalized(0.5, 0.5);
+  sprite.setNormalizedOffset(0.5, 0.5);
 
   const halfWidth = sprite.getTextureRectWidth() / 2;
   const halfHeight = sprite.getTextureRectHeight() / 2;

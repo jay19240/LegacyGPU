@@ -3,7 +3,7 @@ import { eventManager } from '@lib/core/event_manager';
 import { screenManager } from '@lib/screen/screen_manager';
 import { Screen } from '@lib/screen/screen';
 import { UIWidget } from '@lib/ui/ui_widget';
-import { UIMenu, MenuAxis } from '@lib/ui_menu/ui_menu';
+import { UIMenu, UIMenuAxis } from '@lib/ui_menu/ui_menu';
 // ------------------------------------------------------------------
 import { GameScreen } from './game_screen';
 import { FightScreen } from './fight_screen';
@@ -38,7 +38,7 @@ class CharacterScreen extends Screen {
     this.uiTitle.textContent = 'SELECT PLAYERS';
     uiManager.addNode(this.uiTitle, 'position: absolute; left:0; right:0; top:100px;');
 
-    this.uiMenu = new UIMenu({ className: 'UICharacter-menu', axis: MenuAxis.XY, rows: 3, columns: 4, multiple: true, togglable: false });
+    this.uiMenu = new UIMenu({ className: 'UICharacter-menu', axis: UIMenuAxis.XY, rows: 3, columns: 4, multiple: true, togglable: false });
     uiManager.addWidget(this.uiMenu, 'position:absolute; left:100px; top:170px');
 
     for (let i = 0; i < this.numPlayers; i++) {

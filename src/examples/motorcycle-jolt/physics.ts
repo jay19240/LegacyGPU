@@ -27,7 +27,7 @@ export class PhysicsSystem extends DNASystem {
 
   onEntityBind(eid: number): void {
     const physics = dnaManager.getComponent(eid, PhysicsComponent);
-    physics.motorcycle = gfx3JoltManager.motorcycles.add(physics.options);
+    physics.motorcycle = gfx3JoltManager.addMotorcycle(physics.options);
   }
 
   onBeforeUpdate(ts: number): void {

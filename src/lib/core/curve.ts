@@ -1,6 +1,6 @@
 import { CurveInterpolator } from 'curve-interpolator';
 
-interface CurveOptions {
+export interface CurveOptions {
   tension?: number,
   alpha?: number,
   closed?: boolean,
@@ -13,7 +13,7 @@ interface CurveOptions {
 /**
  * A Centripetal Catmull–Rom spline.
  */
-class Curve {
+export class Curve {
   /**
    * Create a curve interpolator from asynchronously loads curve data from a json file and return it.
    * 
@@ -33,9 +33,9 @@ class Curve {
     }
 
     return Curve.createInterpolator(points, {
-      tension: json['Tension'] ?? 0.5,
-      alpha: json['Alpha'] ?? 0,
-      closed: json['Closed'] ?? false,
+      tension: json['Tension'],
+      alpha: json['Alpha'],
+      closed: json['Closed'],
       arcDivisions: json['ArcDivisions'],
       numericalApproximationOrder: json['NumericalApproximationOrder'],
       numericalInverseSamples: json['NumericalInverseSamples'],
@@ -66,9 +66,9 @@ class Curve {
     }
 
     return Curve.createInterpolator(points, {
-      tension: json['Tension'] ?? 0.5,
-      alpha: json['Alpha'] ?? 0,
-      closed: json['Closed'] ?? false,
+      tension: json['Tension'],
+      alpha: json['Alpha'],
+      closed: json['Closed'],
       arcDivisions: json['ArcDivisions'],
       numericalApproximationOrder: json['NumericalApproximationOrder'],
       numericalInverseSamples: json['NumericalInverseSamples'],
@@ -84,9 +84,9 @@ class Curve {
    */
   static createInterpolator(points: Array<vec_any>, options: CurveOptions): CurveInterpolator {
     return new CurveInterpolator(points, {
-      tension: options.tension,
-      alpha: options.alpha,
-      closed: options.closed,
+      tension: options.tension ?? 0,
+      alpha: options.alpha ?? 0.5,
+      closed: options.closed ?? false,
       arcDivisions: options.arcDivisions,
       numericalApproximationOrder: options.numericalApproximationOrder,
       numericalInverseSamples: options.numericalInverseSamples,
@@ -95,4 +95,4 @@ class Curve {
   }
 }
 
-export { Curve, CurveInterpolator };
+export { CurveInterpolator };

@@ -1,12 +1,11 @@
 import { gfx3Manager } from '../gfx3/gfx3_manager';
-import { Quaternion } from '../core/quaternion';
 import { Gfx3View, Gfx3ProjectionMode } from '../gfx3/gfx3_view';
 import { Gfx3Transformable } from '../gfx3/gfx3_transformable';
 
 /**
  * A 3D camera object.
  */
-class Gfx3Camera extends Gfx3Transformable {
+export class Gfx3Camera extends Gfx3Transformable {
   view: Gfx3View;
   clipOffset: vec2;
   minClipOffset: vec2;
@@ -125,6 +124,8 @@ class Gfx3Camera extends Gfx3Transformable {
     }
   }
 
+  update(ts: number): void {}
+  
   /**
    * Returns the clip offset.
    */
@@ -417,16 +418,6 @@ class Gfx3Camera extends Gfx3Transformable {
   }
 
   /**
-   * Set the Quaternion rotation.
-   * 
-   * @param {vec4} quaternion - The quaternion.
-   */
-  setQuaternion(quaternion: Quaternion) : void {
-    super.setQuaternion(quaternion);
-    this.view.setCameraMatrix(this.getTransformMatrix());
-  }
-
-  /**
    * Set the scale with the given x, y and z factors.
    * 
    * @param {number} x - The x factor in the x-axis direction.
@@ -530,5 +521,3 @@ class Gfx3Camera extends Gfx3Transformable {
     return this.view;
   }
 }
-
-export { Gfx3Camera };

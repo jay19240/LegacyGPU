@@ -2,7 +2,7 @@ import { gfx3Manager } from '@lib/gfx3/gfx3_manager';
 import { gfx3TextureManager } from '@lib/gfx3/gfx3_texture_manager';
 import { gfx3DebugRenderer } from '@lib/gfx3/gfx3_debug_renderer';
 import { gfx3MeshRenderer } from '@lib/gfx3_mesh/gfx3_mesh_renderer';
-import { gfx3PostRenderer, PostParam } from '@lib/gfx3_post/gfx3_post_renderer';
+import { gfx3PostRenderer } from '@lib/gfx3_post/gfx3_post_renderer';
 import { gfx3ShadowVolumeRenderer } from '@lib/gfx3_shadow_volume/gfx3_shadow_volume_renderer';
 import { gfx3SkyboxRenderer } from '@lib/gfx3_skybox/gfx3_skybox_renderer';
 import { gfx3FlareRenderer } from '@lib/gfx3_flare/gfx3_flare_renderer';
@@ -10,16 +10,16 @@ import { uiManager } from '@lib/ui/ui_manager';
 import { coreManager } from '@lib/core/core_manager';
 import { UT } from '@lib/core/utils';
 import { Screen } from '@lib/screen/screen';
+import { Gfx3PostParam, Gfx3PostFinalParam } from '@lib/gfx3_post/gfx3_post_shader';
 import { Gfx3CameraOrbit } from '@lib/gfx3_camera/gfx3_camera_orbit';
 import { Gfx3MeshJSM } from '@lib/gfx3_mesh/gfx3_mesh_jsm';
 import { Gfx3MeshOBJ } from '@lib/gfx3_mesh/gfx3_mesh_obj';
 import { Gfx3Skybox } from '@lib/gfx3_skybox/gfx3_skybox';
-import { MatParam } from '@lib/gfx3_mesh/gfx3_mesh_shader';
+import { Gfx3MatParam } from '@lib/gfx3_mesh/gfx3_mesh_shader';
 import { Gfx3Material } from '@lib/gfx3_mesh/gfx3_mesh_material';
 import { Gfx3ShadowVolume } from '@lib/gfx3_shadow_volume/gfx3_shadow_volume';
 import { Gfx3FlareSun } from '@lib/gfx3_flare/gfx3_flare_sun';
-import { Gfx3MeshEffect } from '@lib/gfx3/gfx3_drawable';
-import { Curve } from '@lib/core/curve';
+import { Gfx3DrawableEffect } from '@lib/gfx3/gfx3_drawable';
 // ---------------------------------------------------------------------------------------
 
 class ViewerScreen extends Screen {
@@ -45,19 +45,21 @@ class ViewerScreen extends Screen {
     this.bloom = new Gfx3MeshJSM();
     await this.bloom.loadFromFile('./examples/viewer/bloom/mesh.jsm');
     await this.bloom.setMaterialFromFile('./examples/viewer/bloom/mesh.mat');
+    this.bloom.mat.setParam(Gfx3MatParam.ALPHA_BLEND_ENABLED, 1.0);
 
-    await this.sun.startup([600, 200, 0], { texture: await gfx3TextureManager.loadTexture('./textures/default_sun.png'), scale: 0.5 }, [
+    await this.sun.startup([600, 200, 0],
+      { texture: await gfx3TextureManager.loadTexture('./textures/default_sun.png'), scale: 0.5 }, [
       { texture: await gfx3TextureManager.loadTexture('./textures/default_lens1.png'), scale: 0.3, step: 0.2 },
       { texture: await gfx3TextureManager.loadTexture('./textures/default_lens2.png'), scale: 0.6, step: 1.5 }
     ]);
 
-    gfx3PostRenderer.setParam(PostParam.ENABLED, 1.0);
-    gfx3PostRenderer.setParam(PostParam.COLOR_ENABLED, 1.0);
-    gfx3PostRenderer.setParam(PostParam.PIXELATION_ENABLED, 1.0);
-    gfx3PostRenderer.setParam(PostParam.DITHER_ENABLED, 1.0);
-    gfx3PostRenderer.setParam(PostParam.OUTLINE_ENABLED, 1.0);
-    gfx3PostRenderer.setParam(PostParam.OUTLINE_CONSTANT, 1.0);
-    gfx3PostRenderer.setParam(PostParam.OUTLINE_THICKNESS, 3.0);
+    gfx3PostRenderer.setParam(Gfx3PostParam.ENABLED, 1.0);
+    gfx3PostRenderer.setParam(Gfx3PostParam.COLOR_ENABLED, 1.0);
+    gfx3PostRenderer.setParam(Gfx3PostParam.PIXELATION_ENABLED, 1.0);
+    gfx3PostRenderer.setParam(Gfx3PostParam.DITHER_ENABLED, 1.0);
+    gfx3PostRenderer.setParam(Gfx3PostParam.OUTLINE_ENABLED, 1.0);
+    gfx3PostRenderer.setParam(Gfx3PostParam.OUTLINE_CONSTANT, 1.0);
+    gfx3PostRenderer.setParam(Gfx3PostParam.OUTLINE_THICKNESS, 3.0);
 
     uiManager.addNode(CREATE_UI_INFOBOX(), 'position:absolute; bottom:10px; right:10px');
     document.addEventListener('keydown', this.handleKeyDownCb);
@@ -82,8 +84,6 @@ class ViewerScreen extends Screen {
     this.bloom.draw();
     this.skybox.draw();
     this.sun.draw();
-    // gfx3MeshRenderer.drawPointLight([0, 30, 0], [1, 0, 0], [0, 0, 0]);
-    // gfx3MeshRenderer.drawPointLight([30, 0, 0], [0, 1, 0], [0, 0, 0]);
     gfx3MeshRenderer.drawPointLight([-30, 0, 0], [1, 1, 1], [0, 0, 0]);
     gfx3DebugRenderer.drawGrid(UT.MAT4_ROTATE_X(Math.PI * 0.5), 20, 1);
     gfx3Manager.endDrawing();
@@ -133,16 +133,16 @@ class ViewerScreen extends Screen {
       coreManager.toggleClass('scanlines');
     }
     else if (e.key == 'p' || e.key == 'P') {
-      this.mesh.setEffects(Gfx3MeshEffect.PIXELATION | Gfx3MeshEffect.DITHER | Gfx3MeshEffect.COLOR_LIMITATION);
+      this.mesh.setEffects(Gfx3DrawableEffect.PIXELATION | Gfx3DrawableEffect.DITHER | Gfx3DrawableEffect.COLOR_LIMITATION);
     }
     else if (e.key == 'l' || e.key == 'L') {
-      this.mesh.setEffects(Gfx3MeshEffect.OUTLINE);
+      this.mesh.setEffects(Gfx3DrawableEffect.OUTLINE);
     }
     else if (e.key == 's' || e.key == 'S') {
-      this.mesh.setEffects(Gfx3MeshEffect.SHADOW_VOLUME);
+      this.mesh.setEffects(Gfx3DrawableEffect.SHADOW_VOLUME);
     }
     else if (e.key == 'n' || e.key == 'N') {
-      this.mesh.setEffects(Gfx3MeshEffect.NONE);
+      this.mesh.setEffects(Gfx3DrawableEffect.NONE);
     }
   }
 }
@@ -179,17 +179,17 @@ async function CREATE_CUBE_BRICK() {
   await mesh.loadFromFile('./examples/viewer/cube_brick/mesh.jsm');
   mesh.mat.setTexture(await gfx3TextureManager.loadTexture('./examples/viewer/cube_brick/albedo.png'));
   mesh.mat.setNormalMap(await gfx3TextureManager.loadTexture('./examples/viewer/cube_brick/normal.png'));
-  mesh.mat.setParam(MatParam.LIGHT_ENABLED, 1.0);
-  mesh.mat.setParam(MatParam.ARCADE_ENABLED, 1.0);
-  mesh.mat.setParam(MatParam.ARCADE_START_COLOR_R, 0.5);
-  mesh.mat.setParam(MatParam.ARCADE_START_COLOR_G, 0.5);
-  mesh.mat.setParam(MatParam.ARCADE_START_COLOR_B, 0.1);
-  mesh.mat.setParam(MatParam.ARCADE_END_COLOR_R, 0.5);
-  mesh.mat.setParam(MatParam.ARCADE_END_COLOR_G, 0.5);
-  mesh.mat.setParam(MatParam.ARCADE_END_COLOR_B, 0.1);
-  mesh.mat.setParam(MatParam.ARCADE_SHARP_COLOR_R, 1.0);
-  mesh.mat.setParam(MatParam.ARCADE_SHARP_COLOR_G, 1.0);
-  mesh.mat.setParam(MatParam.ARCADE_SHARP_COLOR_B, 1.0);
+  mesh.mat.setParam(Gfx3MatParam.LIGHT_ENABLED, 1.0);
+  mesh.mat.setParam(Gfx3MatParam.ARCADE_ENABLED, 1.0);
+  mesh.mat.setParam(Gfx3MatParam.ARCADE_START_COLOR_R, 0.5);
+  mesh.mat.setParam(Gfx3MatParam.ARCADE_START_COLOR_G, 0.5);
+  mesh.mat.setParam(Gfx3MatParam.ARCADE_START_COLOR_B, 0.1);
+  mesh.mat.setParam(Gfx3MatParam.ARCADE_END_COLOR_R, 0.5);
+  mesh.mat.setParam(Gfx3MatParam.ARCADE_END_COLOR_G, 0.5);
+  mesh.mat.setParam(Gfx3MatParam.ARCADE_END_COLOR_B, 0.1);
+  mesh.mat.setParam(Gfx3MatParam.ARCADE_SHARP_COLOR_R, 1.0);
+  mesh.mat.setParam(Gfx3MatParam.ARCADE_SHARP_COLOR_G, 1.0);
+  mesh.mat.setParam(Gfx3MatParam.ARCADE_SHARP_COLOR_B, 1.0);
   return mesh;
 }
 
@@ -197,7 +197,7 @@ async function CREATE_CUBE() {
   const mesh = new Gfx3MeshJSM();
   await mesh.loadFromFile('./examples/viewer/cube/mesh.jsm');
   mesh.mat.setTexture(await gfx3TextureManager.loadTexture('./examples/viewer/cube/albedo.png'));
-  mesh.mat.setParam(MatParam.LIGHT_ENABLED, 1.0);
+  mesh.mat.setParam(Gfx3MatParam.LIGHT_ENABLED, 1.0);
   return mesh;
 }
 
@@ -205,7 +205,7 @@ async function CREATE_CUBE_SPRITE() {
   const mesh = new Gfx3MeshJSM();
   await mesh.loadFromFile('./examples/viewer/cube_sprite/mesh.jsm');
   mesh.mat.setTexture(await gfx3TextureManager.loadTexture('./examples/viewer/cube_sprite/flipbook.png'));
-  mesh.mat.setParam(MatParam.LIGHT_ENABLED, 0.0);
+  mesh.mat.setParam(Gfx3MatParam.LIGHT_ENABLED, 0.0);
   mesh.mat.setFlipbooks([{
     textureTarget: 'Texture',
     frameWidth: 850,
@@ -224,7 +224,7 @@ async function CREATE_DUCK() {
   const mesh = new Gfx3MeshJSM();
   await mesh.loadFromFile('./examples/viewer/duck/mesh.jsm');
   mesh.mat.setTexture(await gfx3TextureManager.loadTexture('./examples/viewer/duck/albedo.png'));
-  mesh.mat.setParam(MatParam.LIGHT_ENABLED, 1.0);
+  mesh.mat.setParam(Gfx3MatParam.LIGHT_ENABLED, 1.0);
   return mesh;
 }
 
@@ -232,9 +232,9 @@ async function CREATE_TORUS() {
   const mesh = new Gfx3MeshJSM();
   await mesh.loadFromFile('./examples/viewer/torus/mesh.jsm');
   mesh.mat.setToonMap(await gfx3TextureManager.loadTexture('./textures/default_toon.png', { minFilter: 'nearest', magFilter: 'nearest' }));
-  mesh.mat.setParam(MatParam.TOON_LIGHT_DIR_X, 1.0);
-  mesh.mat.setParam(MatParam.TOON_LIGHT_DIR_Y, -1.0);
-  mesh.mat.setParam(MatParam.TOON_LIGHT_DIR_Z, -1.0);
+  mesh.mat.setParam(Gfx3MatParam.TOON_LIGHT_DIR_X, 1.0);
+  mesh.mat.setParam(Gfx3MatParam.TOON_LIGHT_DIR_Y, -1.0);
+  mesh.mat.setParam(Gfx3MatParam.TOON_LIGHT_DIR_Z, -1.0);
   return mesh;
 }
 

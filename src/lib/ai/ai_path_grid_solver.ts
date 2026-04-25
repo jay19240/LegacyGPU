@@ -1,6 +1,6 @@
 import { AIPathGrid } from './ai_path_grid';
 
-interface Visited<T> {
+export interface Visited<T> {
   pos: T;
   origin: T | null;
 };
@@ -9,7 +9,7 @@ interface Visited<T> {
  * Implements the A* algorithm to find the shortest path between a start coordinate and an end coordinate on a grid.
  * @typeParam T - The coord type: vec2 or vec3.
  */
-class AIPathGridSolver<T extends vec2 | vec3> {
+export class AIPathGridSolver<T extends vec2 | vec3> {
   /**
    * Find the shortest path between a start node and an end node in a given grid and returns the path.
    * 0 = floor, 1 = wall
@@ -74,5 +74,3 @@ class AIPathGridSolver<T extends vec2 | vec3> {
     return grid.getDirections(a, b);
   }
 }
-
-export { AIPathGridSolver };

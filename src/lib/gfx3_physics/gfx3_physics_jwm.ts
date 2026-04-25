@@ -4,7 +4,7 @@ import { PH } from '../core/physics';
 import { Gfx2BoundingRect } from '../gfx2/gfx2_bounding_rect';
 import { Gfx2TreePartition } from '../gfx2/gfx2_tree_partition';
 
-export class Sector extends Gfx2BoundingRect {
+export class Gfx3JWMSector extends Gfx2BoundingRect {
   index: number;
   v1: vec3;
   v2: vec3;
@@ -24,49 +24,49 @@ export class Sector extends Gfx2BoundingRect {
   }
 }
 
-export interface Neighbor {
+export interface Gfx3JWMNeighbor {
   s1: number;
   s2: number;
   s3: number;
 };
 
-export interface Shared {
+export interface Gfx3JWMShared {
   sectorIds: Array<number>
 };
 
-export interface WalkPoint {
+export interface Gfx3JWMPoint {
   sectorIndex: number;
   x: number;
   y: number;
   z: number;
 };
 
-export interface WalkRect {
+export interface Gfx3JWMRect {
   id: string;
   width: number;
   depth: number;
-  points: Array<WalkPoint>;
+  points: Array<Gfx3JWMPoint>;
 };
 
-export interface WalkResMoveRect {
-  walker: WalkRect;
+export interface Gfx3JWMResolveRect {
+  walker: Gfx3JWMRect;
   move: vec3;
   collide: boolean;
 };
 
-export interface WalkResMovePoint {
-  point: WalkPoint;
+export interface Gfx3JWMResolvePoint {
+  point: Gfx3JWMPoint;
   move: vec3;
   collide: boolean;
 };
 
-export interface WalkResRaycast {
+export interface Gfx3JWMResolveRaycast {
   sectorIndex: number;
   distance: number;
   hit: vec3;
 };
 
-export interface WalkResElevation {
+export interface Gfx3JWMResolveElevation {
   sectorIndex: number;
   y: number;
 };
@@ -75,15 +75,15 @@ export interface WalkResElevation {
  * A 3D walkmesh.
  * In collision case, the collision response sliding along the edges of the walkmesh to keep a good feeling for the player.
  */
-class Gfx3PhysicsJWM {
+export class Gfx3PhysicsJWM {
   boundingRect: Gfx2BoundingRect;
-  sectors: Array<Sector>;
+  sectors: Array<Gfx3JWMSector>;
   sectorColors: Array<vec3>;
-  neighborPool: Array<Neighbor>;
-  sharedPool: Array<Shared>;
+  neighborPool: Array<Gfx3JWMNeighbor>;
+  sharedPool: Array<Gfx3JWMShared>;
   btree: Gfx2TreePartition;
-  walkPoints: Map<string, WalkPoint>;
-  walkRects: Map<string, WalkRect>;
+  walkPoints: Map<string, Gfx3JWMPoint>;
+  walkRects: Map<string, Gfx3JWMRect>;
   debugVertices: Array<number>;
   debugVertexCount: number;
 
@@ -94,8 +94,8 @@ class Gfx3PhysicsJWM {
     this.neighborPool = [];
     this.sharedPool = [];
     this.btree = new Gfx2TreePartition(0, 0);
-    this.walkPoints = new Map<string, WalkPoint>();
-    this.walkRects = new Map<string, WalkRect>();
+    this.walkPoints = new Map<string, Gfx3JWMPoint>();
+    this.walkRects = new Map<string, Gfx3JWMRect>();
     this.debugVertices = [];
     this.debugVertexCount = 0;
   }
@@ -121,7 +121,7 @@ class Gfx3PhysicsJWM {
     this.sectors = [];
     for (let i = 0; i < json['NumSectors']; i++) {
       const obj = json['Sectors'][i];
-      const sector = new Sector(i, obj[0], obj[1], obj[2]);
+      const sector = new Gfx3JWMSector(i, obj[0], obj[1], obj[2]);
       this.btree.addChild(sector);
       this.sectors.push(sector);
     }
@@ -180,7 +180,7 @@ class Gfx3PhysicsJWM {
       const v0: vec3 = [data[offset + (i * 9) + 0], data[offset + (i * 9) + 1], data[offset + (i * 9) + 2]];
       const v1: vec3 = [data[offset + (i * 9) + 3], data[offset + (i * 9) + 4], data[offset + (i * 9) + 5]];
       const v2: vec3 = [data[offset + (i * 9) + 6], data[offset + (i * 9) + 7], data[offset + (i * 9) + 8]];
-      const sector = new Sector(i, v0, v1, v2);
+      const sector = new Gfx3JWMSector(i, v0, v1, v2);
       this.btree.addChild(sector);
       this.sectors.push(sector);
     }
@@ -263,7 +263,7 @@ class Gfx3PhysicsJWM {
    * @param {number} x - The x-coordinate of the point position.
    * @param {number} z - The z-coordinate of the point position.
    */
-  addWalkPoint(id: string, x: number, z: number): WalkPoint {
+  addWalkPoint(id: string, x: number, z: number): Gfx3JWMPoint {
     if (this.walkPoints.has(id)) {
       throw new Error('Gfx3PhysicsJWM::addWalkPoint: point with id ' + id + ' already exist.');
     }
@@ -291,7 +291,7 @@ class Gfx3PhysicsJWM {
    * 
    * @param {string} id - A unique identifier.
    */
-  getWalkPoint(id: string): WalkPoint {
+  getWalkPoint(id: string): Gfx3JWMPoint {
     const point = this.walkPoints.get(id);
     if (!point) {
       throw new Error('Gfx3PhysicsJWM::getWalkPoint: point with id ' + id + ' not exist.');
@@ -310,7 +310,7 @@ class Gfx3PhysicsJWM {
    * @param {number} centerX - The center of rotation on x-axis.
    * @param {number} centerZ - The center of rotation on z-axis.
    */
-  testWalkPoint(point: WalkPoint, mx: number, mz: number, angle: number = 0, centerX: number = 0, centerZ: number = 0): WalkResMovePoint {
+  testWalkPoint(point: Gfx3JWMPoint, mx: number, mz: number, angle: number = 0, centerX: number = 0, centerZ: number = 0): Gfx3JWMResolvePoint {
     if (angle != 0) {
       const cosA = Math.cos(angle);
       const sinA = Math.sin(angle);
@@ -347,7 +347,7 @@ class Gfx3PhysicsJWM {
    * @param {number} centerX - The center of rotation on x-axis.
    * @param {number} centerZ - The center of rotation on z-axis.
    */
-  moveWalkPoint(point: WalkPoint, mx: number, mz: number, angle: number = 0, centerX: number = 0, centerZ: number = 0): WalkResMovePoint {
+  moveWalkPoint(point: Gfx3JWMPoint, mx: number, mz: number, angle: number = 0, centerX: number = 0, centerZ: number = 0): Gfx3JWMResolvePoint {
     if (angle != 0) {
       const cosA = Math.cos(angle);
       const sinA = Math.sin(angle);
@@ -388,7 +388,7 @@ class Gfx3PhysicsJWM {
    * @param {number} width - The rectangle width.
    * @param {number} depth - The rectangle depth.
    */
-  addWalkRect(id: string, x: number, z: number, width: number, depth: number = 0): WalkRect {
+  addWalkRect(id: string, x: number, z: number, width: number, depth: number = 0): Gfx3JWMRect {
     if (this.walkRects.has(id)) {
       throw new Error('Gfx3PhysicsJWM::addWalkRect: walker with id ' + id + ' already exist.');
     }
@@ -397,7 +397,7 @@ class Gfx3PhysicsJWM {
       depth = width;
     }
 
-    const walker: WalkRect = {
+    const walker: Gfx3JWMRect = {
       id: id,
       width: width,
       depth: depth,
@@ -432,7 +432,7 @@ class Gfx3PhysicsJWM {
    * 
    * @param {string} id - A unique identifier.
    */
-  getWalkRect(id: string): WalkRect {
+  getWalkRect(id: string): Gfx3JWMRect {
     if (!this.walkRects.has(id)) {
       throw new Error('Gfx3PhysicsJWM::getWalkRect: walker with id ' + id + ' not exist.');
     }
@@ -447,7 +447,7 @@ class Gfx3PhysicsJWM {
    * @param {number} mx - The movement in the x-axis.
    * @param {number} mz - The movement in the z-axis.
    */
-  moveWalkRect(walker: WalkRect, mx: number, mz: number): WalkResMoveRect {
+  moveWalkRect(walker: Gfx3JWMRect, mx: number, mz: number): Gfx3JWMResolveRect {
     let fmx = mx;
     let fmz = mz;
     let fmy = 0;
@@ -520,7 +520,7 @@ class Gfx3PhysicsJWM {
    * @param {number} x - The x-coordinate of the point position.
    * @param {number} z - The z-coordinate of the point position.
    */
-  getElevation(x: number, z: number): WalkResElevation {
+  getElevation(x: number, z: number): Gfx3JWMResolveElevation {
     const loc = this.#utilsFindLocationInfo(x, z);
     return {
       sectorIndex: loc.sectorIndex,
@@ -534,12 +534,12 @@ class Gfx3PhysicsJWM {
    * @param {vec3} origin - The ray origin.
    * @param {vec3} dir - The ray direction.
    */
-  raycast(origin: vec3, dir: vec3, offset: vec3 = [0, 0, 0]): WalkResRaycast | null {
+  raycast(origin: vec3, dir: vec3, offset: vec3 = [0, 0, 0]): Gfx3JWMResolveRaycast | null {
     const o = UT.VEC3_ADD(origin, offset);
     const sectors = this.btree.search(new Gfx2BoundingRect(
       [o[0] - 1, o[2] - 1],
       [o[0] + 1, o[2] + 1]
-    )) as Array<Sector>;
+    )) as Array<Gfx3JWMSector>;
 
     let minSector = null;
     let minSectorLength = Infinity;
@@ -567,7 +567,7 @@ class Gfx3PhysicsJWM {
    * 
    * @param {number} sectorIndex - The sector index.
    */
-  getSector(sectorIndex: number): Sector {
+  getSector(sectorIndex: number): Gfx3JWMSector {
     return this.sectors[sectorIndex];
   }
 
@@ -627,7 +627,7 @@ class Gfx3PhysicsJWM {
     return this.#utilsMove(sectorIndex, x, z, mx, mz, i + 1);
   }
 
-  #utilsCreateWalkPoint(x: number, z: number): WalkPoint {
+  #utilsCreateWalkPoint(x: number, z: number): Gfx3JWMPoint {
     const loc = this.#utilsFindLocationInfo(x, z);
     return {
       sectorIndex: loc.sectorIndex,
@@ -641,7 +641,7 @@ class Gfx3PhysicsJWM {
     const sectors = this.btree.search(new Gfx2BoundingRect(
       [x - 1, z - 1],
       [x + 1, z + 1]
-    )) as Array<Sector>;
+    )) as Array<Gfx3JWMSector>;
 
     for (const sector of sectors) {
       const a = sector.v1;
@@ -655,5 +655,3 @@ class Gfx3PhysicsJWM {
     return { sectorIndex: -1, elev: Infinity };
   }
 }
-
-export { Gfx3PhysicsJWM };

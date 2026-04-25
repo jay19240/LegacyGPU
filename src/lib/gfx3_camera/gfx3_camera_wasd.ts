@@ -6,7 +6,7 @@ import { UT } from '../core/utils';
 /**
  * A 3D camera implementation that behaves similar to first-person-shooter PC games.
  */
-class Gfx3CameraWASD extends Gfx3Camera {
+export class Gfx3CameraWASD extends Gfx3Camera {
   movementSpeed: number;
   rotationSpeed: number;
   frictionCoefficient: number;
@@ -158,5 +158,3 @@ class Gfx3CameraWASD extends Gfx3Camera {
     this.setRotation(newRotationX, newRotationY, 0);
   }
 }
-
-export { Gfx3CameraWASD };

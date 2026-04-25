@@ -1,12 +1,12 @@
 import { UIWidget } from '@lib/ui/ui_widget';
-import { MenuAxis } from '@lib/ui_menu/ui_menu';
+import { UIMenuAxis } from '@lib/ui_menu/ui_menu';
 import { UIMenuListView } from '@lib/ui_menu_list_view/ui_menu_list_view';
 // ---------------------------------------------------------------------------------------
 
 class UIBattleHeroes extends UIMenuListView {
   constructor() {
     super({
-      axis: MenuAxis.X
+      axis: UIMenuAxis.X
     });
   }
 

@@ -1,13 +1,13 @@
-export const SHADER_VERTEX_ATTR_COUNT = 6;
-export const UNIFORM_ATTR_COUNT = 1;
+export const SV_SHADER_VERTEX_ATTR_COUNT = 6;
+export const SV_UNIFORM_ATTR_COUNT = 1;
 
-export const PIPELINE_CW_DESC: any = {
+export const SV_PIPELINE_CW_DESC: any = {
   label: 'Mesh Shadow Volume CW pipeline',
   layout: 'auto',
   vertex: {
     entryPoint: 'main',
     buffers: [{
-      arrayStride: SHADER_VERTEX_ATTR_COUNT * 4,
+      arrayStride: SV_SHADER_VERTEX_ATTR_COUNT * 4,
       attributes: [{
         shaderLocation: 0, /* position */
         offset: 0,
@@ -37,13 +37,13 @@ export const PIPELINE_CW_DESC: any = {
   }
 };
 
-export const PIPELINE_CCW_DESC: any = {
+export const SV_PIPELINE_CCW_DESC: any = {
   label: 'Mesh Shadow Volume CCW pipeline',
   layout: 'auto',
   vertex: {
     entryPoint: 'main',
     buffers: [{
-      arrayStride: SHADER_VERTEX_ATTR_COUNT * 4,
+      arrayStride: SV_SHADER_VERTEX_ATTR_COUNT * 4,
       attributes: [{
         shaderLocation: 0, /* position */
         offset: 0,
@@ -73,7 +73,7 @@ export const PIPELINE_CCW_DESC: any = {
   }
 };
 
-export const VERTEX_SHADER = `
+export const SV_VERTEX_SHADER = `
 struct VertexOutput {
   @builtin(position) Position: vec4<f32>,
   @location(0) Color: vec3<f32>
@@ -92,7 +92,7 @@ fn main(
   return output;
 }`;
 
-export const FRAGMENT_SHADER = /* wgsl */`
+export const SV_FRAGMENT_SHADER = /* wgsl */`
 @fragment
 fn main(
   @builtin(position) Position: vec4<f32>,

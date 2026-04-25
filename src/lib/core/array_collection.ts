@@ -6,7 +6,7 @@ import { eventManager } from './event_manager';
  * It emit 'E_ITEM_ADDED' with data { item, index }
  * It emit 'E_ITEM_REMOVED' with data { item, index }
  */
-class ArrayCollection<T> {
+export class ArrayCollection<T> {
   items: Array<T>;
 
   /**
@@ -101,5 +101,3 @@ class ArrayCollection<T> {
     }
   }
 }
-
-export { ArrayCollection };

@@ -5,7 +5,7 @@ import { Gfx2TileMap } from './gfx2_tile_map';
 /**
  * A tilemap layer drawable.
  */
-class Gfx2TileMapLayer extends Gfx2Drawable {
+export class Gfx2TileMapLayer extends Gfx2Drawable {
   tilemap: Gfx2TileMap;
   layerIndex: number;
   frameIndex: number;
@@ -97,5 +97,3 @@ class Gfx2TileMapLayer extends Gfx2Drawable {
     }
   }
 }
-
-export { Gfx2TileMapLayer };

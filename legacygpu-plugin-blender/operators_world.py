@@ -1,5 +1,6 @@
 import bpy
 import bmesh
+import math
 from . import functions
 from . import utils
 # ----------------------------------------------------------------------------------
@@ -8,8 +9,6 @@ from . import utils
 def register():
   bpy.utils.register_class(WARME_OT_create_jsm)
   bpy.utils.register_class(WARME_OT_cast_to_jsm)
-  bpy.utils.register_class(WARME_OT_create_obj)
-  bpy.utils.register_class(WARME_OT_cast_to_obj)
   bpy.utils.register_class(WARME_OT_create_jam)
   bpy.utils.register_class(WARME_OT_cast_to_jam)
   bpy.utils.register_class(WARME_OT_create_jwm)
@@ -24,11 +23,43 @@ def register():
   bpy.utils.register_class(WARME_OT_create_jlm_curve)
   bpy.utils.register_class(WARME_OT_create_jlt_point)
   bpy.utils.register_class(WARME_OT_create_jlt_spot)
+  bpy.utils.register_class(WARME_OT_create_special_dcl)
+  bpy.utils.register_class(WARME_OT_create_special_sun)
+  bpy.utils.register_class(WARME_OT_create_special_shadow_projector)
+  bpy.utils.register_class(WARME_OT_create_special_shadow_projector_target)
+  bpy.utils.register_class(WARME_OT_create_special_skybox)
+  bpy.utils.register_class(WARME_OT_create_special_particles)
+  bpy.utils.register_class(WARME_OT_create_entity_aabb)
+  bpy.utils.register_class(WARME_OT_create_entity_cylinder)
+  bpy.utils.register_class(WARME_OT_create_entity_sphere)
 
 
 def unregister():
   bpy.utils.unregister_class(WARME_OT_create_jsm)
-  bpy.utils.register_class(WARME_OT_cast_to_jsm)
+  bpy.utils.unregister_class(WARME_OT_cast_to_jsm)
+  bpy.utils.unregister_class(WARME_OT_create_jam)
+  bpy.utils.unregister_class(WARME_OT_cast_to_jam)
+  bpy.utils.unregister_class(WARME_OT_create_jwm)
+  bpy.utils.unregister_class(WARME_OT_cast_to_jwm)
+  bpy.utils.unregister_class(WARME_OT_create_jnm)
+  bpy.utils.unregister_class(WARME_OT_cast_to_jnm)
+  bpy.utils.unregister_class(WARME_OT_create_jsv)
+  bpy.utils.unregister_class(WARME_OT_cast_to_jsv)
+  bpy.utils.unregister_class(WARME_OT_create_grf)
+  bpy.utils.unregister_class(WARME_OT_cast_to_grf)
+  bpy.utils.unregister_class(WARME_OT_create_jlm_points)
+  bpy.utils.unregister_class(WARME_OT_create_jlm_curve)
+  bpy.utils.unregister_class(WARME_OT_create_jlt_point)
+  bpy.utils.unregister_class(WARME_OT_create_jlt_spot)
+  bpy.utils.unregister_class(WARME_OT_create_special_dcl)
+  bpy.utils.unregister_class(WARME_OT_create_special_sun)
+  bpy.utils.unregister_class(WARME_OT_create_special_shadow_projector)
+  bpy.utils.unregister_class(WARME_OT_create_special_shadow_projector_target)
+  bpy.utils.unregister_class(WARME_OT_create_special_skybox)
+  bpy.utils.unregister_class(WARME_OT_create_special_particles)
+  bpy.utils.unregister_class(WARME_OT_create_entity_aabb)
+  bpy.utils.unregister_class(WARME_OT_create_entity_cylinder)
+  bpy.utils.unregister_class(WARME_OT_create_entity_sphere)
 
 
 # ----------------------------------------------------------------------------------
@@ -62,47 +93,6 @@ class WARME_OT_cast_to_jsm(bpy.types.Operator):
 
   def execute(self, context):
     collection = utils.get_or_create_collection("JSM")
-
-    for object in bpy.context.selected_objects:
-      object.color = (0.6, 0.65, 0.7, 1)
-      utils.unlink_from_all_collections(object)
-      collection.objects.link(object)
-      self.report({'INFO'}, "Cast successful ✔")
-    #endfor
-
-    return {"FINISHED"}
-  
-# ----------------------------------------------------------------------------------
-# OBJ
-# ----------------------------------------------------------------------------------
-class WARME_OT_create_obj(bpy.types.Operator):
-  """Create OBJ""" 
-  bl_idname = "object.create_obj"
-  bl_label = "OBJ"
-  bl_options = {'REGISTER', 'UNDO_GROUPED'}
-
-  def execute(self, context):
-    bpy.ops.mesh.primitive_cube_add()
-    cube = context.active_object
-    cube.name = "Object"
-    cube.color = (0.6, 0.65, 0.7, 1)
-
-    collection = utils.get_or_create_collection("OBJ")
-    utils.unlink_from_all_collections(cube)
-    collection.objects.link(cube)
-
-    self.report({'INFO'}, "Creation successful ✔")
-    return {"FINISHED"}
-
-
-class WARME_OT_cast_to_obj(bpy.types.Operator):
-  """Cast To OBJ""" 
-  bl_idname = "object.cast_to_obj"
-  bl_label = "To OBJ"
-  bl_options = {'REGISTER', 'UNDO_GROUPED'}
-
-  def execute(self, context):
-    collection = utils.get_or_create_collection("OBJ")
 
     for object in bpy.context.selected_objects:
       object.color = (0.6, 0.65, 0.7, 1)
@@ -427,6 +417,229 @@ class WARME_OT_create_jlt_spot(bpy.types.Operator):
     collection = utils.get_or_create_collection("JLT")
     utils.unlink_from_all_collections(obj)
     collection.objects.link(obj)
+
+    self.report({'INFO'}, "Creation successful ✔")
+    return {"FINISHED"}
+
+
+# ----------------------------------------------------------------------------------
+# SPECIAL
+# ----------------------------------------------------------------------------------
+class WARME_OT_create_special_dcl(bpy.types.Operator):
+  """Create Decal""" 
+  bl_idname = "object.create_special_dcl"
+  bl_label = "Decal"
+  bl_options = {'REGISTER', 'UNDO_GROUPED'}
+
+  def execute(self, context):
+    empty_obj = bpy.data.objects.new("Decal", None)
+    collection = utils.get_or_create_collection("DCL")
+    utils.unlink_from_all_collections(empty_obj)
+    collection.objects.link(empty_obj)
+
+    self.report({'INFO'}, "Creation successful ✔")
+    return {"FINISHED"}
+
+
+class WARME_OT_create_special_sun(bpy.types.Operator):
+  """Create Sun""" 
+  bl_idname = "object.create_special_sun"
+  bl_label = "Sun"
+  bl_options = {'REGISTER', 'UNDO_GROUPED'}
+
+  def execute(self, context):
+    empty_obj = bpy.data.objects.new("Sun", None)
+    empty_obj.empty_display_type = 'SINGLE_ARROW'
+    empty_obj.empty_display_size = 4.0
+    collection = utils.get_or_create_collection("Collection")
+    utils.unlink_from_all_collections(empty_obj)
+    collection.objects.link(empty_obj)
+
+    self.report({'INFO'}, "Creation successful ✔")
+    return {"FINISHED"}
+
+
+class WARME_OT_create_special_shadow_projector(bpy.types.Operator):
+  """Create Shadow Projector""" 
+  bl_idname = "object.create_special_shadow_projector"
+  bl_label = "Shadow Projector"
+  bl_options = {'REGISTER', 'UNDO_GROUPED'}
+
+  def execute(self, context):
+    empty_obj = bpy.data.objects.new("ShadowProjector", None)
+    empty_obj.empty_display_type = 'CUBE'
+    collection = utils.get_or_create_collection("Collection")
+    utils.unlink_from_all_collections(empty_obj)
+    collection.objects.link(empty_obj)
+    utils.setup_tracking("ShadowProjector", "ShadowProjectorTarget")
+
+    self.report({'INFO'}, "Creation successful ✔")
+    return {"FINISHED"}
+
+
+class WARME_OT_create_special_shadow_projector_target(bpy.types.Operator):
+  """Create Shadow Projector Target""" 
+  bl_idname = "object.create_special_shadow_projector_target"
+  bl_label = "Shadow Projector Target"
+  bl_options = {'REGISTER', 'UNDO_GROUPED'}
+
+  def execute(self, context):
+    empty_obj = bpy.data.objects.new("ShadowProjectorTarget", None)
+    empty_obj.empty_display_type = 'CONE'
+    empty_obj.empty_display_size = 0.1
+    empty_obj.rotation_euler[0] = math.radians(90)
+
+    collection = utils.get_or_create_collection("Collection")
+    utils.unlink_from_all_collections(empty_obj)
+    collection.objects.link(empty_obj)
+    utils.setup_tracking("ShadowProjector", "ShadowProjectorTarget")
+
+    self.report({'INFO'}, "Creation successful ✔")
+    return {"FINISHED"}
+
+
+class WARME_OT_create_special_skybox(bpy.types.Operator):
+  """Create Skybox""" 
+  bl_idname = "object.create_special_skybox"
+  bl_label = "Skybox"
+  bl_options = {'REGISTER', 'UNDO_GROUPED'}
+
+  def execute(self, context):
+    empty_obj = bpy.data.objects.new("Skybox", None)
+    empty_obj.empty_display_type = 'CUBE'
+    empty_obj.empty_display_size = 600
+
+    collection = utils.get_or_create_collection("SKY")
+    utils.unlink_from_all_collections(empty_obj)
+    collection.objects.link(empty_obj)
+
+    self.report({'INFO'}, "Creation successful ✔")
+    return {"FINISHED"}
+
+
+class WARME_OT_create_special_particles(bpy.types.Operator):
+  """Create Particles""" 
+  bl_idname = "object.create_special_particles"
+  bl_label = "Particles"
+  bl_options = {'REGISTER', 'UNDO_GROUPED'}
+
+  def execute(self, context):
+    bpy.ops.mesh.primitive_cone_add()
+    particles = context.active_object
+    particles.name = "Particles"
+    particles.color = (0.0, 1.0, 0.0, 0.2)
+
+    collection = utils.get_or_create_collection("PRT")
+    utils.unlink_from_all_collections(particles)
+    collection.objects.link(particles)
+
+    self.report({'INFO'}, "Creation successful ✔")
+    return {"FINISHED"}
+
+
+# ----------------------------------------------------------------------------------
+# ENTITIES
+# ----------------------------------------------------------------------------------
+class WARME_OT_create_entity_aabb(bpy.types.Operator):
+  """Create Entity AABB""" 
+  bl_idname = "object.create_entity_aabb"
+  bl_label = "Entity AABB"
+  bl_options = {'REGISTER', 'UNDO_GROUPED'}
+
+  def execute(self, context):
+    bpy.ops.mesh.primitive_cube_add()
+    cube = context.active_object
+    cube.name = "Entity"
+    cube["entity_shape"] = "AABB"
+    cube.color = (1.0, 0.0, 0.0, 0.2)
+
+    collection = utils.get_or_create_collection("ENT")
+    utils.unlink_from_all_collections(cube)
+    collection.objects.link(cube)
+
+    self.report({'INFO'}, "Creation successful ✔")
+    return {"FINISHED"}
+
+
+class WARME_OT_create_entity_cylinder(bpy.types.Operator):
+  """Create Entity Cylinder""" 
+  bl_idname = "object.create_entity_cylinder"
+  bl_label = "Entity Cylinder"
+  bl_options = {'REGISTER', 'UNDO_GROUPED'}
+
+  def execute(self, context):
+    bpy.ops.mesh.primitive_cylinder_add()
+    cylinder = context.active_object
+    cylinder.name = "Entity"
+    cylinder["entity_shape"] = "CYLINDER"
+    cylinder.color = (1.0, 0.0, 0.0, 0.2)
+
+    collection = utils.get_or_create_collection("ENT")
+    utils.unlink_from_all_collections(cylinder)
+    collection.objects.link(cylinder)
+
+    self.report({'INFO'}, "Creation successful ✔")
+    return {"FINISHED"}
+
+
+class WARME_OT_create_entity_sphere(bpy.types.Operator):
+  """Create Entity Sphere""" 
+  bl_idname = "object.create_entity_sphere"
+  bl_label = "Entity Sphere"
+  bl_options = {'REGISTER', 'UNDO_GROUPED'}
+
+  def execute(self, context):
+    bpy.ops.mesh.primitive_uv_sphere_add()
+    sphere = context.active_object
+    sphere.name = "Entity"
+    sphere["entity_shape"] = "SPHERE"
+    sphere.color = (1.0, 0.0, 0.0, 0.2)
+
+    collection = utils.get_or_create_collection("ENT")
+    utils.unlink_from_all_collections(sphere)
+    collection.objects.link(sphere)
+
+    self.report({'INFO'}, "Creation successful ✔")
+    return {"FINISHED"}
+
+
+class WARME_OT_create_entity_circle(bpy.types.Operator):
+  """Create Entity Circle""" 
+  bl_idname = "object.create_entity_circle"
+  bl_label = "Entity Circle"
+  bl_options = {'REGISTER', 'UNDO_GROUPED'}
+
+  def execute(self, context):
+    bpy.ops.mesh.primitive_circle_add()
+    circle = context.active_object
+    circle.name = "Entity"
+    circle["entity_shape"] = "CIRCLE"
+    circle.color = (1.0, 0.0, 0.0, 0.2)
+
+    collection = utils.get_or_create_collection("ENT")
+    utils.unlink_from_all_collections(circle)
+    collection.objects.link(circle)
+
+    self.report({'INFO'}, "Creation successful ✔")
+    return {"FINISHED"}
+
+
+class WARME_OT_create_entity_circle(bpy.types.Operator):
+  """Create Entity Plane""" 
+  bl_idname = "object.create_entity_plane"
+  bl_label = "Entity Plane"
+  bl_options = {'REGISTER', 'UNDO_GROUPED'}
+
+  def execute(self, context):
+    bpy.ops.mesh.primitive_plane_add()
+    plane = context.active_object
+    plane.name = "Entity"
+    plane["entity_shape"] = "PLANE"
+    plane.color = (1.0, 0.0, 0.0, 0.2)
+
+    collection = utils.get_or_create_collection("ENT")
+    utils.unlink_from_all_collections(plane)
+    collection.objects.link(plane)
 
     self.report({'INFO'}, "Creation successful ✔")
     return {"FINISHED"}

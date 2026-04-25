@@ -5,7 +5,7 @@ import { FormatJTMTileSet } from './format_jtm';
 /**
  * The tileset.
  */
-class Gfx2Tileset {
+export class Gfx2Tileset {
   columns: number;
   tileWidth: number;
   tileHeight: number;
@@ -158,5 +158,3 @@ class Gfx2Tileset {
     return properties[key];
   }
 }
-
-export { Gfx2Tileset };

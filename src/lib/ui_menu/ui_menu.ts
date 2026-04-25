@@ -1,12 +1,12 @@
 import { eventManager } from '../core/event_manager';
 import { UIWidget } from '../ui/ui_widget';
 
-enum MenuFocus {
+export enum UIMenuFocus {
   AUTO = 0,
   NONE = 1
 };
 
-enum MenuAxis {
+export enum UIMenuAxis {
   X = 0,
   Y = 1,
   XY = 2
@@ -21,8 +21,8 @@ enum MenuAxis {
  * It emit 'E_UNSELECTED'
  * It emit 'E_CLOSED'
  */
-class UIMenu extends UIWidget {
-  axis: MenuAxis;
+export class UIMenu extends UIWidget {
+  axis: UIMenuAxis;
   rows: number;
   columns: number;
   multiple: boolean;
@@ -35,12 +35,12 @@ class UIMenu extends UIWidget {
   /**
    * @param options - Various options for configuring the behavior of the menu.
    */
-  constructor(options: { className?: string, axis?: MenuAxis, rows?: number, columns?: number, multiple?: boolean, selectable?: boolean, togglable?: boolean } = {}) {
+  constructor(options: { className?: string, axis?: UIMenuAxis, rows?: number, columns?: number, multiple?: boolean, selectable?: boolean, togglable?: boolean } = {}) {
     super({
       className: options.className ?? 'UIMenu'
     });
 
-    this.axis = options.axis ?? MenuAxis.Y;
+    this.axis = options.axis ?? UIMenuAxis.Y;
     this.rows = options.rows ?? 0;
     this.columns = options.columns ?? 0;
     this.multiple = options.multiple ?? false;
@@ -49,13 +49,13 @@ class UIMenu extends UIWidget {
     this.widgets = [];
     this.selectedWidgets = [];
 
-    if (this.axis == MenuAxis.X) {
+    if (this.axis == UIMenuAxis.X) {
       this.rows = 1;
       this.columns = Infinity;
       this.node.style.display = 'flex';
       this.node.style.flexDirection = 'row';
     }
-    else if (this.axis == MenuAxis.Y) {
+    else if (this.axis == UIMenuAxis.Y) {
       this.rows = Infinity;
       this.columns = 1;
       this.node.style.display = 'flex';
@@ -93,10 +93,10 @@ class UIMenu extends UIWidget {
   /**
    * Focus on.
    * 
-   * @param {number} focusIndex - If MenuFocus.AUTO then refocus the child widget too.
+   * @param {number} focusIndex - If UIMenuFocus.AUTO then refocus the child widget too.
    */
-  focus(focusIndex = MenuFocus.AUTO): void {
-    if (this.widgets.length > 0 && focusIndex == MenuFocus.AUTO) {
+  focus(focusIndex = UIMenuFocus.AUTO): void {
+    if (this.widgets.length > 0 && focusIndex == UIMenuFocus.AUTO) {
       const focusedIndex = this.focusedWidget ? this.widgets.indexOf(this.focusedWidget) : 0;
       this.focusWidget(focusedIndex, true);
     }
@@ -380,22 +380,22 @@ class UIMenu extends UIWidget {
       const focusedIndex = this.getFocusedWidgetIndex();
       this.selectWidget(focusedIndex);
     }
-    else if (actionId == 'LEFT' && (this.axis == MenuAxis.X || this.axis == MenuAxis.XY)) {
+    else if (actionId == 'LEFT' && (this.axis == UIMenuAxis.X || this.axis == UIMenuAxis.XY)) {
       const focusedIndex = this.getFocusedWidgetIndex();
       const prevIndex = (focusedIndex - 1 < 0) ? this.widgets.length - 1 : focusedIndex - 1;
       this.focusWidget(prevIndex);
     }
-    else if (actionId == 'RIGHT' && (this.axis == MenuAxis.X || this.axis == MenuAxis.XY)) {
+    else if (actionId == 'RIGHT' && (this.axis == UIMenuAxis.X || this.axis == UIMenuAxis.XY)) {
       const focusedIndex = this.getFocusedWidgetIndex();
       const nextIndex = (focusedIndex + 1 > this.widgets.length - 1) ? 0 : focusedIndex + 1;
       this.focusWidget(nextIndex);
     }
-    else if (actionId == 'UP' && (this.axis == MenuAxis.Y || this.axis == MenuAxis.XY)) {
+    else if (actionId == 'UP' && (this.axis == UIMenuAxis.Y || this.axis == UIMenuAxis.XY)) {
       const focusedIndex = this.getFocusedWidgetIndex();
       const prevIndex = (focusedIndex - this.columns < 0) ? this.widgets.length - 1 : focusedIndex - this.columns;
       this.focusWidget(prevIndex);
     }
-    else if (actionId == 'DOWN' && (this.axis == MenuAxis.Y || this.axis == MenuAxis.XY)) {
+    else if (actionId == 'DOWN' && (this.axis == UIMenuAxis.Y || this.axis == UIMenuAxis.XY)) {
       const focusedIndex = this.getFocusedWidgetIndex();
       const nextIndex = (focusedIndex + this.columns > this.widgets.length - 1) ? 0 : focusedIndex + this.columns;
       this.focusWidget(nextIndex);
@@ -425,5 +425,3 @@ class UIMenu extends UIWidget {
     return { top, bottom };
   }
 }
-
-export { UIMenu, MenuFocus, MenuAxis };

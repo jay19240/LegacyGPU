@@ -1,6 +1,6 @@
-import { Gfx3RendererAbstract } from '@lib/gfx3/gfx3_renderer_abstract';
+import { Gfx3RendererAbstract } from '../gfx3/gfx3_renderer_abstract';
 
-export enum MatParam {
+export enum Gfx3MatParam {
   ID,
   OPACITY,
   // --------------------------------------
@@ -12,17 +12,29 @@ export enum MatParam {
   LIGHT_ENABLED,
   LIGHT_GROUP,
   LIGHT_GOURAUD_SHADING_ENABLED,
+  LIGHT_EMISSIVE_FACTOR,
+  LIGHT_EMISSIVE_R,
+  LIGHT_EMISSIVE_G,
+  LIGHT_EMISSIVE_B,
+  LIGHT_AMBIENT_R,
+  LIGHT_AMBIENT_G,
+  LIGHT_AMBIENT_B,
+  LIGHT_DIFFUSE_R,
+  LIGHT_DIFFUSE_G,
+  LIGHT_DIFFUSE_B,
+  LIGHT_SPECULAR_FACTOR,
+  LIGHT_SPECULAR_R,
+  LIGHT_SPECULAR_G,
+  LIGHT_SPECULAR_B,
   // --------------------------------------
   TEXTURE_EXIST,
   TEXTURE_SCROLL_ANGLE,
   TEXTURE_SCROLL_RATE,
   TEXTURE_OFFSET_X,
   TEXTURE_OFFSET_Y,
-
   TEXTURE_OFFSET_NEXT_X,
   TEXTURE_OFFSET_NEXT_Y,
   TEXTURE_OFFSET_BLENDING,
-
   TEXTURE_SCALE_X,
   TEXTURE_SCALE_Y,
   TEXTURE_ROTATION_ANGLE,
@@ -38,11 +50,9 @@ export enum MatParam {
   SECONDARY_TEXTURE_SCROLL_RATE,
   SECONDARY_TEXTURE_OFFSET_X,
   SECONDARY_TEXTURE_OFFSET_Y,
-
   SECONDARY_TEXTURE_OFFSET_NEXT_X,
   SECONDARY_TEXTURE_OFFSET_NEXT_Y,
   SECONDARY_TEXTURE_OFFSET_BLENDING,
-
   SECONDARY_TEXTURE_SCALE_X,
   SECONDARY_TEXTURE_SCALE_Y,
   SECONDARY_TEXTURE_ROTATION_ANGLE,
@@ -104,31 +114,17 @@ export enum MatParam {
   TOON_LIGHT_DIR_Z,
   // --------------------------------------
   EMISSIVE_MAP_EXIST,
-  EMISSIVE_FACTOR,
-  EMISSIVE_R,
-  EMISSIVE_G,
-  EMISSIVE_B,
-  // --------------------------------------
-  AMBIENT_R,
-  AMBIENT_G,
-  AMBIENT_B,
   // --------------------------------------
   DIFFUSE_MAP_EXIST,
-  DIFFUSE_R,
-  DIFFUSE_G,
-  DIFFUSE_B,
   // --------------------------------------
   SPECULAR_MAP_EXIST,
-  SPECULAR_FACTOR,
-  SPECULAR_R,
-  SPECULAR_G,
-  SPECULAR_B,
   // --------------------------------------
   THUNE_MAP_EXIST,
   THUNE_MAP_SHININESS_ENABLED,
   THUNE_MAP_ARCADE_ENABLED,
   THUNE_MAP_REFLECTIVE_ENABLED,
   // --------------------------------------
+  ALPHA_BLEND_ENABLED,
   ALPHA_BLEND_FACING,
   ALPHA_BLEND_DISTANCE,
   // --------------------------------------
@@ -160,7 +156,7 @@ export enum MatParam {
   COUNT
 };
 
-export const MAT_CUSTOM_PARAMS = {
+export const MESH_MAT_CUSTOM_PARAMS = {
   MAT_S00: 'S00',
   MAT_S01: 'S01',
   MAT_S02: 'S02',
@@ -179,7 +175,7 @@ export const MAT_CUSTOM_PARAMS = {
   MAT_S15: 'S15',
 };
 
-export const SCENE_CUSTOM_PARAMS = {
+export const MESH_SCENE_CUSTOM_PARAMS = {
   SCENE_S00: 'S00',
   SCENE_S01: 'S01',
   SCENE_S02: 'S02',
@@ -198,23 +194,23 @@ export const SCENE_CUSTOM_PARAMS = {
   SCENE_S15: 'S15'
 };
 
-export const SHADER_INSERTS = {
+export const MESH_SHADER_INSERTS = {
   VERT_INSERT: '',
   FRAG_INSERT: ''
 };
 
-export const SHADER_VERTEX_ATTR_COUNT = 17;
-export const MAX_POINT_LIGHTS = 64;
-export const MAX_SPOT_LIGHTS = 16;
-export const MAX_DECALS = 64;
+export const MESH_SHADER_VERTEX_ATTR_COUNT = 17;
+export const MESH_MAX_POINT_LIGHTS = 64;
+export const MESH_MAX_SPOT_LIGHTS = 16;
+export const MESH_MAX_DECALS = 64;
 
-export const PIPELINE_DESC: any = {
+export const MESH_PIPELINE_DESC: any = {
   label: 'Mesh pipeline',
   layout: 'auto',
   vertex: {
     entryPoint: 'main',
     buffers: [{
-      arrayStride: SHADER_VERTEX_ATTR_COUNT * 4,
+      arrayStride: MESH_SHADER_VERTEX_ATTR_COUNT * 4,
       attributes: [{
         shaderLocation: 0, /*position*/
         offset: 0,
@@ -303,7 +299,7 @@ export const PIPELINE_DESC: any = {
 
 const STRUCT_MAT_PARAMS = (data: any): string => `
 struct MaterialParams {
-  ${Gfx3RendererAbstract.generateWGSLStructFromEnum(MatParam)}
+  ${Gfx3RendererAbstract.generateWGSLStructFromEnum(Gfx3MatParam)}
   ${data.MAT_S00}: f32,
   ${data.MAT_S01}: f32,
   ${data.MAT_S02}: f32,
@@ -384,7 +380,68 @@ struct VertexOutput {
   @location(7) FragGouraudColor: vec3<f32>
 }`;
 
-export const VERTEX_SHADER = (data: any): string => /* wgsl */`
+const STRUCT_FRAG_OUT = `
+struct FragOutput {
+  @location(0) Base: vec4f,
+  @location(1) Normal: vec4f,
+  @location(2) Tag: vec4f,
+  @location(3) Ch1: vec4f
+}`;
+
+const STRUCT_POINT_LIGHT = `
+struct PointLight {
+  POSITION: vec3<f32>,
+  DIFFUSE: vec3<f32>,
+  SPECULAR: vec3<f32>,
+  ATTEN: vec3<f32>,
+  INTENSITY: f32,
+  GROUP: f32
+}`;
+
+const STRUCT_SPOT_LIGHT = `
+struct SpotLight {
+  POSITION: vec3<f32>,
+  DIRECTION: vec3<f32>,
+  DIFFUSE: vec3<f32>,
+  SPECULAR: vec3<f32>,
+  ATTEN: vec3<f32>,
+  INTENSITY: f32,
+  GROUP: f32,
+  CUTOFF: f32
+}`;
+
+const STRUCT_DIR_LIGHT = `
+struct DirLight {
+  DIR: vec3<f32>,
+  ENABLED: f32,
+  DIFFUSE: vec3<f32>,
+  SPECULAR: vec3<f32>,
+  INTENSITY: f32,
+  GROUP: f32
+}`;
+
+const STRUCT_FOG = `
+struct Fog {
+  ENABLED: f32,
+  NEAR: f32,
+  FAR: f32,
+  COLOR: vec3<f32>,
+  FROM: vec3<f32>
+}`;
+
+const STRUCT_DECAL = `
+struct Decal {
+  VP_MATRIX: mat4x4<f32>,
+  TEXTURE_LEFT: f32,
+  TEXTURE_TOP: f32,
+  TEXTURE_WIDTH: f32,
+  TEXTURE_HEIGHT: f32,
+  ASPECT_RATIO: vec2<f32>,
+  OPACITY: f32,
+  GROUP: f32
+}`;
+
+export const MESH_VERTEX_SHADER = (data: any): string => /* wgsl */`
 ${STRUCT_VERTEX_OUTPUT}
 ${STRUCT_MESH_INFOS}
 ${STRUCT_MAT_PARAMS(data)}
@@ -396,7 +453,7 @@ ${STRUCT_DIR_LIGHT}
 @group(0) @binding(0) var<uniform> SCENE: SceneInfos;
 @group(0) @binding(1) var<uniform> LVP_MATRIX: mat4x4<f32>;
 @group(0) @binding(2) var<uniform> DIR_LIGHT: DirLight;
-@group(0) @binding(3) var<uniform> POINT_LIGHTS: array<PointLight, ${MAX_POINT_LIGHTS}>;
+@group(0) @binding(3) var<uniform> POINT_LIGHTS: array<PointLight, ${MESH_MAX_POINT_LIGHTS}>;
 // --------------------------------------------------------------------------------------------
 @group(1) @binding(0) var<uniform> MESH: MeshInfos;
 // --------------------------------------------------------------------------------------------
@@ -423,10 +480,10 @@ fn main(
 
   if (MAT.JAM_IS_ANIMATED == 1.0)
   {
-    var idxA = u32(MAT.JAM_FRAME_INDEX_A) * u32(MAT.JAM_NUM_VERTICES) * ${SHADER_VERTEX_ATTR_COUNT};
-    var idxB = u32(MAT.JAM_FRAME_INDEX_B) * u32(MAT.JAM_NUM_VERTICES) * ${SHADER_VERTEX_ATTR_COUNT};
-    var offsetA = (idxA + vertexIndex * ${SHADER_VERTEX_ATTR_COUNT});
-    var offsetB = (idxB + vertexIndex * ${SHADER_VERTEX_ATTR_COUNT});
+    var idxA = u32(MAT.JAM_FRAME_INDEX_A) * u32(MAT.JAM_NUM_VERTICES) * ${MESH_SHADER_VERTEX_ATTR_COUNT};
+    var idxB = u32(MAT.JAM_FRAME_INDEX_B) * u32(MAT.JAM_NUM_VERTICES) * ${MESH_SHADER_VERTEX_ATTR_COUNT};
+    var offsetA = (idxA + vertexIndex * ${MESH_SHADER_VERTEX_ATTR_COUNT});
+    var offsetB = (idxB + vertexIndex * ${MESH_SHADER_VERTEX_ATTR_COUNT});
 
     var vax = MAT_JAM_FRAMES[offsetA + 0];
     var vay = MAT_JAM_FRAMES[offsetA + 1];
@@ -562,68 +619,7 @@ fn CalcGouraudShading(worldPos: vec3<f32>, normal: vec3<f32>) -> vec3<f32>
   return result;
 }`;
 
-const STRUCT_FRAG_OUT = `
-struct FragOutput {
-  @location(0) Base: vec4f,
-  @location(1) Normal: vec4f,
-  @location(2) Tag: vec4f,
-  @location(3) Ch1: vec4f
-}`;
-
-const STRUCT_POINT_LIGHT = `
-struct PointLight {
-  POSITION: vec3<f32>,
-  DIFFUSE: vec3<f32>,
-  SPECULAR: vec3<f32>,
-  ATTEN: vec3<f32>,
-  INTENSITY: f32,
-  GROUP: f32
-}`;
-
-const STRUCT_SPOT_LIGHT = `
-struct SpotLight {
-  POSITION: vec3<f32>,
-  DIRECTION: vec3<f32>,
-  DIFFUSE: vec3<f32>,
-  SPECULAR: vec3<f32>,
-  ATTEN: vec3<f32>,
-  INTENSITY: f32,
-  GROUP: f32,
-  CUTOFF: f32
-}`;
-
-const STRUCT_DIR_LIGHT = `
-struct DirLight {
-  DIR: vec3<f32>,
-  ENABLED: f32,
-  DIFFUSE: vec3<f32>,
-  SPECULAR: vec3<f32>,
-  INTENSITY: f32,
-  GROUP: f32
-}`;
-
-const STRUCT_FOG = `
-struct Fog {
-  ENABLED: f32,
-  NEAR: f32,
-  FAR: f32,
-  COLOR: vec3<f32>,
-  FROM: vec3<f32>
-}`;
-
-const STRUCT_DECAL = `
-struct Decal {
-  VP_MATRIX: mat4x4<f32>,
-  TEXTURE_LEFT: f32,
-  TEXTURE_TOP: f32,
-  TEXTURE_WIDTH: f32,
-  TEXTURE_HEIGHT: f32,
-  ASPECT_RATIO: vec2<f32>,
-  OPACITY: f32,
-  GROUP: f32
-}`;
-
-export const FRAGMENT_SHADER = (data: any): string => /* wgsl */`
+export const MESH_FRAGMENT_SHADER = (data: any): string => /* wgsl */`
 ${STRUCT_FRAG_OUT}
 ${STRUCT_MESH_INFOS}
 ${STRUCT_MAT_PARAMS(data)}
@@ -636,9 +632,9 @@ ${STRUCT_DECAL}
 
 @group(0) @binding(0) var<uniform> SCENE: SceneInfos;
 @group(0) @binding(2) var<uniform> DIR_LIGHT: DirLight;
-@group(0) @binding(3) var<uniform> POINT_LIGHTS: array<PointLight, ${MAX_POINT_LIGHTS}>;
-@group(0) @binding(4) var<uniform> SPOT_LIGHTS: array<SpotLight, ${MAX_SPOT_LIGHTS}>;
-@group(0) @binding(5) var<uniform> DECALS: array<Decal, ${MAX_DECALS}>;
+@group(0) @binding(3) var<uniform> POINT_LIGHTS: array<PointLight, ${MESH_MAX_POINT_LIGHTS}>;
+@group(0) @binding(4) var<uniform> SPOT_LIGHTS: array<SpotLight, ${MESH_MAX_SPOT_LIGHTS}>;
+@group(0) @binding(5) var<uniform> DECALS: array<Decal, ${MESH_MAX_DECALS}>;
 @group(0) @binding(6) var<uniform> FOG: Fog;
 @group(0) @binding(7) var DECAL_ATLAS_TEXTURE: texture_2d<f32>;
 @group(0) @binding(8) var DECAL_ATLAS_SAMPLER: sampler;
@@ -843,8 +839,14 @@ fn main(
   if (MAT.ENV_MAP_EXIST == 1.0)
   {
     var envColor = CalcEnvMap(fragNormal, fragPos, cameraPos, displacementMapUV);
-    var reflectivity = textureSample(MAT_THUNE_MAP, MAT_THUNE_MAP_SAMPLER, textureUV).b;
-    outputColor = mix(outputColor, envColor, min(reflectivity, MAT.ENV_MAP_OPACITY));
+    var reflectivity = MAT.ENV_MAP_OPACITY;
+
+    if (MAT.THUNE_MAP_EXIST == 1.0)
+    {
+      reflectivity = textureSample(MAT_THUNE_MAP, MAT_THUNE_MAP_SAMPLER, textureUV).b;
+    }
+
+    outputColor = mix(outputColor, envColor, reflectivity);
   }
 
   // ----------------------------------------------------------------------------------------------------------
@@ -880,7 +882,10 @@ fn main(
   // VOLUMETRIC
   // ----------------------------------------------------------------------------------------------------------
 
-  outputColor.a = CalcVolumetric(outputColor.a, fragNormal, fragPos, cameraPos);
+  if (MAT.ALPHA_BLEND_ENABLED == 1.0)
+  {
+    outputColor.a = CalcVolumetric(outputColor.a, fragNormal, fragPos, cameraPos);
+  }
 
   // ----------------------------------------------------------------------------------------------------------
   // MACRO INSERTION
@@ -1085,9 +1090,16 @@ fn CalcDecal(decal: Decal, fragPos: vec3<f32>) -> vec4<f32>
   var uvy = 1.0 - (ndcPos.y * 0.5 + 0.5);
   uvy = (uvy * decal.TEXTURE_HEIGHT) + decal.TEXTURE_TOP;
 
+  if (uvx < -1.0 || uvx > 1.0 || uvy < -1.0 || uvy > 1.0)
+  {
+    ctrlColor = vec4(0.0, 0.0, 0.0, 0.0);
+  }
+
   var texColor = textureSample(DECAL_ATLAS_TEXTURE, DECAL_ATLAS_SAMPLER, vec2<f32>(uvx, uvy));
   texColor.a = max(texColor.a - (1.0 - decal.OPACITY), 0.0);
   return texColor * ctrlColor;
+
+  // return vec4(1.0, 0.0, 0.0, 1.0);
 }
 
 // *****************************************************************************************************************
@@ -1111,7 +1123,7 @@ fn CalcNormalMap(normal: vec3<f32>, fragTangent: vec3<f32>, fragBinormal: vec3<f
 // *****************************************************************************************************************
 fn CalcEnvMap(normal: vec3<f32>, fragPos: vec3<f32>, cameraPos: vec3<f32>, displacementMapUV: vec2<f32>) -> vec4<f32>
 {
-  var viewDir = normalize(cameraPos - fragPos);
+  var viewDir = normalize(fragPos - cameraPos);
   var rvec = normalize(reflect(viewDir, normal));
 
   if (MAT.DISPLACE_ENV_MAP_ENABLED == 1.0)
@@ -1142,7 +1154,7 @@ fn CalcDisplacementMap(textureUV: vec2<f32>) -> vec2<f32>
 fn CalcLights(normal: vec3<f32>, fragPos: vec3<f32>, cameraPos: vec3<f32>, textureUV: vec2<f32>, shadow: f32) -> vec4<f32>
 {
   var totalLight = vec4(0.0, 0.0, 0.0, 0.0);
-  var matEmissive = vec3(MAT.EMISSIVE_R, MAT.EMISSIVE_G, MAT.EMISSIVE_B) * MAT.EMISSIVE_FACTOR;
+  var matEmissive = vec3(MAT.LIGHT_EMISSIVE_R, MAT.LIGHT_EMISSIVE_G, MAT.LIGHT_EMISSIVE_B) * MAT.LIGHT_EMISSIVE_FACTOR;
 
   if (DIR_LIGHT.ENABLED == 1.0 && (DIR_LIGHT.GROUP == 0.0 || DIR_LIGHT.GROUP == MAT.LIGHT_GROUP))
   {
@@ -1165,7 +1177,7 @@ fn CalcLights(normal: vec3<f32>, fragPos: vec3<f32>, cameraPos: vec3<f32>, textu
 
   if (MAT.EMISSIVE_MAP_EXIST == 1.0)
   {
-    matEmissive = textureSample(MAT_EMISSIVE_MAP, MAT_EMISSIVE_MAP_SAMPLER, textureUV).rgb * MAT.EMISSIVE_FACTOR;
+    matEmissive = textureSample(MAT_EMISSIVE_MAP, MAT_EMISSIVE_MAP_SAMPLER, textureUV).rgb * MAT.LIGHT_EMISSIVE_FACTOR;
   }
 
   if (length(matEmissive) > 0)
@@ -1174,7 +1186,7 @@ fn CalcLights(normal: vec3<f32>, fragPos: vec3<f32>, cameraPos: vec3<f32>, textu
   }
 
   var globalAmbient = vec3(SCENE.AMBIENT_R, SCENE.AMBIENT_G, SCENE.AMBIENT_B);
-  var matAmbient = vec3(MAT.AMBIENT_R, MAT.AMBIENT_G, MAT.AMBIENT_B);
+  var matAmbient = vec3(MAT.LIGHT_AMBIENT_R, MAT.LIGHT_AMBIENT_G, MAT.LIGHT_AMBIENT_B);
 
   var isMaterialAmbientEmpty = all(matAmbient <= vec3f(0.0001));
   var finalAmbient = select(matAmbient, globalAmbient, isMaterialAmbientEmpty);
@@ -1188,9 +1200,9 @@ fn CalcLightInternal(lightDir: vec3<f32>, lightDiffuse: vec3<f32>, lightSpecular
 {
   var diffuseColor = vec3(0.0, 0.0, 0.0);
   var specularColor = vec3(0.0, 0.0, 0.0);
-  var matDiffuse = vec3(MAT.DIFFUSE_R, MAT.DIFFUSE_G, MAT.DIFFUSE_B);
-  var matSpecular = vec3(MAT.SPECULAR_R, MAT.SPECULAR_G, MAT.SPECULAR_B);
-  var matShininess = MAT.SPECULAR_FACTOR;
+  var matDiffuse = vec3(MAT.LIGHT_DIFFUSE_R, MAT.LIGHT_DIFFUSE_G, MAT.LIGHT_DIFFUSE_B);
+  var matSpecular = vec3(MAT.LIGHT_SPECULAR_R, MAT.LIGHT_SPECULAR_G, MAT.LIGHT_SPECULAR_B);
+  var matShininess = MAT.LIGHT_SPECULAR_FACTOR;
   var diffuseFactor = max(dot(normal, -lightDir), 0.0);
 
   if (MAT.DIFFUSE_MAP_EXIST == 1.0)
@@ -1300,7 +1312,7 @@ fn CalcShadowMap(fragShadowPos: vec3<f32>) -> f32
     for (var x = -1; x <= 1; x++)
     {
       var offset = vec2<f32>(vec2(x, y)) * oneOverShadowDepthTextureSize;
-      visibility += textureSampleCompare(SHADOW_MAP_TEXTURE, SHADOW_MAP_SAMPLER, fragShadowPos.xy + offset, fragShadowPos.z - 0.007);
+      visibility += textureSampleCompare(SHADOW_MAP_TEXTURE, SHADOW_MAP_SAMPLER, fragShadowPos.xy + offset, fragShadowPos.z - 0.0001);
     }
   }
 

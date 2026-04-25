@@ -2,7 +2,7 @@ import { uiManager } from '@lib/ui/ui_manager';
 import { eventManager } from '@lib/core/event_manager';
 import { screenManager } from '@lib/screen/screen_manager';
 import { UIWidget } from '@lib/ui/ui_widget';
-import { UIMenu, MenuAxis } from '@lib/ui_menu/ui_menu';
+import { UIMenu, UIMenuAxis } from '@lib/ui_menu/ui_menu';
 import { Screen } from '@lib/screen/screen';
 // ------------------------------------------------------------------
 import { CharacterScreen } from './character_screen';
@@ -27,7 +27,7 @@ class FightScreen extends Screen {
     this.uiTitle.textContent = 'SELECT ARENA';
     uiManager.addNode(this.uiTitle, 'position: absolute; left:0; right:0; top:100px;');
 
-    this.uiMenu = new UIMenu({ className: 'UIMap-menu', axis: MenuAxis.XY, rows: 2, columns: 2 });
+    this.uiMenu = new UIMenu({ className: 'UIMap-menu', axis: UIMenuAxis.XY, rows: 2, columns: 2 });
     uiManager.addWidget(this.uiMenu, 'position:absolute; left:100px; top:170px');
 
     for (let i = 0; i < 4; i++) {

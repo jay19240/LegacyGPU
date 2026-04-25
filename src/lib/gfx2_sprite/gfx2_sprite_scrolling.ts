@@ -6,7 +6,7 @@ import { Gfx2SpriteJAS } from './gfx2_sprite_jas';
 /**
  * A 2D sprite scrolling system.
  */
-class Gfx2SpriteScrolling extends Gfx2Drawable {
+export class Gfx2SpriteScrolling extends Gfx2Drawable {
   sprites: Array<Gfx2SpriteJSS | Gfx2SpriteJAS>;
   move: vec2;
 
@@ -19,7 +19,7 @@ class Gfx2SpriteScrolling extends Gfx2Drawable {
   /**
    * The update function.
    */
-  update(): void {
+  update(ts: number): void {
     for (const sprite of this.sprites) {
       const newX = sprite.position[0] + this.move[0];
       const newY = sprite.position[1] + this.move[1];
@@ -55,6 +55,7 @@ class Gfx2SpriteScrolling extends Gfx2Drawable {
       }
 
       sprite.setPosition(x, y);
+      sprite.update(ts);
     }
   }
 
@@ -75,7 +76,7 @@ class Gfx2SpriteScrolling extends Gfx2Drawable {
    * 
    * @param {Gfx2SpriteJSS | Gfx2SpriteJAS} sprite - The scrolling sprite.
    */
-  setSprite(sprite: Gfx2SpriteJSS | Gfx2SpriteJAS): void {
+  setSprite(sprite: Gfx2SpriteJSS | Gfx2SpriteJAS, animationName: string = ''): void {
     const spriteRect = sprite.getBoundingRect();
     const nbSpritesH = Math.ceil(gfx2Manager.getWidth() / spriteRect.getWidth()) + 1;
     const nbSpritesV = Math.ceil(gfx2Manager.getHeight() / spriteRect.getHeight()) + 1;
@@ -87,9 +88,13 @@ class Gfx2SpriteScrolling extends Gfx2Drawable {
     for (let i = 0; i < nbSpritesH; i++) {
       for (let j = 0; j < nbSpritesV; j++) {
         const clone = sprite.clone();
-        clone.setOffsetNormalized(0.5, 0.5);
+        clone.setNormalizedOffset(0.5, 0.5);
         clone.setPosition(screenLeft + i * spriteRect.getWidth(), screenTop + j * spriteRect.getHeight());
         this.sprites.push(clone);
+
+        if (animationName != '' && clone instanceof Gfx2SpriteJAS) {
+          clone.play(animationName, true);
+        }
       }
     }
   }
@@ -105,5 +110,3 @@ class Gfx2SpriteScrolling extends Gfx2Drawable {
     this.move[1] = my;
   }
 }
-
-export { Gfx2SpriteScrolling };

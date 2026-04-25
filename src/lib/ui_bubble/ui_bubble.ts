@@ -8,7 +8,7 @@ import { UIMenuText } from '../ui_menu_text/ui_menu_text';
  * It emit 'E_MENU_ITEM_SELECTED' with data { id, index }
  * It emit 'E_OK'
  */
-class UIBubble extends UIWidget {
+export class UIBubble extends UIWidget {
   uiMenu: UIMenuText;
   text: string;
   actions: Array<string>;
@@ -194,5 +194,3 @@ class UIBubble extends UIWidget {
     eventManager.emit(this, 'E_MENU_ITEM_SELECTED', data);
   }
 }
-
-export { UIBubble };

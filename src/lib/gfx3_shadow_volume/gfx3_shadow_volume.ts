@@ -1,18 +1,18 @@
 import { gfx3DebugRenderer } from '../gfx3/gfx3_debug_renderer';
 import { gfx3ShadowVolumeRenderer } from './gfx3_shadow_volume_renderer';
 import { Gfx3Drawable } from '../gfx3/gfx3_drawable';
-import { SHADER_VERTEX_ATTR_COUNT } from './gfx3_shadow_volume_shader';
+import { SV_SHADER_VERTEX_ATTR_COUNT } from './gfx3_shadow_volume_shader';
 
 /**
  * A 3D shadow volume mesh.
  */
-class Gfx3ShadowVolume extends Gfx3Drawable {
+export class Gfx3ShadowVolume extends Gfx3Drawable {
   debugEnabled: boolean;
   debugVertices: Array<number>;
   debugVertexCount: number;
 
   constructor() {
-    super(SHADER_VERTEX_ATTR_COUNT);
+    super(SV_SHADER_VERTEX_ATTR_COUNT);
     this.debugEnabled = true;
     this.debugVertices = [];
     this.debugVertexCount = 0;
@@ -129,5 +129,3 @@ class Gfx3ShadowVolume extends Gfx3Drawable {
     }
   }
 }
-
-export { Gfx3ShadowVolume };

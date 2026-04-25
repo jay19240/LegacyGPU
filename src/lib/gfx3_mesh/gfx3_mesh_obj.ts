@@ -5,9 +5,9 @@ import { Poolable } from '../core/object_pool';
 import { UT } from '../core/utils';
 import { Gfx3BoundingBox } from '../gfx3/gfx3_bounding_box';
 import { Gfx3Material } from './gfx3_mesh_material';
+import { Gfx3MatParam } from './gfx3_mesh_shader';
 import { Gfx3Mesh, Gfx3Group } from './gfx3_mesh';
 import { Gfx3BoundingCylinder } from '../gfx3/gfx3_bounding_cylinder';
-import { MatParam } from './gfx3_mesh_shader';
 
 class OBJObject {
   name: string;
@@ -54,7 +54,7 @@ class OBJObject {
  * - map_Ns => Specularity map
  * - map_Bump => Normal map
  */
-class Gfx3MeshOBJ extends Gfx3Mesh implements Poolable<Gfx3MeshOBJ> {
+export class Gfx3MeshOBJ extends Gfx3Mesh implements Poolable<Gfx3MeshOBJ> {
   coords: Array<number>;
   colors: Array<number>;
   texcoords: Array<number>;
@@ -288,33 +288,33 @@ class Gfx3MeshOBJ extends Gfx3Mesh implements Poolable<Gfx3MeshOBJ> {
 
       if (line.startsWith('Kd ')) {
         const a = extract(line, 3).split(' ');
-        curMat.setParam(MatParam.DIFFUSE_R, parseFloat(a[0]));
-        curMat.setParam(MatParam.DIFFUSE_G, parseFloat(a[1]));
-        curMat.setParam(MatParam.DIFFUSE_B, parseFloat(a[2]));
+        curMat.setParam(Gfx3MatParam.DIFFUSE_R, parseFloat(a[0]));
+        curMat.setParam(Gfx3MatParam.DIFFUSE_G, parseFloat(a[1]));
+        curMat.setParam(Gfx3MatParam.DIFFUSE_B, parseFloat(a[2]));
       }
 
       if (line.startsWith('Ks ')) {
         const a = extract(line, 3).split(' ');
-        curMat.setParam(MatParam.SPECULAR_R, parseFloat(a[0]));
-        curMat.setParam(MatParam.SPECULAR_G, parseFloat(a[1]));
-        curMat.setParam(MatParam.SPECULAR_B, parseFloat(a[2]));
+        curMat.setParam(Gfx3MatParam.SPECULAR_R, parseFloat(a[0]));
+        curMat.setParam(Gfx3MatParam.SPECULAR_G, parseFloat(a[1]));
+        curMat.setParam(Gfx3MatParam.SPECULAR_B, parseFloat(a[2]));
       }
 
       if (line.startsWith('Ns ')) {
         const a = extract(line, 3);
-        curMat.setParam(MatParam.SPECULAR_FACTOR, parseFloat(a));
+        curMat.setParam(Gfx3MatParam.SPECULAR_FACTOR, parseFloat(a));
       }
 
       if (line.startsWith('d')) {
         const a = extract(line, 1);
-        curMat.setParam(MatParam.OPACITY, parseFloat(a));
+        curMat.setParam(Gfx3MatParam.OPACITY, parseFloat(a));
       }
 
       if (line.startsWith('Ke ')) {
         const a = extract(line, 3).split(' ');
-        curMat.setParam(MatParam.EMISSIVE_R, parseFloat(a[0]));
-        curMat.setParam(MatParam.EMISSIVE_G, parseFloat(a[1]));
-        curMat.setParam(MatParam.EMISSIVE_B, parseFloat(a[2]));
+        curMat.setParam(Gfx3MatParam.EMISSIVE_R, parseFloat(a[0]));
+        curMat.setParam(Gfx3MatParam.EMISSIVE_G, parseFloat(a[1]));
+        curMat.setParam(Gfx3MatParam.EMISSIVE_B, parseFloat(a[2]));
       }
 
       if (line.startsWith('map_Kd ')) {
@@ -334,7 +334,7 @@ class Gfx3MeshOBJ extends Gfx3Mesh implements Poolable<Gfx3MeshOBJ> {
         while (a[i][0] == '-') {
           const flag = a[i].substring(1);
           if (flag == 'bm') {
-            curMat.setParam(MatParam.NORMAL_MAP_INTENSITY, parseFloat(a[i + 1]));
+            curMat.setParam(Gfx3MatParam.NORMAL_MAP_INTENSITY, parseFloat(a[i + 1]));
           }
 
           i++;
@@ -502,8 +502,6 @@ class Gfx3MeshOBJ extends Gfx3Mesh implements Poolable<Gfx3MeshOBJ> {
     }
   }
 }
-
-export { Gfx3MeshOBJ };
 
 // -------------------------------------------------------------------------------------------
 // HELPFUL

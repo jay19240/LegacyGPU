@@ -1,5 +1,4 @@
 import { gfx2Manager } from '../gfx2/gfx2_manager';
-import { UT } from '../core/utils';
 import { Poolable } from '../core/object_pool';
 import { Gfx2Drawable } from '../gfx2/gfx2_drawable';
 import { Gfx2BoundingRect } from '../gfx2/gfx2_bounding_rect';
@@ -7,16 +6,20 @@ import { Gfx2BoundingRect } from '../gfx2/gfx2_bounding_rect';
 /**
  * A 2D static sprite (without animations).
  */
-class Gfx2SpriteJSS extends Gfx2Drawable implements Poolable<Gfx2SpriteJSS> {
+export class Gfx2SpriteJSS extends Gfx2Drawable implements Poolable<Gfx2SpriteJSS> {
   texture: ImageBitmap | HTMLImageElement;
+  tintedTexture: ImageBitmap | HTMLImageElement;
   textureRect: vec4;
-  offsetFactor: vec2;
+  blendColor: vec3;
+  blendColorMode: GlobalCompositeOperation | '';
 
   constructor() {
     super();
     this.texture = gfx2Manager.getDefaultTexture();
+    this.tintedTexture = gfx2Manager.getDefaultTexture();
     this.textureRect = [0, 0, 0, 0];
-    this.offsetFactor = [0, 0];
+    this.blendColor = [1, 1, 1];
+    this.blendColorMode = '';
   }
 
   /**
@@ -45,6 +48,7 @@ class Gfx2SpriteJSS extends Gfx2Drawable implements Poolable<Gfx2SpriteJSS> {
 
     this.offsetFactor[0] = json['OffsetFactorX'] ?? 0;
     this.offsetFactor[1] = json['OffsetFactorY'] ?? 0;
+    this.offsetFactorEnabled = json['OffsetFactorEnabled'] ? true : false;
 
     this.boundingRect = Gfx2BoundingRect.createFromCoord(
       json['X'],
@@ -61,25 +65,32 @@ class Gfx2SpriteJSS extends Gfx2Drawable implements Poolable<Gfx2SpriteJSS> {
     const ctx = gfx2Manager.getContext();
     ctx.scale(this.flip[0] ? -1 : 1, this.flip[1] ? -1 : 1);
 
-    if (this.offsetFactor[0] != 0) {
-      ctx.translate(-this.textureRect[2] * this.offsetFactor[0], 0);
+    if (this.blendColorMode == '') {
+      ctx.drawImage(
+        this.texture,
+        this.textureRect[0],
+        this.textureRect[1],
+        this.textureRect[2],
+        this.textureRect[3],
+        this.flip[0] ? this.textureRect[2] * -1 : 0,
+        this.flip[1] ? this.textureRect[3] * -1 : 0,
+        this.textureRect[2],
+        this.textureRect[3]
+      );
     }
-
-    if (this.offsetFactor[1] != 0) {
-      ctx.translate(0, -this.textureRect[3] * this.offsetFactor[1]);
+    else {
+      ctx.drawImage(
+        this.tintedTexture,
+        this.textureRect[0],
+        this.textureRect[1],
+        this.textureRect[2],
+        this.textureRect[3],
+        this.flip[0] ? this.textureRect[2] * -1 : 0,
+        this.flip[1] ? this.textureRect[3] * -1 : 0,
+        this.textureRect[2],
+        this.textureRect[3]
+      );
     }
-
-    ctx.drawImage(
-      this.texture,
-      this.textureRect[0],
-      this.textureRect[1],
-      this.textureRect[2],
-      this.textureRect[3],
-      this.flip[0] ? this.textureRect[2] * -1 : 0,
-      this.flip[1] ? this.textureRect[3] * -1 : 0,
-      this.textureRect[2],
-      this.textureRect[3]
-    );
   }
 
   /**
@@ -117,18 +128,6 @@ class Gfx2SpriteJSS extends Gfx2Drawable implements Poolable<Gfx2SpriteJSS> {
   }
 
   /**
-   * Set the normalized offset value.
-   * Note: this offset is independant from the regular drawable pixel based offset.
-   * 
-   * @param {number} offsetXFactor - The normalized x-coordinate offset value.
-   * @param {number} offsetYFactor - The normalized y-coordinate offset value.
-   */
-  setOffsetNormalized(offsetXFactor: number, offsetYFactor: number) {
-    this.offsetFactor[0] = offsetXFactor;
-    this.offsetFactor[1] = offsetYFactor;
-  }
-
-  /**
    * Set the sprite texture.
    * 
    * @param {ImageBitmap | HTMLImageElement} texture - The sprite texture.
@@ -151,12 +150,30 @@ class Gfx2SpriteJSS extends Gfx2Drawable implements Poolable<Gfx2SpriteJSS> {
   }
 
   /**
-   * Returns the bounding rect in the world space coordinates.
+   * Returns the blend color.
    */
-  getWorldBoundingRect(): Gfx2BoundingRect {
-    const x = this.position[0] - this.textureRect[2] * this.offsetFactor[0];
-    const y = this.position[1] - this.textureRect[3] * this.offsetFactor[1];
-    return this.boundingRect.transform(UT.MAT3_TRANSFORM([x, y], this.offset, this.rotation, this.scale));
+  getBlendColor(): vec3 {
+    return this.blendColor;
+  }
+
+  /**
+   * Returns the blend color mode.
+   */
+  getBlendColorMode(): GlobalCompositeOperation | '' {
+    return this.blendColorMode;
+  }
+
+  /**
+   * Set the color filter.
+   * 
+   * @param {number} r - The red channel.
+   * @param {number} g - The green channel.
+   * @param {number} b - The blue channel.
+   */
+  setBlendColor(r: number, g: number, b: number): void {
+    this.blendColor = [r, g, b];
+    this.blendColorMode = 'multiply';
+    this.tintedTexture = gfx2Manager.getTintedTexture(this.texture, r, g, b);
   }
 
   /**
@@ -167,10 +184,9 @@ class Gfx2SpriteJSS extends Gfx2Drawable implements Poolable<Gfx2SpriteJSS> {
   clone(jss: Gfx2SpriteJSS = new Gfx2SpriteJSS()): Gfx2SpriteJSS {
     super.clone(jss);
     jss.texture = this.texture;
+    jss.tintedTexture = this.tintedTexture;
     jss.textureRect = [this.textureRect[0], this.textureRect[1], this.textureRect[2], this.textureRect[3]]
     jss.flip = [this.flip[0], this.flip[1]];
     return jss;
   }
 }
-
-export { Gfx2SpriteJSS };

@@ -6,7 +6,7 @@ import { UT } from '../core/utils';
 /**
  * A 3D camera orbiting around a target.
  */
-class Gfx3CameraOrbit extends Gfx3Camera {
+export class Gfx3CameraOrbit extends Gfx3Camera {
   rotationSpeed: number;
   frictionCoefficient: number;
   maxPitch: number;
@@ -25,6 +25,8 @@ class Gfx3CameraOrbit extends Gfx3Camera {
   phiOrigin: number;
   thetaTarget: number;
   transitionSpeed: number;
+  targetPitch: number;
+  targetRoll: number;
 
   /**
    * @param {number} viewIndex - The view you want to bind the camera.
@@ -43,12 +45,14 @@ class Gfx3CameraOrbit extends Gfx3Camera {
     this.phi = Math.PI * 0.5;
     this.theta = 0;
     this.lastDragTimestamp = 0;
-    // ----------------------------------------------
+    // cardinal ----------------------------------------------
     this.modeCardinal = false;
     this.phiTarget = Math.PI * 0.5;
     this.phiOrigin = Math.PI * 0.5;
     this.thetaTarget = this.theta;
     this.transitionSpeed = 0.12;
+    this.targetPitch = 0;
+    this.targetRoll = 0;
 
     eventManager.subscribe(inputManager, 'E_MOUSE_WHEEL', this, this.#handleMouseWheel);
     eventManager.subscribe(inputManager, 'E_MOUSE_UP', this, this.#handleMouseUp);
@@ -79,6 +83,11 @@ class Gfx3CameraOrbit extends Gfx3Camera {
     }
 
     const pos = UT.VEC3_ROTATE_AROUND(this.target, this.distance, this.phi, this.theta);
+
+    if (this.modeCardinal) {
+      this.#applyTargetRotation(pos, this.targetPitch, this.targetRoll);
+    }
+    
     this.setPosition(pos[0], pos[1], pos[2]);
     this.lookAt(this.target[0], this.target[1], this.target[2]);
 
@@ -217,25 +226,109 @@ class Gfx3CameraOrbit extends Gfx3Camera {
     return this.phi;
   }
 
+  /**
+   * Look the left side of the target relative to the camera.
+   */
   lookLeft() {
     this.phiTarget = this.phiOrigin + Math.PI * 0.5;
+    this.modeCardinal = true;
   }
 
+  /**
+   * Look the right side of the target relative to the camera.
+   */
   lookRight() {
     this.phiTarget = this.phiOrigin - Math.PI * 0.5;
+    this.modeCardinal = true;
   }
 
+  /**
+   * Look the back side of the target relative to the camera.
+   */
   lookBack() {
     this.phiTarget = this.phiOrigin + Math.PI;
+    this.modeCardinal = true;
   }
 
+  /**
+   * Look the front side of the target relative to the camera.
+   */
   lookFront() {
     this.phiTarget = this.phiOrigin;
+    this.modeCardinal = true;
   }
 
-  setPhiOrigin(phiOrigin: number): void { this.phiOrigin = phiOrigin; this.phi = phiOrigin; this.phiTarget = phiOrigin; }
-  setTheta(theta: number): void { this.thetaTarget = theta; }
-  setTransitionSpeed(transitionSpeed: number): void { this.transitionSpeed = transitionSpeed; }
+  /**
+   * Disables cardinal constraints to allow free camera movement.
+   */
+  lookFree() {
+    this.modeCardinal = false;
+  }
+
+  /**
+   * Set the origin reference horizontal angle (phi) and snap the camera to it.
+   * This resets the origin, current angle, and target angle simultaneously.
+   */
+  setPhiOrigin(phiOrigin: number): void {
+    this.phiOrigin = phiOrigin;
+    this.phi = phiOrigin;
+    this.phiTarget = phiOrigin;
+  }
+
+  /**
+   * Set the vertical angle (theta) between minPitch and maxPitch.
+   * The camera will smoothly transition toward this tilt value.
+   */
+  setTheta(theta: number): void {
+    this.thetaTarget = UT.CLAMP(theta, this.minPitch, this.maxPitch);
+  }
+
+  /**
+   * Adjust the interpolation speed for camera transitions.
+   * Higher values result in faster, more reactive camera movements.
+   */
+  setTransitionSpeed(transitionSpeed: number): void {
+    this.transitionSpeed = transitionSpeed;
+  }
+
+  /**
+   * Set the target pitch (longitudinal tilt) for the camera's orbital plane.
+   * This aligns the camera's vertical axis with the front-to-back inclination of the vehicle.
+   * 
+   * @param targetPitch - The tilt angle in radians.
+   */
+  setTargetPitch(targetPitch: number): void {
+    this.targetPitch = targetPitch;
+  }
+
+  /**
+   * Set the target roll (lateral inclination) for the camera's orbital plane.
+   * This ensures the camera's horizontal orbit stays synchronized with the vehicle's side-to-side tilt.
+   * 
+   * @param targetRoll - The roll angle in radians.
+   */
+  setTargetRoll(targetRoll: number): void {
+    this.targetRoll = targetRoll;
+  }
+
+  #applyTargetRotation(position: vec3, pitch: number, roll: number): void {
+    // Rotate X (Assiette / Pitch)
+    const cosP = Math.cos(pitch);
+    const sinP = Math.sin(pitch);
+    const y1 = position[1] * cosP - position[2] * sinP;
+    const z1 = position[1] * sinP + position[2] * cosP;
+
+    // Rotate Z (Roulis / Roll)
+    const cosR = Math.cos(roll);
+    const sinR = Math.sin(roll);
+    const x2 = position[0] * cosR - y1 * sinR;
+    const y2 = position[0] * sinR + y1 * cosR;
+
+    // Update position
+    position[0] = x2;
+    position[1] = y2;
+    position[2] = z1;
+  }
 
   #handleMouseUp(): void {
     if (this.modeCardinal) {
@@ -276,5 +369,3 @@ class Gfx3CameraOrbit extends Gfx3Camera {
     this.distance *= 1 + data.delta * this.zoomSpeed;
   }
 }
-
-export { Gfx3CameraOrbit };

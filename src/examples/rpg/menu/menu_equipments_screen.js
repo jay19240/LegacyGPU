@@ -4,7 +4,7 @@ import { eventManager } from '@lib/core/event_manager';
 import { ArrayCollection } from '@lib/core/array_collection';
 import { Screen } from '@lib/screen/screen';
 import { UIText } from '@lib/ui_text/ui_text';
-import { MenuAxis } from '@lib/ui_menu/ui_menu';
+import { UIMenuAxis } from '@lib/ui_menu/ui_menu';
 import { UIMenuText } from '@lib/ui_menu_text/ui_menu_text';
 // ---------------------------------------------------------------------------------------
 import { gameManager } from '../game_manager';
@@ -19,7 +19,7 @@ class MenuEquipmentsScreen extends Screen {
     super();
     this.player = gameManager.getPlayer();
     this.inventory = this.player.getInventory();
-    this.uiTopMenu = new UIMenuText({ axis: MenuAxis.X });
+    this.uiTopMenu = new UIMenuText({ axis: UIMenuAxis.X });
     this.uiTitle = new UIText();
     this.uiDescription = new UIText();
     this.uiInventory = new UIInventory({ showPrice: false, showQuantity: true });

@@ -6,7 +6,7 @@ import { Screen } from '@lib/screen/screen';
 import { Gfx3MeshJSM } from '@lib/gfx3_mesh/gfx3_mesh_jsm';
 import { Gfx3Material } from '@lib/gfx3_mesh/gfx3_mesh_material';
 import { Gfx3Camera } from '@lib/gfx3_camera/gfx3_camera';
-import { MatParam } from '@lib/gfx3_mesh/gfx3_mesh_shader';
+import { Gfx3MatParam } from '@lib/gfx3_mesh/gfx3_mesh_shader';
 // ---------------------------------------------------------------------------------------
 
 class ShadowScreen extends Screen {
@@ -27,6 +27,8 @@ class ShadowScreen extends Screen {
     this.skySphere = await CREATE_SKYSPHERE();
     this.floor = await CREATE_FLOOR(0, 0, -100);
     this.cube = await CREATE_CUBE(0, 7, -100);
+
+    gfx3MeshRenderer.setDirLight(true, [100, -100, 0], [1, 1, 1], [0, 0, 0]);
   }
 
   update(ts) {
@@ -40,7 +42,6 @@ class ShadowScreen extends Screen {
 
   draw() {
     gfx3Manager.beginDrawing();
-    gfx3MeshRenderer.drawDirLight([100, -100, 0], [1, 1, 1], [0, 0, 0]);
     this.skySphere.draw();
     this.floor.draw();
     this.cube.draw();
@@ -66,8 +67,8 @@ export { ShadowScreen };
 async function CREATE_FLOOR(x, y, z) {
   const floor = new Gfx3MeshJSM();
   floor.setPosition(x, y, z);
-  floor.mat.setParam(MatParam.LIGHT_ENABLED, 1.0);
-  floor.mat.setParam(MatParam.SHADOW_ENABLED, 1.0);
+  floor.mat.setParam(Gfx3MatParam.LIGHT_ENABLED, 1.0);
+  floor.mat.setParam(Gfx3MatParam.SHADOW_ENABLED, 1.0);
   floor.mat.setTexture(await gfx3TextureManager.loadTexture('./examples/shadow/floor.jpg'));
   
   await floor.loadFromFile('./examples/shadow/floor.jsm');
@@ -87,7 +88,7 @@ async function CREATE_CUBE(x, y, z) {
   mesh.setScale(10, 10, 10);
   mesh.setShadowCasting(true);
   mesh.mat.setTexture(await gfx3TextureManager.loadTexture('./examples/viewer/duck/albedo.png'));
-  mesh.mat.setParam(MatParam.LIGHT_ENABLED, 1.0);
+  mesh.mat.setParam(Gfx3MatParam.LIGHT_ENABLED, 1.0);
   await mesh.loadFromFile('./examples/viewer/duck/mesh.jsm');
   return mesh;
 }

@@ -1,17 +1,17 @@
-export const SHADER_INSERTS = {
+export const TRAIL_SHADER_INSERTS = {
   VERT_INSERT: '',
   FRAG_INSERT: ''
 };
 
-export const SHADER_VERTEX_ATTR_COUNT = 9;
+export const TRAIL_SHADER_VERTEX_ATTR_COUNT = 9;
 
-export const PIPELINE_DESC: any = {
+export const TRAIL_PIPELINE_DESC: any = {
   label: 'Trail pipeline',
   layout: 'auto',
   vertex: {
     entryPoint: 'main',
     buffers: [{
-      arrayStride: SHADER_VERTEX_ATTR_COUNT * 4,
+      arrayStride: TRAIL_SHADER_VERTEX_ATTR_COUNT * 4,
       attributes: [{
         shaderLocation: 0, /*position*/
         offset: 0,
@@ -65,7 +65,7 @@ export const PIPELINE_DESC: any = {
   }
 };
 
-export const VERTEX_SHADER = (data: any) => /* wgsl */`
+export const TRAIL_VERTEX_SHADER = (data: any) => /* wgsl */`
 struct VertexOutput {
   @builtin(position) Position: vec4<f32>,
   @location(0) FragUV: vec2<f32>,
@@ -90,7 +90,7 @@ fn main(
   return output;
 }`;
 
-export const FRAGMENT_SHADER = (data: any) => /* wgsl */`
+export const TRAIL_FRAGMENT_SHADER = (data: any) => /* wgsl */`
 struct FragOutput {
   @location(0) Base: vec4f,
   @location(1) Normal: vec4f,

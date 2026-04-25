@@ -2,9 +2,9 @@ import { gfx3Manager } from '../gfx3/gfx3_manager';
 import { UT } from '../core/utils';
 import { Gfx3RendererAbstract } from './gfx3_renderer_abstract';
 import { Gfx3DynamicGroup } from '../gfx3/gfx3_group';
-import { PIPELINE_DESC, VERTEX_SHADER, FRAGMENT_SHADER, SHADER_VERTEX_ATTR_COUNT } from './gfx3_debug_shader';
+import { DEBUG_PIPELINE_DESC, DEBUG_VERTEX_SHADER, DEBUG_FRAGMENT_SHADER, DEBUG_SHADER_VERTEX_ATTR_COUNT } from './gfx3_debug_shader';
 
-interface Command {
+interface Gfx3DebugCommand {
   vertices: Float32Array;
   vertexCount: number;
   matrix: mat4;
@@ -13,17 +13,17 @@ interface Command {
 /**
  * Singleton debug renderer.
  */
-class Gfx3DebugRenderer extends Gfx3RendererAbstract {
+export class Gfx3DebugRenderer extends Gfx3RendererAbstract {
   device: GPUDevice;
   vertexBuffer: GPUBuffer;
   vertexCount: number;
-  commands: Array<Command>;
+  commands: Array<Gfx3DebugCommand>;
   showDebug: boolean;
   grp0: Gfx3DynamicGroup;
   mvpcMatrix: Float32Array;
 
   constructor() {
-    super('DEBUG_PIPELINE', VERTEX_SHADER, FRAGMENT_SHADER, PIPELINE_DESC);
+    super('DEBUG_PIPELINE', DEBUG_VERTEX_SHADER, DEBUG_FRAGMENT_SHADER, DEBUG_PIPELINE_DESC);
     this.device = gfx3Manager.getDevice();
     this.vertexBuffer = this.device.createBuffer({ size: 0, usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC });
     this.vertexCount = 0;
@@ -48,7 +48,7 @@ class Gfx3DebugRenderer extends Gfx3RendererAbstract {
     passEncoder.setPipeline(this.pipeline);
 
     this.vertexBuffer.destroy();
-    this.vertexBuffer = this.device.createBuffer({ size: this.vertexCount * SHADER_VERTEX_ATTR_COUNT * 4, usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC });
+    this.vertexBuffer = this.device.createBuffer({ size: this.vertexCount * DEBUG_SHADER_VERTEX_ATTR_COUNT * 4, usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC });
 
     if (this.grp0.getSize() < this.commands.length) {
       this.grp0.allocate(this.commands.length);
@@ -494,5 +494,4 @@ class Gfx3DebugRenderer extends Gfx3RendererAbstract {
   }
 }
 
-export { Gfx3DebugRenderer };
 export const gfx3DebugRenderer = new Gfx3DebugRenderer();

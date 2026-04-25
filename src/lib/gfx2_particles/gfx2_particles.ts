@@ -3,20 +3,57 @@ import { UT } from '../core/utils';
 import { Tween } from '../core/tween';
 import { Gfx2Drawable } from '../gfx2/gfx2_drawable';
 
-enum Gfx2VelocityStyle {
+export enum Gfx2ParticlesVelocity {
   CLASSIC = 'CLASSIC',
   EXPLODE = 'EXPLODE'
 };
 
-enum Gfx2PositionStyle {
+export enum Gfx2ParticlesPosition {
   SQUARE = 'SQUARE',
   CIRCLE = 'CIRCLE'
+};
+
+export interface Gfx2ParticlesOptions {
+  texture: ImageBitmap | HTMLImageElement;
+  globalCompositeOperation: GlobalCompositeOperation | '';
+  positionStyle: Gfx2ParticlesPosition;
+  positionBase: vec2;
+  positionSpread: vec2;
+  positionCircleRadiusBase: number;
+  positionRadiusSpread: number;
+  velocityStyle: Gfx2ParticlesVelocity;
+  velocityBase: vec2;
+  velocitySpread: vec2;
+  velocityExplodeSpeedBase: number;
+  velocityExplodeSpeedSpread: number;
+  colorBase: vec3;
+  colorSpread: vec3;
+  colorTween: Tween<vec3>;
+  sizeBase: number;
+  sizeSpread: number;
+  sizeTween: Tween<number>;
+  opacityBase: number;
+  opacitySpread: number;
+  opacityTween: Tween<number>;
+  accelerationBase: vec2;
+  accelerationSpread: vec2;
+  accelerationTween: Tween<vec2>;
+  angleBase: number;
+  angleSpread: number;
+  angleVelocityBase: number;
+  angleVelocitySpread: number;
+  angleAccelerationBase: number;
+  angleAccelerationSpread: number;
+  particleDeathAge: number;
+  particlesPerSecond: number;
+  particleQuantity: number;
+  emitterDeathAge: number;
 };
 
 /**
  * A 2D particle.
  */
-class Particle {
+class Gfx2Particle {
   position: vec2;
   velocity: vec2; // units per second
   acceleration: vec2;
@@ -24,6 +61,8 @@ class Particle {
   angle: number;
   angleVelocity: number; // degrees per second
   angleAcceleration: number; // degrees per second, per second
+  color: vec3;
+  colorTween: Tween<vec3>;
   size: number;
   sizeTween: Tween<number>;
   opacity: number;
@@ -39,6 +78,8 @@ class Particle {
     this.angle = 0;
     this.angleVelocity = 0;
     this.angleAcceleration = 0;
+    this.color = [0, 0, 0];
+    this.colorTween = new Tween<vec3>();
     this.size = 16.0;
     this.sizeTween = new Tween<number>();
     this.opacity = 1.0;
@@ -60,6 +101,10 @@ class Particle {
     this.angleVelocity += this.angleAcceleration * UT.DEG_TO_RAD_RATIO * (ts / 1000.0);
     this.age += ts / 1000.0;
 
+    if (!this.colorTween.isEmpty()) {
+      this.color = this.colorTween.interpolate(this.age);
+    }
+
     if (!this.sizeTween.isEmpty()) {
       this.size = this.sizeTween.interpolate(this.age);
     }
@@ -74,53 +119,25 @@ class Particle {
   }
 }
 
-interface Gfx2ParticlesOptions {
-  texture: ImageBitmap | HTMLImageElement;
-  positionStyle: Gfx2PositionStyle;
-  positionBase: vec2;
-  positionSpread: vec2;
-  positionCircleRadiusBase: number;
-  positionRadiusSpread: number;
-  velocityStyle: Gfx2VelocityStyle;
-  velocityBase: vec2;
-  velocitySpread: vec2;
-  velocityExplodeSpeedBase: number;
-  velocityExplodeSpeedSpread: number;
-  sizeBase: number;
-  sizeSpread: number;
-  sizeTween: Tween<number>;
-  opacityBase: number;
-  opacitySpread: number;
-  opacityTween: Tween<number>;
-  accelerationBase: vec2;
-  accelerationSpread: vec2;
-  accelerationTween: Tween<vec2>;
-  angleBase: number;
-  angleSpread: number;
-  angleVelocityBase: number;
-  angleVelocitySpread: number;
-  angleAccelerationBase: number;
-  angleAccelerationSpread: number;
-  particleDeathAge: number;
-  particlesPerSecond: number;
-  particleQuantity: number;
-  emitterDeathAge: number;
-};
-
 /**
  * The particles diffuser.
  */
-class Gfx2Particles extends Gfx2Drawable {
-  positionStyle: Gfx2PositionStyle;
+export class Gfx2Particles extends Gfx2Drawable implements Gfx2ParticlesOptions {
+  texture: ImageBitmap | HTMLImageElement;
+  globalCompositeOperation: GlobalCompositeOperation | '';
+  positionStyle: Gfx2ParticlesPosition;
   positionBase: vec2;
   positionSpread: vec2;
   positionCircleRadiusBase: number;
   positionRadiusSpread: number;
-  velocityStyle: Gfx2VelocityStyle;
+  velocityStyle: Gfx2ParticlesVelocity;
   velocityBase: vec2;
   velocitySpread: vec2;
   velocityExplodeSpeedBase: number;
   velocityExplodeSpeedSpread: number;
+  colorBase: vec3;
+  colorSpread: vec3;
+  colorTween: Tween<vec3>;
   sizeBase: number;
   sizeSpread: number;
   sizeTween: Tween<number>;
@@ -139,28 +156,34 @@ class Gfx2Particles extends Gfx2Drawable {
   particleDeathAge: number;
   particlesPerSecond: number;
   particleQuantity: number;
-  particleAlivedCount: number;
-  particleArray: Array<Particle>;
   emitterDeathAge: number;
+  // ---------------------------------------------------------------------
+  tintedTextures: Map<string, ImageBitmap | HTMLImageElement>;
+  particleAlivedCount: number;
+  particleArray: Array<Gfx2Particle>;
   emitterAge: number;
   emitterAlive: boolean;
-  texture: ImageBitmap | HTMLImageElement;
 
   /**
    * @param options - Various options for configuring the behavior of the particles cloud.
    */
   constructor(options: Partial<Gfx2ParticlesOptions>) {
     super();
-    this.positionStyle = options.positionStyle ?? Gfx2PositionStyle.SQUARE;
+    this.texture = options.texture ?? gfx2Manager.getDefaultTexture();
+    this.globalCompositeOperation = options.globalCompositeOperation ?? '';
+    this.positionStyle = options.positionStyle ?? Gfx2ParticlesPosition.SQUARE;
     this.positionBase = options.positionBase ?? [0, 0];
     this.positionSpread = options.positionSpread ?? [0, 0];
     this.positionCircleRadiusBase = options.positionCircleRadiusBase ?? 0.0;
     this.positionRadiusSpread = options.positionRadiusSpread ?? 0.0;
-    this.velocityStyle = options.velocityStyle ?? Gfx2VelocityStyle.CLASSIC;
+    this.velocityStyle = options.velocityStyle ?? Gfx2ParticlesVelocity.CLASSIC;
     this.velocityBase = options.velocityBase ?? [0, 0];
     this.velocitySpread = options.velocitySpread ?? [0, 0];
     this.velocityExplodeSpeedBase = options.velocityExplodeSpeedBase ?? 0.0;
     this.velocityExplodeSpeedSpread = options.velocityExplodeSpeedSpread ?? 0.0;
+    this.colorBase = options.colorBase ?? [0, 0, 0];
+    this.colorSpread = options.colorSpread ?? [0, 0, 0];
+    this.colorTween = options.colorTween ?? new Tween<vec3>();
     this.sizeBase = options.sizeBase ?? 1.0;
     this.sizeSpread = options.sizeSpread ?? 0.0;
     this.sizeTween = options.sizeTween ?? new Tween<number>();
@@ -179,15 +202,24 @@ class Gfx2Particles extends Gfx2Drawable {
     this.particleDeathAge = options.particleDeathAge ?? 1.0;
     this.particlesPerSecond = options.particlesPerSecond ?? 30;
     this.particleQuantity = options.particleQuantity ?? 100;
+    this.emitterDeathAge = options.emitterDeathAge ?? 60;
+    // -------------------------------------------------------------------------------
+    this.tintedTextures = new Map();
     this.particleAlivedCount = 0;
     this.particleArray = [];
-    this.emitterDeathAge = options.emitterDeathAge ?? 60;
     this.emitterAge = 0.0;
     this.emitterAlive = true;
-    this.texture = options.texture ?? gfx2Manager.getDefaultTexture();
 
     for (let i = 0; i < this.particleQuantity; i++) {
       this.particleArray[i] = this.#createParticle();
+    }
+
+    if (!this.colorTween.isEmpty()) {
+      for (let i = 0; i <= this.particleDeathAge; i += 0.1) {
+        const color = this.colorTween.interpolate(i);
+        const texture = gfx2Manager.getTintedTexture(this.texture, color[0], color[1], color[2]);
+        this.tintedTextures.set(i.toFixed(1), texture);
+      }
     }
   }
 
@@ -245,40 +277,39 @@ class Gfx2Particles extends Gfx2Drawable {
   /**
    * The draw function.
    */
-  draw(): void {
+  onRender(): void {
     const ctx = gfx2Manager.getContext();
 
-    ctx.save();
-    ctx.translate(-this.offset[0], -this.offset[1]);
-    ctx.translate(this.position[0], this.position[1]);
-    ctx.rotate(this.rotation);
-    ctx.scale(this.scale[0], this.scale[1]);
-
     for (let i = 0; i < this.particleQuantity; i++) {
-      if (this.particleArray[i].alive) {
-        const opacity = this.particleArray[i].opacity;
-        const position = this.particleArray[i].position;
-        const size = this.particleArray[i].size;
-        const angle = this.particleArray[i].angle;
+      const particle = this.particleArray[i];
+      if (particle.alive) {
+        const opacity = particle.opacity;
+        const position = particle.position;
+        const size = particle.size;
+        const angle = particle.angle;
 
         ctx.save();
         ctx.globalAlpha = opacity;
         ctx.rotate(angle);
-        ctx.drawImage(this.texture, position[0] - size * 0.5, position[1] - size * 0.5, size, size);
+
+        if (this.globalCompositeOperation) {
+          ctx.globalCompositeOperation = this.globalCompositeOperation;
+        }
+
+        if (particle.colorTween.isEmpty()) {
+          ctx.drawImage(this.texture, position[0] - size * 0.5, position[1] - size * 0.5, size, size);
+        }
+        else {
+          const textureIndex = particle.age.toFixed(1);
+          const texture = this.tintedTextures.get(textureIndex);
+          if (texture) {
+            ctx.drawImage(texture, position[0] - size * 0.5, position[1] - size * 0.5, size, size);
+          }
+        }
+
         ctx.restore();
       }
     }
-
-    ctx.restore();
-  }
-
-  /**
-   * Set the particle texture.
-   * 
-   * @param {ImageBitmap | HTMLImageElement} texture - The texture.
-   */
-  setTexture(texture: ImageBitmap | HTMLImageElement): void {
-    this.texture = texture;
   }
 
   /**
@@ -289,24 +320,31 @@ class Gfx2Particles extends Gfx2Drawable {
   }
 
   /**
+   * Returns the particle list.
+   */
+  getParticles(): Array<Gfx2Particle> {
+    return this.particleArray;
+  }
+
+  /**
    * Creates a particle with various properties such as position, velocity, size, opacity, acceleration, angle, and age.
    */
-  #createParticle(): Particle {
-    const particle = new Particle();
+  #createParticle(): Gfx2Particle {
+    const particle = new Gfx2Particle();
 
-    if (this.positionStyle == Gfx2PositionStyle.SQUARE) {
+    if (this.positionStyle == Gfx2ParticlesPosition.SQUARE) {
       particle.position = UT.VEC2_SPREAD(this.positionBase, this.positionSpread);
     }
-    else if (this.positionStyle == Gfx2PositionStyle.CIRCLE) {
+    else if (this.positionStyle == Gfx2ParticlesPosition.CIRCLE) {
       const positionRadius = UT.SPREAD(this.positionCircleRadiusBase, this.positionRadiusSpread);
       const a = Math.PI * 2 * Math.random();
       particle.position = UT.VEC2_ADD(this.positionBase, [positionRadius * Math.cos(a), positionRadius * Math.sin(a)]);
     }
 
-    if (this.velocityStyle == Gfx2VelocityStyle.CLASSIC) {
+    if (this.velocityStyle == Gfx2ParticlesVelocity.CLASSIC) {
       particle.velocity = UT.VEC2_SPREAD(this.velocityBase, this.velocitySpread);
     }
-    else if (this.velocityStyle == Gfx2VelocityStyle.EXPLODE) {
+    else if (this.velocityStyle == Gfx2ParticlesVelocity.EXPLODE) {
       const direction = UT.VEC2_SUBSTRACT(particle.position, this.positionBase);
       const velocitySpeed = UT.SPREAD(this.velocityExplodeSpeedBase, this.velocityExplodeSpeedSpread);
       particle.velocity = UT.VEC2_SCALE(UT.VEC2_NORMALIZE(direction), velocitySpeed);
@@ -318,6 +356,8 @@ class Gfx2Particles extends Gfx2Drawable {
     particle.opacityTween = this.opacityTween;
     particle.acceleration = UT.VEC2_SPREAD(this.accelerationBase, this.accelerationSpread);
     particle.accelerationTween = this.accelerationTween;
+    particle.color = UT.VEC3_SPREAD(this.colorBase, this.colorSpread);
+    particle.colorTween = this.colorTween;
     particle.angle = UT.SPREAD(this.angleBase, this.angleSpread);
     particle.angleVelocity = UT.SPREAD(this.angleVelocityBase, this.angleVelocitySpread);
     particle.angleAcceleration = UT.SPREAD(this.angleAccelerationBase, this.angleAccelerationSpread);
@@ -326,6 +366,3 @@ class Gfx2Particles extends Gfx2Drawable {
     return particle;
   }
 }
-
-export type { Gfx2ParticlesOptions };
-export { Gfx2VelocityStyle, Gfx2PositionStyle, Gfx2Particles };

@@ -49,7 +49,7 @@ class BgIsoScreen extends Screen {
 
     this.bg1.setTexture(await gfx2TextureManager.loadTexture('./examples/bg-iso/foreground.png'));
     this.bg1.setOffset(this.tilemap.getWidth() / 2, 0);
-    this.bg1.setPositionZ(2);
+    this.bg1.setPositionZ(3);
 
     this.cursor.setTexture(await gfx2TextureManager.loadTexture('./examples/bg-iso/control.png'));
     this.cursor.setOffset(16, 16);
@@ -61,7 +61,10 @@ class BgIsoScreen extends Screen {
     const controllerSprite = new Gfx2SpriteJAS();
     await controllerSprite.loadFromFile('./examples/bg-iso/controller.jas');
     controllerSprite.setTexture(await gfx2TextureManager.loadTexture('./examples/bg-iso/controller.png'));
+    controllerSprite.setBlendColor(1, 0, 0);
+
     this.controller.setSprite(controllerSprite);
+    this.controller.setPositionZ(2);
 
     this.locatePlayer(19, 1);
   }
@@ -74,8 +77,8 @@ class BgIsoScreen extends Screen {
   draw() {
     this.bg0.draw();
     this.bg1.draw();
-    this.cursor.draw();
     this.controller.draw();
+    this.cursor.draw();
     this.layer1.draw();
   }
 
@@ -113,13 +116,15 @@ class BgIsoScreen extends Screen {
 
     if (follower[0] - cameraPos[0] > CAMERA_FOLLOW_BEGIN_X) {
       gfx2Manager.moveCamera(1, 0);
-    } else if (follower[0] - cameraPos[0] < -CAMERA_FOLLOW_BEGIN_X) {
+    }
+    else if (follower[0] - cameraPos[0] < -CAMERA_FOLLOW_BEGIN_X) {
       gfx2Manager.moveCamera(-1, 0);
     }
 
     if (follower[1] - cameraPos[1] > CAMERA_FOLLOW_BEGIN_Y) {
       gfx2Manager.moveCamera(0, 1);
-    } else if (follower[1] - cameraPos[1] < -CAMERA_FOLLOW_BEGIN_Y) {
+    }
+    else if (follower[1] - cameraPos[1] < -CAMERA_FOLLOW_BEGIN_Y) {
       gfx2Manager.moveCamera(0, -1);
     }
   }
@@ -148,7 +153,7 @@ class BgIsoScreen extends Screen {
     this.controller.moveAlong(positions, elevations, (currentIndex, t) => {
       const i = t > 0.5 ? Math.min(currentIndex + 1, path.length - 1) : currentIndex;
       const tileId = this.gridIds[path[i][1]][path[i][0]];
-      this.controller.setPositionZ(tileId == 2 ? 1 : 3);
+      this.controller.setPositionZ(tileId == 2 ? 2 : 4);
       this.controllerRow = path[i][1];
       this.controllerCol = path[i][0];
     });
@@ -184,16 +189,20 @@ class BgIsoScreen extends Screen {
     if (actionId == 'RIGHT') {
       const nextCol = UT.CLAMP(this.cursorCol + 1, 0, this.tilemap.getColumns() - 1);
       this.locateCursor(this.cursorRow, nextCol);
-    } else if (actionId == 'LEFT') {
+    }
+    else if (actionId == 'LEFT') {
       const nextCol = UT.CLAMP(this.cursorCol - 1, 0, this.tilemap.getColumns() - 1);
       this.locateCursor(this.cursorRow, nextCol);
-    } else if (actionId == 'UP') {
+    }
+    else if (actionId == 'UP') {
       const nextRow = UT.CLAMP(this.cursorRow - 1, 0, this.tilemap.getRows() - 1);
       this.locateCursor(nextRow, this.cursorCol);
-    } else if (actionId == 'DOWN') {
+    }
+    else if (actionId == 'DOWN') {
       const nextRow = UT.CLAMP(this.cursorRow + 1, 0, this.tilemap.getRows() - 1);
       this.locateCursor(nextRow, this.cursorCol);
-    } else if (actionId == 'OK') {
+    }
+    else if (actionId == 'OK') {
       this.movePlayer(this.cursorRow, this.cursorCol);
     }
   }

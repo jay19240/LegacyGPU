@@ -1,7 +1,6 @@
 import { UT } from '../core/utils';
-import { Quaternion } from '../core/quaternion';
 
-enum Axis {
+enum Gfx3Axis {
   FORWARD = 'FORWARD',
   BACKWARD = 'BACKWARD',
   LEFT = 'LEFT',
@@ -13,11 +12,10 @@ enum Axis {
 /**
  * A transformable object with position, rotation, scale and more.
  */
-class Gfx3Transformable {
+export class Gfx3Transformable {
   position: vec3;
   rotation: vec3;
   scale: vec3;
-  quaternion: Quaternion;
   lookTarget: vec3 | null;
   lookUp: vec3;
   transformMatrix: mat4;
@@ -27,7 +25,6 @@ class Gfx3Transformable {
     this.position = [0.0, 0.0, 0.0];
     this.rotation = [0.0, 0.0, 0.0];
     this.scale = [1.0, 1.0, 1.0];
-    this.quaternion = new Quaternion();
     this.lookTarget = null;
     this.lookUp = [0, 1, 0];
     this.transformMatrix = UT.MAT4_IDENTITY();
@@ -172,23 +169,6 @@ class Gfx3Transformable {
   }
 
   /**
-   * Sets the Quaternion rotation.
-   * 
-   * @param {Quaternion} quaternion - The quaternion.
-   */
-  setQuaternion(quaternion: Quaternion) : void {
-    this.quaternion = quaternion.clone();
-    this.lookTarget = null;
-  }
-
-  /**
-   * Returns the Quaternion rotation.
-   */
-  getQuaternion(): Quaternion {
-    return this.quaternion;
-  }
-
-  /**
    * Returns the scale.
    */
   getScale(): vec3 {
@@ -282,7 +262,7 @@ class Gfx3Transformable {
       UT.MAT4_MULTIPLY(this.transformMatrix, UT.MAT4_SCALE(this.scale[0], this.scale[1], this.scale[2]), this.transformMatrix);  
     }
     else {
-      UT.MAT4_TRANSFORM(this.position, this.rotation, this.scale, this.quaternion, this.transformMatrix);
+      UT.MAT4_TRANSFORM(this.position, this.rotation, this.scale, this.transformMatrix);
     }
 
     return this.transformMatrix;
@@ -331,30 +311,56 @@ class Gfx3Transformable {
   }
 
   /**
+   * Returns three local axies of the transformable.
+   */
+  getNormalizedAxies(): Array<vec3> {
+    const matrix = this.getTransformMatrix();
+    return [
+      UT.VEC3_NORMALIZE([matrix[0], matrix[1], matrix[2]]),
+      UT.VEC3_NORMALIZE([matrix[4], matrix[5], matrix[6]]),
+      UT.VEC3_NORMALIZE([matrix[8], matrix[9], matrix[10]])
+    ];
+  }
+
+  /**
    * Returns the specified local axis of the transformable.
    */
-  getAxis(axis: Axis): vec3 {
+  getAxis(axis: Gfx3Axis): vec3 {
     const axies = this.getAxies();
 
-    if (axis == Axis.FORWARD) {
+    if (axis == Gfx3Axis.FORWARD) {
       return [-axies[2][0], -axies[2][1], -axies[2][2]];
     }
-    else if (axis == Axis.BACKWARD) {
+    else if (axis == Gfx3Axis.BACKWARD) {
       return [axies[2][0], axies[2][1], axies[2][2]];
     }
-    else if (axis == Axis.LEFT) {
+    else if (axis == Gfx3Axis.LEFT) {
       return [-axies[0][0], -axies[0][1], -axies[0][2]];
     }
-    else if (axis == Axis.RIGHT) {
+    else if (axis == Gfx3Axis.RIGHT) {
       return [axies[0][0], axies[0][1], axies[0][2]];
     }
-    else if (axis == Axis.UP) {
+    else if (axis == Gfx3Axis.UP) {
       return [axies[1][0], axies[1][1], axies[1][2]];
     }
     else {
       return [-axies[1][0], -axies[1][1], -axies[1][2]];
     }
   }
-}
 
-export { Gfx3Transformable, Axis };
+  /**
+   * Clone the object.
+   * 
+   * @param {Gfx3Transformable} transformable - The copy object.
+   */
+  clone(transformable: Gfx3Transformable = new Gfx3Transformable()): Gfx3Transformable {
+    transformable.position = [this.position[0], this.position[1], this.position[2]];
+    transformable.rotation = [this.rotation[0], this.rotation[1], this.rotation[2]];
+    transformable.scale = [this.scale[0], this.scale[1], this.scale[2]];
+    transformable.lookTarget = this.lookTarget ? [this.lookTarget[0], this.lookTarget[1], this.lookTarget[2]] : null;
+    transformable.lookUp = [this.lookUp[0], this.lookUp[1], this.lookUp[2]];
+    transformable.transformMatrix = UT.MAT4_COPY(this.transformMatrix, transformable.transformMatrix);
+    transformable.useTransformMatrix = this.useTransformMatrix;
+    return transformable;
+  }
+}

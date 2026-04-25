@@ -4,7 +4,7 @@ import { screenManager } from '@lib/screen/screen_manager';
 import { inputManager } from '@lib/input/input_manager';
 import { Screen } from '@lib/screen/screen';
 import { UIMenuText } from '@lib/ui_menu_text/ui_menu_text';
-import { MenuAxis } from '@lib/ui_menu/ui_menu';
+import { UIMenuAxis } from '@lib/ui_menu/ui_menu';
 // ---------------------------------------------------------------------------------------
 import { BgIsoScreen } from './bg-iso/bg_iso_screen';
 import { BoardScreen } from './board/board_screen';
@@ -27,7 +27,7 @@ import { PlatformerBox2DScreen } from './platformer-box2d/platformer_box2d_scree
 import { CarJoltScreen } from './car-jolt/car_jolt_screen';
 import { CurveScreen } from './curve/curve_screen';
 import { MenuRingScreen } from './menu-ring/menu_ring_screen';
-import { ParticlesScreen } from './particles/particles_screen';
+import { Particles3DScreen } from './particles-3d/particles_3d_screen';
 import { PerfScreen } from './perf/perf_screen';
 import { ShadowScreen } from './shadow/shadow_screen';
 import { UserInterfaceScreen } from './user-interface/user_interface_screen';
@@ -43,11 +43,12 @@ import { TwoCasualScreen } from './two-casual/two_casual_screen';
 import { MotorcycleJoltScreen } from './motorcycle-jolt/motorcycle_jolt_screen';
 import { MotorJoltScreen } from './motor-jolt/motor_jolt_screen';
 import { TrailsTestScreen } from './trails/trails_test_screen';
+import { Particles2DScreen } from './particles-2d/particles_2d_screen';
 
 class BootScreen extends Screen {
   constructor() {
     super();
-    this.uiExamples = new UIMenuText({ axis: MenuAxis.XY, rows: 1, columns: 2, className: 'UIMenuText' });
+    this.uiExamples = new UIMenuText({ axis: UIMenuAxis.XY, rows: 1, columns: 2, className: 'UIMenuText' });
   }
 
   async onEnter() {
@@ -88,6 +89,7 @@ class BootScreen extends Screen {
     this.uiExamples.add('34', '3D Motorcycle Jolt');
     this.uiExamples.add('35', '3D Motor Jolt');
     this.uiExamples.add('36', '3D Trails');
+    this.uiExamples.add('37', '2D Particles');
     this.uiExamples.setEnabledWidget(31, false);
     uiManager.addWidget(this.uiExamples, 'position:absolute; top:10px; bottom:10px; left:10px; right:10px');
 
@@ -162,7 +164,7 @@ class BootScreen extends Screen {
         screenManager.requestSetScreen(new CurveScreen());
         break;
       case '20':
-        screenManager.requestSetScreen(new ParticlesScreen());
+        screenManager.requestSetScreen(new Particles3DScreen());
         break;
       case '21':
         screenManager.requestSetScreen(new PerfScreen());
@@ -211,6 +213,9 @@ class BootScreen extends Screen {
         break;
       case '36':
         screenManager.requestSetScreen(new TrailsTestScreen());
+        break;
+      case '37':
+        screenManager.requestSetScreen(new Particles2DScreen());
         break;
       default:
         console.log('Unknown template ID:', data.id);

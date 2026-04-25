@@ -10,7 +10,6 @@ import { gfx3PostRenderer } from '@lib/legacygpu';
 import { gfx3ShadowVolumeRenderer } from '@lib/legacygpu';
 import { gfx2Manager } from '@lib/legacygpu';
 import { gfx2FontManager } from '@lib/legacygpu';
-import { UT } from '@lib/legacygpu';
 import { Screen } from '@lib/legacygpu';
 import { EnginePack3D } from '@lib/legacygpu';
 // ---------------------------------------------------------------------------------------
@@ -24,8 +23,7 @@ class GameScreen extends Screen {
   }
 
   async onEnter() {
-    this.pack = await EnginePack3D.createFromFile('./scene.blend.pak');
-
+    this.pack = await EnginePack3D.createFromFile('orbit', './scene.blend.pak');
     await gfx2FontManager.loadFont('./fonts/HanWangYanKai-26.bdf');
     gfx2Manager.setBgColor(0, 0, 0, 0);
   }
@@ -37,14 +35,13 @@ class GameScreen extends Screen {
   draw() {
     gfx3Manager.beginDrawing();
     this.pack.draw();
-    gfx3DebugRenderer.drawGrid(UT.MAT4_ROTATE_X(Math.PI * 0.5), 20, 1);
     gfx3Manager.endDrawing();
 
     gfx2Manager.drawCommand((ctx) => {
-      gfx2FontManager.draw('./fonts/HanWangYanKai-26.bdf', 'Hello World !', {
+      gfx2FontManager.draw('./fonts/HanWangYanKai-26.bdf', '3DLegacy Engine', {
         align: 'center',
         linelimit: 300,
-        valign: 'middle',
+        valign: 'middle'
       });
     });
   }

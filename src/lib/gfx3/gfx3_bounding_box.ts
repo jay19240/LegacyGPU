@@ -5,7 +5,7 @@ import { Gfx3BoundingCylinder } from './gfx3_bounding_cylinder';
 /**
  * A 3D bounding box.
  */
-class Gfx3BoundingBox {
+export class Gfx3BoundingBox {
   min: vec3;
   max: vec3;
 
@@ -390,5 +390,3 @@ class Gfx3BoundingBox {
     ];
   }
 }
-
-export { Gfx3BoundingBox };

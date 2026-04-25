@@ -6,9 +6,10 @@ import { gfx3ShadowVolumeRenderer } from '../gfx3_shadow_volume/gfx3_shadow_volu
 import { Gfx3RendererAbstract } from '../gfx3/gfx3_renderer_abstract';
 import { Gfx3StaticGroup } from '../gfx3/gfx3_group';
 import { Gfx3Texture, Gfx3RenderingTexture } from '../gfx3/gfx3_texture';
-import { VERTEX_SHADER, FRAGMENT_SHADER, PIPELINE_DESC, SHADER_VERTEX_ATTR_COUNT, POST_CUSTOM_PARAMS, SHADER_INSERTS, PostParam } from './gfx3_post_shader';
+import { POST_VERTEX_SHADER, POST_FRAGMENT_SHADER, POST_PIPELINE_DESC, POST_SHADER_VERTEX_ATTR_COUNT, POST_CUSTOM_PARAMS, POST_SHADER_INSERTS, Gfx3PostParam } from './gfx3_post_shader';
+import { RADIAL_V_SHADER, RADIAL_F_SHADER, Gfx3PostFinalParam } from './gfx3_post_shader';
 
-enum PostShadowVolumeBlendMode {
+export enum Gfx3PostShadowVolumeBlendMode {
   MUL = 0,
   ADD = 1
 };
@@ -16,7 +17,7 @@ enum PostShadowVolumeBlendMode {
 /**
  * Singleton post-processing effects renderer.
  */
-class Gfx3PostRenderer extends Gfx3RendererAbstract {
+export class Gfx3PostRenderer extends Gfx3RendererAbstract {
   device: GPUDevice;
   vertexBuffer: GPUBuffer;
   grp0: Gfx3StaticGroup;
@@ -34,33 +35,39 @@ class Gfx3PostRenderer extends Gfx3RendererAbstract {
   grp2: Gfx3StaticGroup;
   s0Texture: Gfx3Texture;
   s1Texture: Gfx3Texture;
+  // ---------------------------------------------------------------------
+  finalEnabled: boolean;
+  finalPipeline: GPURenderPipeline;
+  finalGrp0: Gfx3StaticGroup;
+  finalSourceTexture: Gfx3RenderingTexture;
+  finalParams: Float32Array;
 
   constructor() {
-    super('POST_PIPELINE', VERTEX_SHADER, FRAGMENT_SHADER, PIPELINE_DESC, {...POST_CUSTOM_PARAMS, ...SHADER_INSERTS });
+    super('POST_PIPELINE', POST_VERTEX_SHADER, POST_FRAGMENT_SHADER, POST_PIPELINE_DESC, { ...POST_CUSTOM_PARAMS, ...POST_SHADER_INSERTS });
     this.device = gfx3Manager.getDevice();
-    this.vertexBuffer = this.device.createBuffer({ size: 6 * SHADER_VERTEX_ATTR_COUNT * 4, usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC });
+    this.vertexBuffer = this.device.createBuffer({ size: 6 * POST_SHADER_VERTEX_ATTR_COUNT * 4, usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC });
 
     this.grp0 = gfx3Manager.createStaticGroup('POST_PIPELINE', 0);
-    this.params = this.grp0.setFloat(0, 'PARAMS', 35);
-    this.params[PostParam.ENABLED] = 1.0;
-    this.params[PostParam.PIXELATION_ENABLED] = 0.0;
-    this.params[PostParam.PIXELATION_WIDTH] = 400.0;
-    this.params[PostParam.PIXELATION_HEIGHT] = 400.0;
-    this.params[PostParam.COLOR_ENABLED] = 0.0;
-    this.params[PostParam.COLOR_PRECISION] = 32.0;
-    this.params[PostParam.DITHER_ENABLED] = 0.0;
-    this.params[PostParam.DITHER_PATTERN_INDEX] = 0.0;
-    this.params[PostParam.DITHER_THRESHOLD] = 1.0;
-    this.params[PostParam.DITHER_SCALE_X] = 1.0;
-    this.params[PostParam.DITHER_SCALE_Y] = 1.0;
-    this.params[PostParam.OUTLINE_ENABLED] = 0.0;
-    this.params[PostParam.OUTLINE_THICKNESS] = 120.0;
-    this.params[PostParam.OUTLINE_R] = 0.0;
-    this.params[PostParam.OUTLINE_G] = 0.0;
-    this.params[PostParam.OUTLINE_B] = 0.0;
-    this.params[PostParam.OUTLINE_CONSTANT] = 0.0;
-    this.params[PostParam.SHADOW_VOLUME_ENABLED] = 1.0;
-    this.params[PostParam.SHADOW_VOLUME_BLEND_MODE] = PostShadowVolumeBlendMode.MUL;
+    this.params = this.grp0.setFloat(0, 'PARAMS', Gfx3PostParam.COUNT + 16);
+    this.params[Gfx3PostParam.ENABLED] = 1.0;
+    this.params[Gfx3PostParam.PIXELATION_ENABLED] = 0.0;
+    this.params[Gfx3PostParam.PIXELATION_WIDTH] = 400.0;
+    this.params[Gfx3PostParam.PIXELATION_HEIGHT] = 400.0;
+    this.params[Gfx3PostParam.COLOR_ENABLED] = 0.0;
+    this.params[Gfx3PostParam.COLOR_PRECISION] = 32.0;
+    this.params[Gfx3PostParam.DITHER_ENABLED] = 0.0;
+    this.params[Gfx3PostParam.DITHER_PATTERN_INDEX] = 0.0;
+    this.params[Gfx3PostParam.DITHER_THRESHOLD] = 1.0;
+    this.params[Gfx3PostParam.DITHER_SCALE_X] = 1.0;
+    this.params[Gfx3PostParam.DITHER_SCALE_Y] = 1.0;
+    this.params[Gfx3PostParam.OUTLINE_ENABLED] = 0.0;
+    this.params[Gfx3PostParam.OUTLINE_THICKNESS] = 120.0;
+    this.params[Gfx3PostParam.OUTLINE_R] = 0.0;
+    this.params[Gfx3PostParam.OUTLINE_G] = 0.0;
+    this.params[Gfx3PostParam.OUTLINE_B] = 0.0;
+    this.params[Gfx3PostParam.OUTLINE_CONSTANT] = 0.0;
+    this.params[Gfx3PostParam.SHADOW_VOLUME_ENABLED] = 1.0;
+    this.params[Gfx3PostParam.SHADOW_VOLUME_BLEND_MODE] = Gfx3PostShadowVolumeBlendMode.MUL;
     this.infos = this.grp0.setFloat(1, 'INFOS', 6);
     this.sourceTexture = this.grp0.setRenderingTexture(2, 'SOURCE_TEXTURE', gfx3Manager.createRenderingTexture());
     this.sourceTexture = this.grp0.setRenderingSampler(3, 'SOURCE_SAMPLER', this.sourceTexture);
@@ -96,6 +103,21 @@ class Gfx3PostRenderer extends Gfx3RendererAbstract {
       1.0, -1.0, 1.0, 1.0 // second tri -> bottom right
     ]));
 
+    this.finalEnabled = false;
+    this.finalPipeline = gfx3Manager.loadPipeline('POST_FINAL_PIPELINE', RADIAL_V_SHADER({}), RADIAL_F_SHADER({}), POST_PIPELINE_DESC);
+    this.finalSourceTexture = gfx3Manager.createRenderingTexture();
+
+    this.finalGrp0 = gfx3Manager.createStaticGroup('POST_FINAL_PIPELINE', 0);
+    this.finalParams = this.finalGrp0.setFloat(0, 'PARAMS', Gfx3PostFinalParam.COUNT);
+    this.finalParams[Gfx3PostFinalParam.RADIALBLUR_ENABLED] = 0.0;
+    this.finalParams[Gfx3PostFinalParam.RADIALBLUR_STRENGTH] = 0.1;
+    this.finalParams[Gfx3PostFinalParam.RADIALBLUR_SAMPLES] = 6.0;
+    this.finalParams[Gfx3PostFinalParam.RADIALBLUR_CENTER_X] = 0.5;
+    this.finalParams[Gfx3PostFinalParam.RADIALBLUR_CENTER_Y] = 0.5;
+    this.finalGrp0.setRenderingTexture(1, 'FINAL_SOURCE_TEXTURE', this.finalSourceTexture);
+    this.finalGrp0.setRenderingSampler(2, 'FINAL_SOURCE_SAMPLER', this.finalSourceTexture);
+    this.finalGrp0.allocate();
+
     eventManager.subscribe(coreManager, 'E_RESIZE', this, this.#handleWindowResize);
   }
 
@@ -103,11 +125,13 @@ class Gfx3PostRenderer extends Gfx3RendererAbstract {
    * The render function.
    */
   render(ts: number, destinationTexture: Gfx3RenderingTexture): void {
+    const firstPassView = this.finalEnabled ? this.finalSourceTexture.gpuTextureView : destinationTexture.gpuTextureView;
+
     const currentView = gfx3Manager.getCurrentView();
     const commandEncoder = gfx3Manager.getCommandEncoder();
     const passEncoder = commandEncoder.beginRenderPass({
       colorAttachments: [{
-        view: destinationTexture.gpuTextureView,
+        view: firstPassView,
         loadOp: 'clear',
         storeOp: 'store'
       }]
@@ -132,6 +156,25 @@ class Gfx3PostRenderer extends Gfx3RendererAbstract {
     passEncoder.setVertexBuffer(0, this.vertexBuffer);
     passEncoder.draw(6);
     passEncoder.end();
+
+    if (this.finalEnabled) {
+      const passEncoder = commandEncoder.beginRenderPass({
+        colorAttachments: [{
+          view: destinationTexture.gpuTextureView,
+          loadOp: 'clear',
+          storeOp: 'store'
+        }]
+      });
+
+      passEncoder.setPipeline(this.finalPipeline);
+      this.finalGrp0.beginWrite();
+      this.finalGrp0.write(0, this.finalParams);
+      this.finalGrp0.endWrite();
+      passEncoder.setBindGroup(0, this.finalGrp0.getBindGroup());
+      passEncoder.setVertexBuffer(0, this.vertexBuffer);
+      passEncoder.draw(6);
+      passEncoder.end();
+    }
   }
 
   /**
@@ -140,9 +183,9 @@ class Gfx3PostRenderer extends Gfx3RendererAbstract {
    * 
    * @param {Partial<typeof SHADER_INSERTS>} data - The custom data used by the shader template.
    */
-  setShaderInserts(data: Partial<typeof SHADER_INSERTS> = {}): void {
-    Object.assign(SHADER_INSERTS, data);
-    super.reload(VERTEX_SHADER, FRAGMENT_SHADER, PIPELINE_DESC, {...POST_CUSTOM_PARAMS, ...SHADER_INSERTS });
+  setShaderInserts(data: Partial<typeof POST_SHADER_INSERTS> = {}): void {
+    Object.assign(POST_SHADER_INSERTS, data);
+    super.reload(POST_VERTEX_SHADER, POST_FRAGMENT_SHADER, POST_PIPELINE_DESC, { ...POST_CUSTOM_PARAMS, ...POST_SHADER_INSERTS });
     this.grp0.setPipeline(this.pipeline);
     this.grp1.setPipeline(this.pipeline);
     this.grp2.setPipeline(this.pipeline);
@@ -159,7 +202,7 @@ class Gfx3PostRenderer extends Gfx3RendererAbstract {
    */
   setParamsVars(data: Partial<typeof POST_CUSTOM_PARAMS> = {}): void {
     Object.assign(POST_CUSTOM_PARAMS, data);
-    super.reload(VERTEX_SHADER, FRAGMENT_SHADER, PIPELINE_DESC, {...POST_CUSTOM_PARAMS, ...SHADER_INSERTS });
+    super.reload(POST_VERTEX_SHADER, POST_FRAGMENT_SHADER, POST_PIPELINE_DESC, { ...POST_CUSTOM_PARAMS, ...POST_SHADER_INSERTS });
     this.grp0.setPipeline(this.pipeline);
     this.grp1.setPipeline(this.pipeline);
     this.grp2.setPipeline(this.pipeline);
@@ -197,7 +240,7 @@ class Gfx3PostRenderer extends Gfx3RendererAbstract {
       throw new Error('Gfx3PostRenderer::setCustomParamValue(): Custom param name not found !');
     }
 
-    this.params[PostParam.COUNT + paramIndex] = value;
+    this.params[Gfx3PostParam.COUNT + paramIndex] = value;
   }
 
   /**
@@ -211,7 +254,7 @@ class Gfx3PostRenderer extends Gfx3RendererAbstract {
       throw new Error('Gfx3PostRenderer::getCustomParamValue(): Custom param name not found !');
     }
 
-    return this.params[PostParam.COUNT + paramIndex];
+    return this.params[Gfx3PostParam.COUNT + paramIndex];
   }
 
   /**
@@ -219,7 +262,7 @@ class Gfx3PostRenderer extends Gfx3RendererAbstract {
    * 
    * @param {any} textures - The textures list.
    */
-  setCustomTextures(textures: {0?: Gfx3Texture, 1?: Gfx3Texture }): void {
+  setCustomTextures(textures: { 0?: Gfx3Texture, 1?: Gfx3Texture }): void {
     if (textures[0]) {
       this.s0Texture = this.grp2.setTexture(0, 'S0_TEXTURE', textures[0]);
     }
@@ -229,6 +272,25 @@ class Gfx3PostRenderer extends Gfx3RendererAbstract {
     }
 
     this.grp2.allocate();
+  }
+
+  /**
+   * Enable or not the final pass.
+   * 
+   * @param {boolean} enabled - The enable flag.
+   */
+  enableFinal(enabled: boolean): void {
+    this.finalEnabled = enabled;
+  }
+
+  /**
+   * Set a parameter value.
+   * 
+   * @param {number} index - The param index.
+   * @param {number} value - The value.
+   */
+  setFinalParam(index: number, value: number): void {
+    this.finalParams[index] = value;
   }
 
   /**
@@ -268,8 +330,10 @@ class Gfx3PostRenderer extends Gfx3RendererAbstract {
     this.shadowVolDepthCCWTexture = this.grp1.setRenderingTexture(2, 'SHADOW_VOL_DEPTH_CCW_TEXTURE', gfx3ShadowVolumeRenderer.getDepthCCWTexture());
     this.shadowVolDepthCWTexture = this.grp1.setRenderingTexture(3, 'SHADOW_VOL_DEPTH_CW_TEXTURE', gfx3ShadowVolumeRenderer.getDepthCWTexture());
     this.grp1.allocate();
+
+    this.finalSourceTexture = this.grp0.setRenderingTexture(1, 'FINAL_SOURCE_TEXTURE', gfx3Manager.createRenderingTexture());
+    this.finalGrp0.allocate();
   }
 }
 
-export { Gfx3PostRenderer, PostParam, PostShadowVolumeBlendMode };
 export const gfx3PostRenderer = new Gfx3PostRenderer();

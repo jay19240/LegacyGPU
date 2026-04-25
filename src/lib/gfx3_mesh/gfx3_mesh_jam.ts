@@ -7,7 +7,7 @@ import { Gfx3Mesh, Gfx3MeshBuild } from './gfx3_mesh';
 import { Gfx3Material } from './gfx3_mesh_material';
 import { Gfx3BoundingCylinder } from '../gfx3/gfx3_bounding_cylinder';
 
-interface JAMAnimation {
+export interface Gfx3JAMAnimation {
   name: String;
   startFrame: number;
   endFrame: number;
@@ -18,17 +18,18 @@ interface JAMAnimation {
  * A 3D animated mesh.
  * It emit 'E_FINISHED'
  */
-class Gfx3MeshJAM extends Gfx3Mesh implements Poolable<Gfx3MeshJAM> {
+export class Gfx3MeshJAM extends Gfx3Mesh implements Poolable<Gfx3MeshJAM> {
   frames: Array<number>;
-  animations: Array<JAMAnimation>;
+  animations: Array<Gfx3JAMAnimation>;
   interpolated: boolean;
   looped: boolean;
-  currentAnimation: JAMAnimation | null;
+  currentAnimation: Gfx3JAMAnimation | null;
   currentFrameIndex: number;
   frameProgress: number;
   geos: Array<Gfx3MeshBuild>;
   boundingBoxes: Array<Gfx3BoundingBox>;
   boundingCylinders: Array<Gfx3BoundingCylinder>;
+  boundingShapesDynamicMode: boolean;
 
   constructor() {
     super();
@@ -42,6 +43,7 @@ class Gfx3MeshJAM extends Gfx3Mesh implements Poolable<Gfx3MeshJAM> {
     this.geos = [];
     this.boundingBoxes = [];
     this.boundingCylinders = [];
+    this.boundingShapesDynamicMode = false;
   }
 
   /**
@@ -212,6 +214,9 @@ class Gfx3MeshJAM extends Gfx3Mesh implements Poolable<Gfx3MeshJAM> {
         this.currentAnimation.frameDuration,
         this.vertexCount
       );
+
+      this.boundingBox = this.boundingBoxes[this.currentFrameIndex];
+      this.boundingCylinder = this.boundingCylinders[this.currentFrameIndex];
     }
 
     if (interpolateFactor >= 1) {
@@ -277,7 +282,7 @@ class Gfx3MeshJAM extends Gfx3Mesh implements Poolable<Gfx3MeshJAM> {
   /**
    * Returns the current animation or null if there is no current animation.
    */
-  getCurrentAnimation(): JAMAnimation | null {
+  getCurrentAnimation(): Gfx3JAMAnimation | null {
     return this.currentAnimation;
   }
 
@@ -296,57 +301,17 @@ class Gfx3MeshJAM extends Gfx3Mesh implements Poolable<Gfx3MeshJAM> {
   }
 
   /**
-   * Returns the bounding box.
+   * Bounding shapes fit the sprite size in realtime.
    * 
-   * @param {boolean} [dynamicMode=false] - Determines if bounding box fit the current animation.
+   * @param {boolean} [dynamicMode] - Determines if bounding shapes fit the current animation.
    */
-  getBoundingBox(dynamicMode: boolean = false): Gfx3BoundingBox {
-    if (dynamicMode && this.currentAnimation) {
-      return this.boundingBoxes[this.currentFrameIndex];
+  setBoundingShapesDynamicMode(dynamicMode: boolean) {
+    if (dynamicMode == false) {
+      this.boundingBox = this.boundingBoxes[0];
+      this.boundingCylinder = this.boundingCylinders[0];
     }
 
-    return this.boundingBox;
-  }
-
-  /**
-   * Returns the bounding box in the world space coordinates.
-   * 
-   * @param {boolean} [dynamicMode=false] - Determines if bounding box fit the current animation.
-   */
-  getWorldBoundingBox(dynamicMode: boolean = false): Gfx3BoundingBox {
-    if (dynamicMode && this.currentAnimation) {
-      const box = this.boundingBoxes[this.currentFrameIndex];
-      return box.transform(this.getTransformMatrix());
-    }
-
-    return this.boundingBox.transform(this.getTransformMatrix());
-  }
-
-  /**
-   * Returns the bounding cylinder.
-   * 
-   * @param {boolean} [dynamicMode=false] - Determines if bounding cylinder fit the current animation.
-   */
-  getBoundingCylinder(dynamicMode: boolean = false): Gfx3BoundingCylinder {
-    if (dynamicMode && this.currentAnimation) {
-      return this.boundingCylinders[this.currentFrameIndex];
-    }
-
-    return this.boundingCylinder;
-  }
-
-  /**
-   * Returns the bounding cylinder in the world space coordinates.
-   * 
-   * @param {boolean} [dynamicMode=false] - Determines if bounding cylinder fit the current animation.
-   */
-  getWorldBoundingCylinder(dynamicMode: boolean = false): Gfx3BoundingCylinder {
-    if (dynamicMode && this.currentAnimation) {
-      const cylinder = this.boundingCylinders[this.currentFrameIndex];
-      return cylinder.transform(this.getTransformMatrix());
-    }
-
-    return this.boundingCylinder.transform(this.getTransformMatrix());
+    this.boundingShapesDynamicMode = dynamicMode;
   }
 
   /**
@@ -364,15 +329,9 @@ class Gfx3MeshJAM extends Gfx3Mesh implements Poolable<Gfx3MeshJAM> {
     jam.currentAnimation = null;
     jam.currentFrameIndex = 0;
     jam.frameProgress = 0;
-
-    for (const boundingBox of this.boundingBoxes) {
-      jam.boundingBoxes.push(new Gfx3BoundingBox(
-        boundingBox.min, boundingBox.max
-      ));
-    }
-
+    jam.geos = this.geos;
+    jam.boundingBoxes = this.boundingBoxes;
+    jam.boundingCylinders = this.boundingCylinders;
     return jam;
   }
 }
-
-export { Gfx3MeshJAM };

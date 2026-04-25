@@ -1,12 +1,17 @@
-export const SHADER_VERTEX_ATTR_COUNT = 6;
+export const SKYBOX_SHADER_VERTEX_ATTR_COUNT = 6;
 
-export const PIPELINE_DESC: any = {
+export const SKYBOX_SHADER_INSERTS = {
+  VERT_INSERT: '',
+  FRAG_INSERT: ''
+};
+
+export const SKYBOX_PIPELINE_DESC: any = {
   label: 'Skybox pipeline',
   layout: 'auto',
   vertex: {
     entryPoint: 'main',
     buffers: [{
-      arrayStride: SHADER_VERTEX_ATTR_COUNT * 4,
+      arrayStride: SKYBOX_SHADER_VERTEX_ATTR_COUNT * 4,
       attributes: [{
         shaderLocation: 0, /*position*/
         offset: 0,
@@ -51,7 +56,7 @@ export const PIPELINE_DESC: any = {
   }
 };
 
-export const VERTEX_SHADER = (data: any) => /* wgsl */`
+export const SKYBOX_VERTEX_SHADER = (data: any = {}) => /* wgsl */`
 struct VertexOutput {
   @builtin(position) Position: vec4<f32>,
   @location(0) ClipPos: vec4<f32>
@@ -61,14 +66,17 @@ struct VertexOutput {
 fn main(
   @location(0) Position: vec4<f32>,
 ) -> VertexOutput {
-  var output : VertexOutput;
+
+  ${data.VERT_INSERT}
+
+  var output: VertexOutput;
   output.Position = Position;
   output.Position.z = 1;
   output.ClipPos = Position;
   return output;
 }`;
 
-export const FRAGMENT_SHADER = (data: any) => /* wgsl */`
+export const SKYBOX_FRAGMENT_SHADER = (data: any) => /* wgsl */`
 struct FragOutput {
   @location(0) Base: vec4f,
   @location(1) Normal: vec4f,
@@ -87,6 +95,8 @@ fn main(
   @location(0) ClipPos: vec4<f32>
 ) -> FragOutput {
   var t = VPC_INVERSE_MATRIX * ClipPos;
+
+  ${data.FRAG_INSERT}
 
   var output: FragOutput;
   output.Base = textureSample(CUBEMAP_TEXTURE, CUBEMAP_SAMPLER, normalize(t.xyz / t.w));

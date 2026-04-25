@@ -1,12 +1,12 @@
 import { Gfx3Texture, Gfx3RenderingTexture } from './gfx3_texture';
 
-export const MIN_UNIFORM_BUFFER_OFFSET_ALIGNMENT = 256;
+const MIN_UNIFORM_BUFFER_OFFSET_ALIGNMENT = 256;
 
 /**
  * Interface to bind the uniform buffer and textures to the GPU pipeline.
  * Note: Used for one bind group.
  */
-class Gfx3StaticGroup {
+export class Gfx3StaticGroup {
   device: GPUDevice;
   pipeline: GPURenderPipeline;
   groupIndex: number;
@@ -204,7 +204,7 @@ class Gfx3StaticGroup {
  * Interface to bind the uniform buffer and textures to the GPU pipeline.
  * Note: Used for multiple bind groups.
  */
-class Gfx3DynamicGroup {
+export class Gfx3DynamicGroup {
   device: GPUDevice;
   pipeline: GPURenderPipeline;
   groupIndex: number;
@@ -370,5 +370,3 @@ class Gfx3DynamicGroup {
     this.pipeline = pipeline;
   }
 }
-
-export { Gfx3StaticGroup, Gfx3DynamicGroup };

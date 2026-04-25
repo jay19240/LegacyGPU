@@ -1,10 +1,10 @@
-interface JSCBlock {
+export interface JSCBlock {
   id: string;
   description: string;
   calls: Array<JSCBlockCall>;
 }
 
-interface JSCBlockCall {
+export interface JSCBlockCall {
   commandName: string;
   commandArgs: Array<any>;
 }
@@ -12,7 +12,7 @@ interface JSCBlockCall {
 /**
  * Is a script machine that parse and execute blocks from a JSON file.
  */
-class ScriptMachine {
+export class ScriptMachine {
   variants: any;
   blocks: Array<JSCBlock>;
   commandRegister: Map<string, Function>;
@@ -303,8 +303,6 @@ class ScriptMachine {
     window.setTimeout(() => this.setEnabled(true), ms);
   }
 }
-
-export { ScriptMachine };
 
 // -------------------------------------------------------------------------------------------
 // HELPFUL

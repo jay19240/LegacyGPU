@@ -6,7 +6,7 @@ import { TreePartition, TreePartitionNode, ITreePartitionMethod, SplitResult } f
 /**
  * A 3D binary tree space partition.
  */
-class Gfx3TreePartition extends TreePartition<Gfx3BoundingBox> {
+export class Gfx3TreePartition extends TreePartition<Gfx3BoundingBox> {
   /**
    * @param {number} maxChildren - The maximum number of children that a node in the tree can have. It determines the branching factor of the tree, i.e.
    * @param {number} maxDepth - The maximum depth or level of the tree partition. It determines how deep the tree can be divided into smaller partitions.
@@ -20,7 +20,7 @@ class Gfx3TreePartition extends TreePartition<Gfx3BoundingBox> {
 /**
  * A 3D binary tree partition method for quick search intersections.
  */
-class Gfx3TreePartitionMethod implements ITreePartitionMethod<Gfx3BoundingBox> {
+export class Gfx3TreePartitionMethod implements ITreePartitionMethod<Gfx3BoundingBox> {
   box: Gfx3BoundingBox;
   axis: 'x' | 'y' | 'z';
 
@@ -157,5 +157,3 @@ class Gfx3TreePartitionMethod implements ITreePartitionMethod<Gfx3BoundingBox> {
     return { left, right, leftMethod, rightMethod };
   }
 }
-
-export { Gfx3TreePartition, Gfx3TreePartitionMethod };

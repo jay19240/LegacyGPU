@@ -142,13 +142,13 @@ class TwoCasualScreen extends Screen {
     const bg = new Gfx2SpriteJSS();
     bg.setTexture(gfx2TextureManager.getTexture('./examples/two-casual/bg.png'));
     bg.setTextureRect(0, 0, 600, 600);
-    bg.setOffsetNormalized(0.5, 0.5);
+    bg.setNormalizedOffset(0.5, 0.5);
     this.map.push(bg);
 
     for (let i = 0; i < 4; i++) {
       const cityLight = new Gfx2SpriteJSS();
       cityLight.setTexture(gfx2TextureManager.getTexture('./examples/two-casual/city_light.png'));
-      cityLight.setOffsetNormalized(0.5, 0.5);
+      cityLight.setNormalizedOffset(0.5, 0.5);
       cityLight.setPositionX(LEFT(0) + (i * 240));
       cityLight.setPositionY(240);
       cityLight.setPositionZ(Layer.MIDDLEGROUND);
@@ -156,7 +156,7 @@ class TwoCasualScreen extends Screen {
 
       const cityDark = new Gfx2SpriteJSS();
       cityDark.setTexture(gfx2TextureManager.getTexture('./examples/two-casual/city_dark.png'));
-      cityDark.setOffsetNormalized(0.5, 0.5);
+      cityDark.setNormalizedOffset(0.5, 0.5);
       cityDark.setPositionX(LEFT(0) + (i * 240));
       cityDark.setPositionY(265);
       cityDark.setPositionZ(Layer.FOREGROUND);
@@ -166,7 +166,7 @@ class TwoCasualScreen extends Screen {
     for (let i = 0; i < 4; i++) {
       const trees = new Gfx2SpriteJSS();
       trees.setTexture(gfx2TextureManager.getTexture('./examples/two-casual/trees.png'));
-      trees.setOffsetNormalized(0.5, 0.5);
+      trees.setNormalizedOffset(0.5, 0.5);
       trees.setPosition(LEFT(0) + (i * 240), 280);
       trees.setPositionZ(Layer.FOREGROUND);
       this.map.push(trees);
@@ -178,7 +178,7 @@ class TwoCasualScreen extends Screen {
 
       const cloud = new Gfx2SpriteJSS();
       cloud.setTexture(gfx2TextureManager.getTexture('./examples/two-casual/cloud.png'));
-      cloud.setOffsetNormalized(0.5, 0.5);
+      cloud.setNormalizedOffset(0.5, 0.5);
       cloud.setPosition(60 + (i * 120), posY);
       cloud.setPositionZ(z);
       this.clouds.push(cloud);
@@ -199,16 +199,16 @@ class TwoCasualScreen extends Screen {
 
     this.introMessage = new Gfx2SpriteJSS();
     this.introMessage.setTexture(gfx2TextureManager.getTexture('./examples/two-casual/intro_message.png'));
-    this.introMessage.setOffsetNormalized(0.5, 0.5);
+    this.introMessage.setNormalizedOffset(0.5, 0.5);
 
     this.gameOverMessage = new Gfx2SpriteJSS();
     this.gameOverMessage.setTexture(gfx2TextureManager.getTexture('./examples/two-casual/game_over_message.png'));
-    this.gameOverMessage.setOffsetNormalized(0.5, 0.5);
+    this.gameOverMessage.setNormalizedOffset(0.5, 0.5);
     this.gameOverMessage.setVisible(false);
 
     this.bomb = new Gfx2SpriteJSS();
     this.bomb.setTexture(gfx2TextureManager.getTexture('./examples/two-casual/bomb.png'));
-    this.bomb.setOffsetNormalized(0.5, 0.5);
+    this.bomb.setNormalizedOffset(0.5, 0.5);
     this.bomb.setPosition(0, 0);
     this.bomb.setPositionZ(Layer.FOREGROUND);
     this.bomb.setScale(1, 1);
@@ -216,19 +216,19 @@ class TwoCasualScreen extends Screen {
 
     this.bombSparkle = new Gfx2SpriteJSS();
     this.bombSparkle.setTexture(gfx2TextureManager.getTexture('./examples/two-casual/sparkle.png'));
-    this.bombSparkle.setOffsetNormalized(0.5, 0.5);
+    this.bombSparkle.setNormalizedOffset(0.5, 0.5);
     this.bombSparkle.setPosition(0, 0);
     this.bombSparkle.setVisible(false);
 
     this.bombHalo = new Gfx2SpriteJSS();
     this.bombHalo.setTexture(gfx2TextureManager.getTexture('./examples/two-casual/halo.png'));
-    this.bombHalo.setOffsetNormalized(0.5, 0.5);
+    this.bombHalo.setNormalizedOffset(0.5, 0.5);
     this.bombHalo.setPosition(this.bomb.getTextureRectWidth() / 2, this.bomb.getTextureRectHeight() / 2);
     this.bombHalo.setVisible(false);
 
     this.shockwave = new Gfx2SpriteJSS();
     this.shockwave.setTexture(gfx2TextureManager.getTexture('./examples/two-casual/shockwave.png'));
-    this.shockwave.setOffsetNormalized(0.5, 0.5);
+    this.shockwave.setNormalizedOffset(0.5, 0.5);
     this.shockwave.setScale(0, 0);
     this.shockwave.setPosition(0, 0);
     this.shockwave.setVisible(false);
@@ -236,7 +236,7 @@ class TwoCasualScreen extends Screen {
     this.animated = new Gfx2SpriteJAS();
     this.animated.setTexture(gfx2TextureManager.getTexture('./examples/two-casual/sprite_sheet.png'));
     await this.animated.loadFromFile('./examples/two-casual/sprite_sheet.jas');
-    this.animated.setOffsetNormalized(0.5, 1);
+    this.animated.setNormalizedOffset(0.5, 1);
     this.animated.setPosition(0, 0);
     this.animated.setPositionZ(Layer.MIDDLEGROUND);
 
@@ -324,7 +324,7 @@ class TwoCasualScreen extends Screen {
     if (this.asteroidGenerateTimer >= this.asteroidGenerateDelay) {
       const sprite = new Gfx2SpriteJSS();
       sprite.setTexture(gfx2TextureManager.getTexture('./examples/two-casual/meteor.png'));
-      sprite.setOffsetNormalized(0.5, 0.5);
+      sprite.setNormalizedOffset(0.5, 0.5);
       sprite.setPositionX(UT.GET_RANDOM_INT(-300, 300));
       sprite.setPositionY(TOP(-sprite.getTextureRectHeight()));
       sprite.setPositionZ(Layer.MIDDLEGROUND);
@@ -353,7 +353,7 @@ class TwoCasualScreen extends Screen {
     if (this.healthGenerateTimer >= this.healthGenerateDelay) {
       const sprite = new Gfx2SpriteJSS();
       sprite.setTexture(gfx2TextureManager.getTexture('./examples/two-casual/health.png'));
-      sprite.setOffsetNormalized(0.5, 0.5);
+      sprite.setNormalizedOffset(0.5, 0.5);
       sprite.setPositionX(UT.GET_RANDOM_INT(0, coreManager.getWidth()));
       sprite.setPositionY(TOP(0));
       sprite.setPositionZ(Layer.FOREGROUND);
@@ -425,7 +425,7 @@ class TwoCasualScreen extends Screen {
             explosion.setPositionX(asteroid.sprite.getPositionX());
             explosion.setPositionY(asteroid.sprite.getPositionY());
             explosion.setPositionZ(Layer.MIDDLEGROUND);
-            explosion.setOffsetNormalized(0.5, 0.5);
+            explosion.setNormalizedOffset(0.5, 0.5);
             explosion.play('EXPLOSION_SMALL');
             this.explosions.push(explosion);
             this.score += 10;
@@ -461,7 +461,7 @@ class TwoCasualScreen extends Screen {
         crash.setPositionX(asteroid.sprite.getPositionX());
         crash.setPositionY(asteroid.sprite.getPositionY());
         crash.setPositionZ(Layer.MIDDLEGROUND);
-        crash.setOffsetNormalized(0.5, 1);
+        crash.setNormalizedOffset(0.5, 1);
         crash.play('BOOM', false, false);
         this.crashes.push(crash);
         this.energy -= ASTEROID_DAMAGEPOINT;

@@ -1,6 +1,6 @@
 import { UIWidget } from '../ui/ui_widget';
 
-class UIConfetti extends UIWidget {
+export class UIConfetti extends UIWidget {
   containerEl: HTMLDivElement | null;
   colors: Array<string>;
   animations: Array<string>;
@@ -78,5 +78,3 @@ class UIConfetti extends UIWidget {
     this.containerEl = containerEl;
   }
 }
-
-export { UIConfetti };

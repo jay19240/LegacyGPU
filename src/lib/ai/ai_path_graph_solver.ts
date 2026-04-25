@@ -4,7 +4,7 @@ import { AIPathGraph, AIPathNode } from './ai_path_graph';
  * Implements the A* algorithm to find the shortest path between two nodes in a graph.
  * @typeParam T - The coord type: vec2 or vec3.
  */
-class AIPathGraphSolver<T extends vec2 | vec3> {
+export class AIPathGraphSolver<T extends vec2 | vec3> {
   /**
    * Find the shortest path between a start node and an end node in a given graph and returns the path.
    * 
@@ -90,5 +90,3 @@ class AIPathGraphSolver<T extends vec2 | vec3> {
     return graph.getDistance(nodeA, nodeB);
   }
 }
-
-export { AIPathGraphSolver };

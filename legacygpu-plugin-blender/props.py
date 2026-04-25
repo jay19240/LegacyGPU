@@ -4,6 +4,10 @@ from . import utils
 
 
 def register():
+  bpy.utils.register_class(TweenColor)
+  bpy.utils.register_class(TweenNumber)
+  bpy.utils.register_class(TweenVector3)
+
   bpy.utils.register_class(JamAnimation)
   bpy.types.Object.jam_animations = bpy.props.CollectionProperty(type=JamAnimation)
   
@@ -22,6 +26,21 @@ def register():
   bpy.utils.register_class(WARME_PG_WorldProperties)
   bpy.types.Scene.world_properties = bpy.props.PointerProperty(type=WARME_PG_WorldProperties)
 
+  bpy.utils.register_class(WARME_PG_DecalProperties)
+  bpy.types.Object.decal_properties = bpy.props.PointerProperty(type=WARME_PG_DecalProperties)
+
+  bpy.utils.register_class(WARME_PG_ShadowProperties)
+  bpy.types.Object.shadow_properties = bpy.props.PointerProperty(type=WARME_PG_ShadowProperties)
+
+  bpy.utils.register_class(WARME_PG_SkyboxProperties)
+  bpy.types.Object.skybox_properties = bpy.props.PointerProperty(type=WARME_PG_SkyboxProperties)
+
+  bpy.utils.register_class(WARME_PG_ParticlesProperties)
+  bpy.types.Object.particles_properties = bpy.props.PointerProperty(type=WARME_PG_ParticlesProperties)
+
+  bpy.utils.register_class(WARME_PG_EntityProperties)
+  bpy.types.Object.entity_properties = bpy.props.PointerProperty(type=WARME_PG_EntityProperties)
+
 
 def unregister():
   bpy.utils.unregister_class(JamAnimation)
@@ -30,6 +49,11 @@ def unregister():
   bpy.utils.unregister_class(WARME_PG_LightProperties)
   bpy.utils.unregister_class(WARME_PG_SunProperties)
   bpy.utils.unregister_class(WARME_PG_WorldProperties)
+  bpy.utils.unregister_class(WARME_PG_DecalProperties)
+  bpy.utils.unregister_class(WARME_PG_ShadowProperties)
+  bpy.utils.unregister_class(WARME_PG_SkyboxProperties)
+  bpy.utils.unregister_class(WARME_PG_ParticlesProperties)
+  bpy.utils.unregister_class(WARME_PG_EntityProperties)
 
 
 # -------------------------------------------------------------------------------
@@ -85,6 +109,7 @@ def update_texture_path_bind(self, context):
       mat = bpy.data.materials.new(name="Material_Auto")
       mat.use_nodes = True
       obj.data.materials.append(mat)
+    #endif
       
     mat = obj.active_material
     nodes = mat.node_tree.nodes
@@ -104,10 +129,35 @@ def update_texture_path_bind(self, context):
     except:
       print("Erreur lors du chargement de l'image")
 
+def update_shadow_size(self, context):
+  shadow = bpy.data.objects["ShadowProjector"]
+  shadow.scale[0] = self.size
+  shadow.scale[1] = self.size
+  update_trigger_export(self, context)
+
+def update_shadow_depth(self, context):
+  shadow = bpy.data.objects["ShadowProjector"]
+  shadow.scale[2] = self.depth
+  update_trigger_export(self, context)
 
 # -------------------------------------------------------------------------------
 # PROPERTIES
 # -------------------------------------------------------------------------------
+class TweenColor(bpy.types.PropertyGroup):
+  time: bpy.props.FloatProperty(name="Time")
+  value: bpy.props.FloatVectorProperty(name="Value", subtype='COLOR', default=(1.0, 1.0, 1.0), min=0.0, max=1.0)
+
+
+class TweenVector3(bpy.types.PropertyGroup):
+  time: bpy.props.FloatProperty(name="Time")
+  value: bpy.props.FloatVectorProperty(name="Value", subtype='NONE', default=(0.0, 0.0, 0.0))
+
+
+class TweenNumber(bpy.types.PropertyGroup):
+  time: bpy.props.FloatProperty(name="Time")
+  value: bpy.props.FloatProperty(name="Value")
+
+
 class JamAnimation(bpy.types.PropertyGroup):
   name: bpy.props.StringProperty(name="Name")
   start_frame: bpy.props.IntProperty(name="Start frame")
@@ -192,10 +242,6 @@ class WARME_PG_MatProperties(bpy.types.PropertyGroup):
     name="Emissive Map",
     default=False
   )
-  show_ambient: bpy.props.BoolProperty(
-    name="Ambient",
-    default=False
-  )
   show_diffuse_map: bpy.props.BoolProperty(
     name="Diffuse Map",
     default=False
@@ -249,6 +295,12 @@ class WARME_PG_MatProperties(bpy.types.PropertyGroup):
     default=False,
     update=update_trigger_export
   )
+  shadow_casting: bpy.props.BoolProperty(
+    name="Shadow Casting",
+    description="Enable the object to cast shadow on others",
+    default=False,
+    update=update_trigger_export
+  )
   # ----------------------------------------------------------------------------------
   decal_enabled: bpy.props.BoolProperty(
     name="Decal Enabled",
@@ -256,10 +308,10 @@ class WARME_PG_MatProperties(bpy.types.PropertyGroup):
     default=False,
     update=update_trigger_export
   )
-  decal_group: bpy.props.FloatProperty(
+  decal_group: bpy.props.IntProperty(
     name="Decal Group Identifier",
     description="Set the decal group that affect this object",
-    default=1,
+    default=0,
     update=update_trigger_export
   )
   # ----------------------------------------------------------------------------------
@@ -279,6 +331,52 @@ class WARME_PG_MatProperties(bpy.types.PropertyGroup):
     name="Light Gouraud Shading Enabled",
     description="Enable the light gouraud shading or not",
     default=False,
+    update=update_trigger_export
+  )
+  light_emissive_factor: bpy.props.FloatProperty(
+    name="Emissive Factor",
+    description="Set the strength of the emissive color",
+    default=0.0,
+    min=0.0, max=1.0,
+    update=update_trigger_export
+  )
+  light_emissive_color: bpy.props.FloatVectorProperty(
+    name="Emissive Color",
+    description="Set the emissive color. Not used if emissive map is set.",
+    subtype='COLOR',
+    default=(1.0, 1.0, 1.0),
+    min=0.0, max=1.0,
+    update=update_trigger_export
+  )
+  light_ambient_color: bpy.props.FloatVectorProperty(
+    name="Ambient Color",
+    description="Set the ambiant color. If zero the scene ambient color is used.",
+    subtype='COLOR',
+    default=(0.5, 0.5, 0.5),
+    min=0.0, max=1.0,
+    update=update_trigger_export
+  )
+  light_diffuse_color: bpy.props.FloatVectorProperty(
+    name="Diffuse Color",
+    description="Set the diffuse color. Not used if diffuse map is set.",
+    subtype='COLOR',
+    default=(1.0, 1.0, 1.0),
+    min=0.0, max=1.0,
+    update=update_trigger_export
+  )
+  light_specular_factor: bpy.props.FloatProperty(
+    name="Specular Factor",
+    description="Set the strength of the specular effect",
+    default=0.0,
+    min=0.0, max=1.0,
+    update=update_trigger_export
+  )
+  light_specular_color: bpy.props.FloatVectorProperty(
+    name="Specular Color",
+    description="Set the specular color. Not used if specular map is set.",
+    subtype='COLOR',
+    default=(1.0, 1.0, 1.0),
+    min=0.0, max=1.0,
     update=update_trigger_export
   )
   # ----------------------------------------------------------------------------------
@@ -540,6 +638,12 @@ class WARME_PG_MatProperties(bpy.types.PropertyGroup):
     update=update_trigger_export
   )
   # ----------------------------------------------------------------------------------
+  env_map_name: bpy.props.StringProperty(
+    name="Env Map Name",
+    description="Set the env map name",
+    default="",
+    update=update_trigger_export
+  )
   env_map_right: bpy.props.StringProperty(
     name="Env Map Right",
     description="Set the env map right texture",
@@ -817,30 +921,6 @@ class WARME_PG_MatProperties(bpy.types.PropertyGroup):
     subtype='FILE_PATH',
     update=update_trigger_export
   )
-  emissive_factor: bpy.props.FloatProperty(
-    name="Emissive Factor",
-    description="Set the strength of the emissive color",
-    default=0.0,
-    min=0.0, max=1.0,
-    update=update_trigger_export
-  )
-  emissive: bpy.props.FloatVectorProperty(
-    name="Emissive Color",
-    description="Set the emissive color. Not used if emissive map is set.",
-    subtype='COLOR',
-    default=(1.0, 1.0, 1.0),
-    min=0.0, max=1.0,
-    update=update_trigger_export
-  )
-  # ----------------------------------------------------------------------------------
-  ambient: bpy.props.FloatVectorProperty(
-    name="Ambient Color",
-    description="Set the ambiant color. If zero the scene ambient color is used.",
-    subtype='COLOR',
-    default=(0.5, 0.5, 0.5),
-    min=0.0, max=1.0,
-    update=update_trigger_export
-  )
   # ----------------------------------------------------------------------------------
   diffuse_map: bpy.props.StringProperty(
     name="Diffuse Map",
@@ -849,35 +929,12 @@ class WARME_PG_MatProperties(bpy.types.PropertyGroup):
     subtype='FILE_PATH',
     update=update_trigger_export
   )
-  diffuse: bpy.props.FloatVectorProperty(
-    name="Diffuse Color",
-    description="Set the diffuse color. Not used if diffuse map is set.",
-    subtype='COLOR',
-    default=(1.0, 1.0, 1.0),
-    min=0.0, max=1.0,
-    update=update_trigger_export
-  )
   # ----------------------------------------------------------------------------------
   specular_map: bpy.props.StringProperty(
     name="Specular Map",
     description="Set the specular map texture. Override specular color.",
     default="",
     subtype='FILE_PATH',
-    update=update_trigger_export
-  )
-  specular_factor: bpy.props.FloatProperty(
-    name="Specular Factor",
-    description="Set the strength of the specular effect",
-    default=0.0,
-    min=0.0, max=1.0,
-    update=update_trigger_export
-  )
-  specular: bpy.props.FloatVectorProperty(
-    name="Specular Color",
-    description="Set the specular color. Not used if specular map is set.",
-    subtype='COLOR',
-    default=(1.0, 1.0, 1.0),
-    min=0.0, max=1.0,
     update=update_trigger_export
   )
   # ----------------------------------------------------------------------------------
@@ -907,6 +964,12 @@ class WARME_PG_MatProperties(bpy.types.PropertyGroup):
     update=update_trigger_export
   )
   # ----------------------------------------------------------------------------------
+  alpha_blend_enabled: bpy.props.BoolProperty(
+    name="Alpha Blend Enabled",
+    description="Enable alpha blending effect",
+    default=False,
+    update=update_trigger_export
+  )
   alpha_blend_facing: bpy.props.FloatProperty(
     name="Alpha Blend Facing",
     description="Set the facing transparency based on view angle",
@@ -1159,12 +1222,8 @@ class WARME_PG_MatProperties(bpy.types.PropertyGroup):
 
 
 class WARME_PG_WorldProperties(bpy.types.PropertyGroup):
-  show_camera: bpy.props.BoolProperty(
-    name="Camera",
-    default=False
-  )
-  show_world: bpy.props.BoolProperty(
-    name="World",
+  show_export: bpy.props.BoolProperty(
+    name="Export",
     default=False
   )
   show_create: bpy.props.BoolProperty(
@@ -1175,12 +1234,16 @@ class WARME_PG_WorldProperties(bpy.types.PropertyGroup):
     name="Cast To",
     default=False
   )
-  show_texture_settings: bpy.props.BoolProperty(
-    name="Texture General Settings",
+  show_camera: bpy.props.BoolProperty(
+    name="Camera",
+    default=False
+  )
+  show_world: bpy.props.BoolProperty(
+    name="World",
     default=False
   )
   enable_auto_export: bpy.props.BoolProperty(
-    name="Enable Auto-Export",
+    name="Auto Export On Save",
     description="Export on save and property changes",
     default=False
   )
@@ -1209,7 +1272,7 @@ class WARME_PG_WorldProperties(bpy.types.PropertyGroup):
   camera_near_bind: bpy.props.FloatProperty(
     name="Near",
     description="Set the near clipping plane of the camera",
-    default=0.1,
+    default=1,
     update=update_camera_near_bind
   )
   camera_far_bind: bpy.props.FloatProperty(
@@ -1252,40 +1315,6 @@ class WARME_PG_WorldProperties(bpy.types.PropertyGroup):
     update=update_trigger_export
   )
   # world ----------------------------------------------------------------------------------
-  shadow_enabled: bpy.props.BoolProperty(
-    name="Shadow Enabled",
-    description="Enable shadow mapping or not",
-    default=False,
-    update=update_trigger_export
-  )
-  shadow_position: bpy.props.FloatVectorProperty(
-    name="Shadow Position",
-    description="Set the position of the shadow projector",
-    subtype='NONE',
-    size=3,
-    default=(0.0, 0.0, 0.0),
-    update=update_trigger_export
-  )
-  shadow_target: bpy.props.FloatVectorProperty(
-    name="Shadow Target",
-    description="Set the target of the shadow projector",
-    subtype='NONE',
-    size=3,
-    default=(0.0, 0.0, 0.0),
-    update=update_trigger_export
-  )
-  shadow_size: bpy.props.FloatProperty(
-    name="Shadow Size",
-    description="Set the size of the shadow projector",
-    default=600.0,
-    update=update_trigger_export
-  )
-  shadow_depth: bpy.props.FloatProperty(
-    name="Shadow Depth",
-    description="Set the depth of the shadow projection",
-    default=600.0,
-    update=update_trigger_export
-  )
   fog_enabled: bpy.props.BoolProperty(
     name="Fog Enabled",
     description="Enable fog or not",
@@ -1550,9 +1579,9 @@ class WARME_PG_LightProperties(bpy.types.PropertyGroup):
     min=0.0, max=2.0,
     update=update_trigger_export
   )
-  group_id: bpy.props.IntProperty(
+  group: bpy.props.IntProperty(
     name="Group Id",
-    description="The material light group id to affect",
+    description="The material light group to affect",
     default=0,
     update=update_trigger_export
   )
@@ -1565,25 +1594,9 @@ class WARME_PG_LightProperties(bpy.types.PropertyGroup):
 
 
 class WARME_PG_SunProperties(bpy.types.PropertyGroup):
-  position: bpy.props.FloatVectorProperty( # // replace by position of sun mesh
-    name="Position",
-    description="Set the position of the sun",
-    subtype='NONE',
-    size=3,
-    default=(0.0, 0.0, 0.0),
-    update=update_trigger_export
-  )
-  target: bpy.props.FloatVectorProperty( # // replace target by direction of sun mesh
-    name="Target",
-    description="Set the target of the sun light",
-    subtype='NONE',
-    size=3,
-    default=(0.0, 0.0, 0.0),
-    update=update_trigger_export
-  )
   diffuse: bpy.props.FloatVectorProperty(
     name="Diffuse Color",
-    description="Set the diffuse color of the sun",
+    description="Set the diffuse color",
     subtype='COLOR',
     default=(0.5, 0.5, 0.5),
     min=0.0, max=1.0,
@@ -1591,7 +1604,7 @@ class WARME_PG_SunProperties(bpy.types.PropertyGroup):
   )
   specular: bpy.props.FloatVectorProperty(
     name="Specular Color",
-    description="Set the specular color of the sun",
+    description="Set the specular color",
     subtype='COLOR',
     default=(1.0, 1.0, 1.0),
     min=0.0, max=1.0,
@@ -1599,13 +1612,529 @@ class WARME_PG_SunProperties(bpy.types.PropertyGroup):
   )
   intensity: bpy.props.FloatProperty(
     name="Intensity",
-    description="Set the intensity of the sun",
-    default=15.0,
+    description="Set the intensity of the sun light",
+    default=1.0,
     update=update_trigger_export
   )
-  light_group_id: bpy.props.FloatProperty(
+  group: bpy.props.IntProperty(
     name="Group Identifier",
-    description="Set the group identifier of the sun",
+    description="Set the group identifier",
+    default=0,
+    update=update_trigger_export
+  )
+
+
+class WARME_PG_DecalProperties(bpy.types.PropertyGroup):
+  size: bpy.props.FloatVectorProperty(
+    name="Size",
+    description="Set the size of the projector",
+    subtype='NONE',
+    size=3,
+    default=(1.0, 1.0, 1.0),
+    update=update_trigger_export
+  )
+  group: bpy.props.IntProperty(
+    name="Group Id",
+    description="Set the group identifier",
+    default=0,
+    update=update_trigger_export
+  )
+  source_position: bpy.props.IntVectorProperty(
+    name="Texture Position",
+    description="Set position of the sprite from the atlas texture",
+    subtype='NONE',
+    size=2,
+    default=(0, 0),
+    update=update_trigger_export
+  )
+  source_size: bpy.props.IntVectorProperty(
+    name="Source Size",
+    description="Set size of the sprite from the atlas texture",
+    subtype='NONE',
+    size=2,
+    default=(0, 0),
+    update=update_trigger_export
+  )
+  opacity: bpy.props.FloatProperty(
+    name="Opacity",
+    description="Set the opacity",
     default=1.0,
+    update=update_trigger_export
+  )
+
+
+class WARME_PG_ShadowProperties(bpy.types.PropertyGroup):
+  size: bpy.props.FloatProperty(
+    name="Size",
+    description="Set the size of the projector",
+    default=(1.0),
+    update=update_shadow_size
+  )
+  depth: bpy.props.FloatProperty(
+    name="Depth",
+    description="Set the depth of the projector",
+    default=(1.0),
+    update=update_shadow_depth
+  )
+  texture_size: bpy.props.IntProperty(
+    name="Size",
+    description="Set the depth texture size",
+    default=(2048),
+    update=update_shadow_size
+  )
+
+
+class WARME_PG_SkyboxProperties(bpy.types.PropertyGroup):
+  name: bpy.props.StringProperty(
+    name="Skybox Name",
+    description="Set the skybox name",
+    default="",
+    update=update_trigger_export
+  )
+  right: bpy.props.StringProperty(
+    name="Skybox Right",
+    description="Set the skybox right texture",
+    default="",
+    subtype='FILE_PATH',
+    update=update_trigger_export
+  )
+  left: bpy.props.StringProperty(
+    name="Skybox Left",
+    description="Set the skybox left texture",
+    default="",
+    subtype='FILE_PATH',
+    update=update_trigger_export
+  )
+  top: bpy.props.StringProperty(
+    name="Skybox Top",
+    description="Set the skybox top texture",
+    default="",
+    subtype='FILE_PATH',
+    update=update_trigger_export
+  )
+  bottom: bpy.props.StringProperty(
+    name="Skybox Bottom",
+    description="Set the skybox bottom texture",
+    default="",
+    subtype='FILE_PATH',
+    update=update_trigger_export
+  )
+  front: bpy.props.StringProperty(
+    name="Skybox Front",
+    description="Set the skybox front texture",
+    default="",
+    subtype='FILE_PATH',
+    update=update_trigger_export
+  )
+  back: bpy.props.StringProperty(
+    name="Skybox Back",
+    description="Set the skybox back texture",
+    default="",
+    subtype='FILE_PATH',
+    update=update_trigger_export
+  )
+
+
+class WARME_PG_ParticlesProperties(bpy.types.PropertyGroup):
+  texture: bpy.props.StringProperty(
+    name="Texture",
+    description="Set the particle texture",
+    default="",
+    subtype='FILE_PATH',
+    update=update_trigger_export
+  )
+  position_style: bpy.props.EnumProperty(
+    name="Position Style",
+    description="Set the spawn position style distribution",
+    items=[
+      ('CUBE', "CUBE", "Cube"),
+      ('SPHERE', "SPHERE", "Sphere"),
+    ],
+    default='CUBE',
+    update=update_trigger_export
+  )
+  position_base: bpy.props.FloatVectorProperty(
+    name="Position Base",
+    description="Set the position base",
+    subtype='NONE',
+    default=(0.0, 0.0, 0.0),
+    update=update_trigger_export
+  )
+  position_spread: bpy.props.FloatVectorProperty(
+    name="Position Spread",
+    description="Set the position variation from base",
+    subtype='NONE',
+    default=(0.0, 0.0, 0.0),
+    update=update_trigger_export
+  )
+  position_sphere_radius_base: bpy.props.FloatProperty(
+    name="Position Sphere Radius Base",
+    description="Set the position radius base",
+    default=(0.0),
+    update=update_trigger_export
+  )
+  position_radius_spread: bpy.props.FloatProperty(
+    name="Position Sphere Radius Spread",
+    description="Set the position variation from base",
+    default=(0.0),
+    update=update_trigger_export
+  )
+  velocity_style: bpy.props.EnumProperty(
+    name="Velocity Style",
+    description="Set the velocity style",
+    items=[
+      ('CLASSIC', "CLASSIC", "Classic"),
+      ('EXPLODE', "EXPLODE", "Explode"),
+    ],
+    default='CLASSIC',
+    update=update_trigger_export
+  )
+  velocity_base: bpy.props.FloatVectorProperty(
+    name="Velocity Base",
+    description="Set the velocity base",
+    subtype='NONE',
+    default=(0.0, 0.0, 0.0),
+    update=update_trigger_export
+  )
+  velocity_spread: bpy.props.FloatVectorProperty(
+    name="Velocity Spread",
+    description="Set the velocity variation from base",
+    subtype='NONE',
+    default=(0.0, 0.0, 0.0),
+    update=update_trigger_export
+  )
+  velocity_explode_speed_base: bpy.props.FloatProperty(
+    name="Velocity Explode Speed Base",
+    description="Set the velocity explode speed base",
+    subtype='NONE',
+    default=(0.0),
+    update=update_trigger_export
+  )
+  velocity_explode_speed_spread: bpy.props.FloatProperty(
+    name="Velocity Explode Speed Spread",
+    description="Set the velocity explode speed variation from base",
+    subtype='NONE',
+    default=(0.0),
+    update=update_trigger_export
+  )
+  color_base: bpy.props.FloatVectorProperty(
+    name="Color Base",
+    description="Set the color base",
+    subtype='COLOR',
+    default=(0.0, 1.0, 0.5),
+    min=0.0, max=1.0,
+    update=update_trigger_export
+  )
+  color_spread: bpy.props.FloatVectorProperty(
+    name="Color Spread",
+    description="Set the color variation from base",
+    subtype='COLOR',
+    default=(0.0, 0.0, 0.0),
+    min=0.0, max=1.0,
+    update=update_trigger_export
+  )
+  size_base: bpy.props.FloatProperty(
+    name="Size Base",
+    description="Set the size base",
+    subtype='NONE',
+    default=(1.0),
+    update=update_trigger_export
+  )
+  size_spread: bpy.props.FloatProperty(
+    name="Size Spread",
+    description="Set the size variation from base",
+    subtype='NONE',
+    default=(0.0),
+    update=update_trigger_export
+  )
+  opacity_base: bpy.props.FloatProperty(
+    name="Opacity Base",
+    description="Set the opacity base",
+    subtype='NONE',
+    default=(1.0),
+    update=update_trigger_export
+  )
+  opacity_spread: bpy.props.FloatProperty(
+    name="Opacity Spread",
+    description="Set the opacity variation from base",
+    subtype='NONE',
+    default=(0.0),
+    update=update_trigger_export
+  )
+  acceleration_base: bpy.props.FloatVectorProperty(
+    name="Acceleration Base",
+    description="Set the acceleration base",
+    subtype='NONE',
+    default=(0.0, 0.0, 0.0),
+    update=update_trigger_export
+  )
+  acceleration_spread: bpy.props.FloatVectorProperty(
+    name="Acceleration Spread",
+    description="Set the acceleration variation from base",
+    subtype='NONE',
+    default=(0.0, 0.0, 0.0),
+    update=update_trigger_export
+  )
+  angle_base: bpy.props.FloatProperty(
+    name="Angle Base",
+    description="Set the angle base",
+    subtype='NONE',
+    default=(0.0),
+    update=update_trigger_export
+  )
+  angle_spread: bpy.props.FloatProperty(
+    name="Angle Spread",
+    description="Set the angle variation from base",
+    subtype='NONE',
+    default=(0.0),
+    update=update_trigger_export
+  )
+  angle_velocity_base: bpy.props.FloatProperty(
+    name="Angle Velocity Base",
+    description="Set the angle velocity base",
+    subtype='NONE',
+    default=(0.0),
+    update=update_trigger_export
+  )
+  angle_velocity_spread: bpy.props.FloatProperty(
+    name="Angle Velocity Spread",
+    description="Set the angle velocity variation from base",
+    subtype='NONE',
+    default=(0.0),
+    update=update_trigger_export
+  )
+  angle_acceleration_base: bpy.props.FloatProperty(
+    name="Angle Acceleration Base",
+    description="Set the angle acceleration base",
+    subtype='NONE',
+    default=(0.0),
+    update=update_trigger_export
+  )
+  angle_acceleration_spread: bpy.props.FloatProperty(
+    name="Angle Acceleration Spread",
+    description="Set the angle acceleration variation from base",
+    subtype='NONE',
+    default=(0.0),
+    update=update_trigger_export
+  )
+  particle_death_age: bpy.props.FloatProperty(
+    name="Particle Death Age",
+    description="Set the particle death age",
+    subtype='NONE',
+    default=(1.0),
+    update=update_trigger_export
+  )
+  particles_per_second: bpy.props.FloatProperty(
+    name="Particles Per Second",
+    description="Set the number of particles generated per second",
+    subtype='NONE',
+    default=(30.0),
+    update=update_trigger_export
+  )
+  particles_quantity: bpy.props.FloatProperty(
+    name="Particles Quantity",
+    description="Set the maximum number of particles",
+    subtype='NONE',
+    default=(100.0),
+    update=update_trigger_export
+  )
+  emitter_death_age: bpy.props.FloatProperty(
+    name="Emitter Death Age",
+    description="Set emitter death age",
+    subtype='NONE',
+    default=(60.0),
+    update=update_trigger_export
+  )
+  tweens_color: bpy.props.CollectionProperty(type=TweenColor)
+  tweens_size: bpy.props.CollectionProperty(type=TweenNumber)
+  tweens_opacity: bpy.props.CollectionProperty(type=TweenNumber)
+  tweens_acceleration: bpy.props.CollectionProperty(type=TweenVector3)
+  tweens_color_index: bpy.props.IntProperty()
+  tweens_size_index: bpy.props.IntProperty()
+  tweens_opacity_index: bpy.props.IntProperty()
+  tweens_acceleration_index: bpy.props.IntProperty()
+
+
+class WARME_PG_EntityProperties(bpy.types.PropertyGroup):
+  type: bpy.props.StringProperty(
+    name="Type",
+    description="Set the type of entity",
+    default="",
+    update=update_trigger_export
+  )
+  s00_name: bpy.props.StringProperty(
+    name="S00",
+    description="Custom slot name 00",
+    default="S00",
+    update=update_trigger_export
+  )
+  s00_value: bpy.props.StringProperty(
+    name="S00",
+    description="Custom slot value 00",
+    update=update_trigger_export
+  )
+  s01_name: bpy.props.StringProperty(
+    name="S01",
+    description="Custom slot name 01",
+    default="S01",
+    update=update_trigger_export
+  )
+  s01_value: bpy.props.StringProperty(
+    name="S01",
+    description="Custom slot value 01",
+    update=update_trigger_export
+  )
+  s02_name: bpy.props.StringProperty(
+    name="S02",
+    description="Custom slot name 02",
+    default="S02",
+    update=update_trigger_export
+  )
+  s02_value: bpy.props.StringProperty(
+    name="S02",
+    description="Custom slot value 02",
+    update=update_trigger_export
+  )
+  s03_name: bpy.props.StringProperty(
+    name="S03",
+    description="Custom slot name 03",
+    default="S03",
+    update=update_trigger_export
+  )
+  s03_value: bpy.props.StringProperty(
+    name="S03",
+    description="Custom slot value 03",
+    update=update_trigger_export
+  )
+  s04_name: bpy.props.StringProperty(
+    name="S04",
+    description="Custom slot name 04",
+    default="S04",
+    update=update_trigger_export
+  )
+  s04_value: bpy.props.StringProperty(
+    name="S04",
+    description="Custom slot value 04",
+    update=update_trigger_export
+  )
+  s05_name: bpy.props.StringProperty(
+    name="S05",
+    description="Custom slot name 05",
+    default="S05",
+    update=update_trigger_export
+  )
+  s05_value: bpy.props.StringProperty(
+    name="S05",
+    description="Custom slot value 05",
+    update=update_trigger_export
+  )
+  s06_name: bpy.props.StringProperty(
+    name="S06",
+    description="Custom slot name 06",
+    default="S06",
+    update=update_trigger_export
+  )
+  s06_value: bpy.props.StringProperty(
+    name="S06",
+    description="Custom slot value 06",
+    update=update_trigger_export
+  )
+  s07_name: bpy.props.StringProperty(
+    name="S07",
+    description="Custom slot name 07",
+    default="S07",
+    update=update_trigger_export
+  )
+  s07_value: bpy.props.StringProperty(
+    name="S07",
+    description="Custom slot value 07",
+    update=update_trigger_export
+  )
+  s08_name: bpy.props.StringProperty(
+    name="S08",
+    description="Custom slot name 08",
+    default="S08",
+    update=update_trigger_export
+  )
+  s08_value: bpy.props.StringProperty(
+    name="S08",
+    description="Custom slot value 08",
+    update=update_trigger_export
+  )
+  s09_name: bpy.props.StringProperty(
+    name="S09",
+    description="Custom slot name 09",
+    default="S09",
+    update=update_trigger_export
+  )
+  s09_value: bpy.props.StringProperty(
+    name="S09",
+    description="Custom slot value 09",
+    update=update_trigger_export
+  )
+  s10_name: bpy.props.StringProperty(
+    name="S10",
+    description="Custom slot name 10",
+    default="S10",
+    update=update_trigger_export
+  )
+  s10_value: bpy.props.StringProperty(
+    name="S10",
+    description="Custom slot value 10",
+    update=update_trigger_export
+  )
+  s11_name: bpy.props.StringProperty(
+    name="S11",
+    description="Custom slot name 11",
+    default="S11",
+    update=update_trigger_export
+  )
+  s11_value: bpy.props.StringProperty(
+    name="S11",
+    description="Custom slot value 11",
+    update=update_trigger_export
+  )
+  s12_name: bpy.props.StringProperty(
+    name="S12",
+    description="Custom slot name 12",
+    default="S12",
+    update=update_trigger_export
+  )
+  s12_value: bpy.props.StringProperty(
+    name="S12",
+    description="Custom slot value 12",
+    update=update_trigger_export
+  )
+  s13_name: bpy.props.StringProperty(
+    name="S13",
+    description="Custom slot name 13",
+    default="S13",
+    update=update_trigger_export
+  )
+  s13_value: bpy.props.StringProperty(
+    name="S13",
+    description="Custom slot value 13",
+    update=update_trigger_export
+  )
+  s14_name: bpy.props.StringProperty(
+    name="S14",
+    description="Custom slot name 14",
+    default="S14",
+    update=update_trigger_export
+  )
+  s14_value: bpy.props.StringProperty(
+    name="S14",
+    description="Custom slot value 14",
+    update=update_trigger_export
+  )
+  s15_name: bpy.props.StringProperty(
+    name="S15",
+    description="Custom slot name 15",
+    default="S15",
+    update=update_trigger_export
+  )
+  s15_value: bpy.props.StringProperty(
+    name="S15",
+    description="Custom slot value 15",
     update=update_trigger_export
   )

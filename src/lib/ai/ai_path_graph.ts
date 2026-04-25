@@ -15,7 +15,7 @@ export interface AIPathNode<T> {
  * 
  * @typeParam T - The coord type: vec2 or vec3.
  */
-abstract class AIPathGraph<T> {
+export abstract class AIPathGraph<T> {
   nodes: Map<string, AIPathNode<T>>;
   groups: Map<string, Array<string>>;
 
@@ -233,7 +233,7 @@ abstract class AIPathGraph<T> {
 /**
  * Two-dimensions path graph.
  */
-class AIPathGraph2D extends AIPathGraph<vec2> {
+export class AIPathGraph2D extends AIPathGraph<vec2> {
   /**
    * @param nodes - The graph data.
    */
@@ -254,7 +254,7 @@ class AIPathGraph2D extends AIPathGraph<vec2> {
 /**
  * Three-dimensions path graph.
  */
-class AIPathGraph3D extends AIPathGraph<vec3> {
+export class AIPathGraph3D extends AIPathGraph<vec3> {
   /**
    * @param nodes - The graph data.
    */
@@ -271,5 +271,3 @@ class AIPathGraph3D extends AIPathGraph<vec3> {
     return UT.VEC3_DISTANCE(a.pos, b.pos);
   }
 }
-
-export { AIPathGraph, AIPathGraph2D, AIPathGraph3D };

@@ -5,6 +5,7 @@ export interface FormatJAS {
   OffsetY?: number;
   OffsetFactorX?: number;
   OffsetFactorY?: number;
+  OffsetFactorEnabled?: boolean;
   FlipX?: boolean;
   FlipY?: boolean;
 };

@@ -1,5 +1,3 @@
-import { Quaternion } from './quaternion';
-
 export type CurveMapItem = {
   mapBegin: number;
   mapEnd: number;
@@ -7,7 +5,7 @@ export type CurveMapItem = {
   valueMax: number;
 };
 
-class UT {
+export class UT {
   static DEG_TO_RAD_RATIO = Math.PI / 180;
   static EPSILON = 0.0000001;
   static BIG_EPSILON = 0.0001;
@@ -830,7 +828,7 @@ class UT {
   static VEC3_FROM_ANGLES(r: number, yaw: number, pitch: number, out: vec3 = [0, 0, 0]): vec3 {
     const cosPitch = Math.cos(pitch);
     out[0] = r * cosPitch * Math.cos(yaw);
-    out[2] = r * cosPitch * Math.sin(yaw); 
+    out[2] = r * cosPitch * Math.sin(yaw);
     out[1] = r * Math.sin(pitch);
     return out;
   }
@@ -919,14 +917,6 @@ class UT {
     out[1] = pay + ((pby - pay) * t);
     out[2] = paz + ((pbz - paz) * t);
     return out;
-  }
-
-  /**
-   * @param a - The vector to transform.
-   * @param q - The quaternion filter.
-   */
-  static VEC3_APPLY_QUATERNION(a: vec3, q: Quaternion): vec3 {
-    return q.rotateVector(a);
   }
 
   /**
@@ -1639,9 +1629,8 @@ class UT {
    * @param quaternion - The rotation quaternion.
    * @param out - The result matrix.
    */
-  static MAT4_TRANSFORM(position: vec3, rotation: vec3, scale: vec3, quaternion: Quaternion, out: mat4 = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]): mat4 {
+  static MAT4_TRANSFORM(position: vec3, rotation: vec3, scale: vec3, out: mat4 = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]): mat4 {
     UT.MAT4_TRANSLATE(position[0], position[1], position[2], out);
-    UT.MAT4_MULTIPLY(out, quaternion.toMatrix4(), out);
     UT.MAT4_MULTIPLY(out, UT.MAT4_ROTATE_Y(rotation[1]), out);
     UT.MAT4_MULTIPLY(out, UT.MAT4_ROTATE_X(rotation[0]), out); // y -> x -> z
     UT.MAT4_MULTIPLY(out, UT.MAT4_ROTATE_Z(rotation[2]), out);
@@ -1865,5 +1854,3 @@ class UT {
     return Infinity;
   }
 }
-
-export { UT };
