@@ -148,6 +148,10 @@ export class Gfx3PostRenderer extends Gfx3RendererAbstract {
     this.finalParams[Gfx3PostFinalParam.RADIALBLUR_SAMPLES] = 6.0;
     this.finalParams[Gfx3PostFinalParam.RADIALBLUR_CENTER_X] = 0.5;
     this.finalParams[Gfx3PostFinalParam.RADIALBLUR_CENTER_Y] = 0.5;
+    this.finalParams[Gfx3PostFinalParam.HDR_ENABLED] = 0.0;
+    this.finalParams[Gfx3PostFinalParam.HDR_EXPOSURE] = 1.0;
+    this.finalParams[Gfx3PostFinalParam.HDR_GAMMA] = 2.2;
+
     this.finalGrp0.setRenderingTexture(1, 'FINAL_SOURCE_TEXTURE', this.finalSourceTexture);
     this.finalGrp0.setRenderingSampler(2, 'FINAL_SOURCE_SAMPLER', this.finalSourceTexture);
     this.finalGrp0.allocate();

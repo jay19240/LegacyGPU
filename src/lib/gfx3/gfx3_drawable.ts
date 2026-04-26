@@ -13,7 +13,7 @@ export enum Gfx3DrawableEffect {
   OUTLINE = 16,
   SHADOW_VOLUME = 32,
   CHANNEL1 = 64,
-  BLOOM = 128
+  BRIGHTNESS = 128
 };
 
 /**

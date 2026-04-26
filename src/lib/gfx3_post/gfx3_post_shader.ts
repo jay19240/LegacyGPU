@@ -51,6 +51,7 @@ export const POST_SHADER_INSERTS = {
   INSERT_BETWEEN_DITHER_AND_OUTLINE: '',
   INSERT_BETWEEN_OUTLINE_AND_SHADOW_VOLUME: '',
   INSERT_SHADOW_VOLUME_HOOK: null,
+  INSERT_BETWEEN_SHADOW_VOLUME_AND_BRIGHTNESS: '',
   INSERT_END: ''
 };
 
@@ -278,6 +279,8 @@ fn main(
       }`}
     }
   }
+
+  ${data.INSERT_BETWEEN_SHADOW_VOLUME_AND_BRIGHTNESS}
 
   var brightColor = vec4<f32>(0.0, 0.0, 0.0, 1.0);
   if (PARAMS.BRIGHTNESS_ENABLED == 1.0 && (flags & 128) == 128)
@@ -591,6 +594,9 @@ export enum Gfx3PostFinalParam {
   RADIALBLUR_SAMPLES,
   RADIALBLUR_CENTER_X,
   RADIALBLUR_CENTER_Y,
+  HDR_ENABLED,
+  HDR_EXPOSURE, 
+  HDR_GAMMA,
   COUNT
 };
 
@@ -627,5 +633,17 @@ fn main(
     outputColor = combinedColor / f32(samples + 1);
   }
 
+  if (PARAMS.HDR_ENABLED == 1.0)
+  {
+    var color = ReinhardToneMapping(outputColor.rgb, PARAMS.HDR_EXPOSURE);
+    color = pow(color, vec3<f32>(1.0 / PARAMS.HDR_GAMMA));
+    outputColor = vec4<f32>(color.rgb, outputColor.a);
+  }
+
   return outputColor;
+}
+
+fn ReinhardToneMapping(color: vec3<f32>, exposure: f32) -> vec3<f32> {
+  var mapped = color * exposure;
+  return mapped / (mapped + vec3<f32>(1.0));
 }`;
