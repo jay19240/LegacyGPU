@@ -195,7 +195,7 @@ class WARME_PT_options(bpy.types.Panel):
 
 class WARME_PT_object(bpy.types.Panel):
   bl_idname = "WARME_PT_object"
-  bl_label = "LGPU Object Panel"
+  bl_label = "LGPU Object"
   bl_space_type = 'VIEW_3D'
   bl_region_type = 'UI'
   bl_category = "LGPU Object Panel"

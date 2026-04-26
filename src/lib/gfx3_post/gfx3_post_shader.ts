@@ -48,6 +48,7 @@ export const POST_SHADER_INSERTS = {
   INSERT_BETWEEN_COLOR_DITHERING_AND_DITHER: '',
   INSERT_BETWEEN_DITHER_AND_OUTLINE: '',
   INSERT_BETWEEN_OUTLINE_AND_SHADOW_VOLUME: '',
+  INSERT_SHADOW_VOLUME_HOOK: null,
   INSERT_END: ''
 };
 
@@ -255,14 +256,15 @@ fn main(
   {
     if (shadowVolDepthCW != 1.0 && shadowVolDepthCCW != 1.0 && depth >= shadowVolDepthCCW && depth <= shadowVolDepthCW)
     {
-      if (PARAMS.SHADOW_VOLUME_BLEND_MODE == 1.0)
-      {
-        outputColor += shadowVol;
-      }
-      else
+      ${data.INSERT_SHADOW_VOLUME_HOOK ?? `
+      if (PARAMS.SHADOW_VOLUME_BLEND_MODE == 0.0)
       {
         outputColor *= shadowVol;
       }
+      else if (PARAMS.SHADOW_VOLUME_BLEND_MODE == 1.0)
+      {
+        outputColor += shadowVol;
+      }`}
     }
   }
 
@@ -426,6 +428,10 @@ fn NormalizeDepth(linearDepth: f32, near: f32, far: f32) -> f32 {
   return clamp((linearDepth - near) / (far - near), 0.0, 1.0);
 }`;
 
+//
+// -----------------------------------------------------------------------------------------------------------------
+//
+
 export enum Gfx3PostFinalParam {
   RADIALBLUR_ENABLED,
   RADIALBLUR_STRENGTH,
@@ -435,7 +441,7 @@ export enum Gfx3PostFinalParam {
   COUNT
 };
 
-export const RADIAL_V_SHADER = (data: any): string => /* wgsl */`
+export const POST_FINAL_VERTEX_SHADER = (data: any): string => /* wgsl */`
 struct VertexOutput {
   @builtin(position) Position: vec4<f32>,
   @location(0) FragUV: vec2<f32>,
@@ -449,7 +455,7 @@ fn main(@location(0) pos: vec2<f32>, @location(1) uv: vec2<f32>) -> VertexOutput
   return output;
 }`;
 
-export const RADIAL_F_SHADER = (data: any): string => /* wgsl */`
+export const POST_FINAL_FRAGMENT_SHADER = (data: any): string => /* wgsl */`
 struct Params {
   ${Gfx3RendererAbstract.generateWGSLStructFromEnum(Gfx3PostFinalParam)}
 };

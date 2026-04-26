@@ -7,7 +7,7 @@ import { Gfx3RendererAbstract } from '../gfx3/gfx3_renderer_abstract';
 import { Gfx3StaticGroup } from '../gfx3/gfx3_group';
 import { Gfx3Texture, Gfx3RenderingTexture } from '../gfx3/gfx3_texture';
 import { POST_VERTEX_SHADER, POST_FRAGMENT_SHADER, POST_PIPELINE_DESC, POST_SHADER_VERTEX_ATTR_COUNT, POST_CUSTOM_PARAMS, POST_SHADER_INSERTS, Gfx3PostParam } from './gfx3_post_shader';
-import { RADIAL_V_SHADER, RADIAL_F_SHADER, Gfx3PostFinalParam } from './gfx3_post_shader';
+import { POST_FINAL_VERTEX_SHADER, POST_FINAL_FRAGMENT_SHADER, Gfx3PostFinalParam } from './gfx3_post_shader';
 
 export enum Gfx3PostShadowVolumeBlendMode {
   MUL = 0,
@@ -104,7 +104,7 @@ export class Gfx3PostRenderer extends Gfx3RendererAbstract {
     ]));
 
     this.finalEnabled = false;
-    this.finalPipeline = gfx3Manager.loadPipeline('POST_FINAL_PIPELINE', RADIAL_V_SHADER({}), RADIAL_F_SHADER({}), POST_PIPELINE_DESC);
+    this.finalPipeline = gfx3Manager.loadPipeline('POST_FINAL_PIPELINE', POST_FINAL_VERTEX_SHADER({}), POST_FINAL_FRAGMENT_SHADER({}), POST_PIPELINE_DESC);
     this.finalSourceTexture = gfx3Manager.createRenderingTexture();
 
     this.finalGrp0 = gfx3Manager.createStaticGroup('POST_FINAL_PIPELINE', 0);
