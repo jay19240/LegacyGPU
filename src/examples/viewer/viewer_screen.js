@@ -10,7 +10,7 @@ import { uiManager } from '@lib/ui/ui_manager';
 import { coreManager } from '@lib/core/core_manager';
 import { UT } from '@lib/core/utils';
 import { Screen } from '@lib/screen/screen';
-import { Gfx3PostParam, Gfx3PostFinalParam } from '@lib/gfx3_post/gfx3_post_shader';
+import { Gfx3PostParam, Gfx3PostFinalParam, Gfx3PostMiddleParam } from '@lib/gfx3_post/gfx3_post_shader';
 import { Gfx3CameraOrbit } from '@lib/gfx3_camera/gfx3_camera_orbit';
 import { Gfx3MeshJSM } from '@lib/gfx3_mesh/gfx3_mesh_jsm';
 import { Gfx3MeshOBJ } from '@lib/gfx3_mesh/gfx3_mesh_obj';

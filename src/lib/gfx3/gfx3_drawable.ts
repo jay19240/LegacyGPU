@@ -12,7 +12,8 @@ export enum Gfx3DrawableEffect {
   DITHER = 8,
   OUTLINE = 16,
   SHADOW_VOLUME = 32,
-  CHANNEL1 = 64
+  CHANNEL1 = 64,
+  BLOOM = 128
 };
 
 /**
@@ -150,6 +151,7 @@ export class Gfx3Drawable extends Gfx3Transformable implements Poolable<Gfx3Draw
    * ■ outline: 16
    * ■ shadow volume: 32
    * ■ channel1: 64
+   * ■ bloom: 128
    * 
    * @param {number} groupId - Identifies group of objects (e.g. category).
    * @param {number} meshId - Identifies this specific mesh within its group.

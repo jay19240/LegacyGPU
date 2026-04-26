@@ -20,6 +20,8 @@ export enum Gfx3PostParam {
   OUTLINE_CONSTANT,
   SHADOW_VOLUME_ENABLED,
   SHADOW_VOLUME_BLEND_MODE,
+  BRIGHTNESS_ENABLED,
+  BRIGHTNESS_THRESHOLD,
   COUNT
 };
 
@@ -88,8 +90,9 @@ export const POST_PIPELINE_DESC: any = {
           operation: 'add'
         }
       }
-    }]
-  },
+    },
+    { format: 'rgba16float' }
+  ]},
   primitive: {
     topology: 'triangle-list'
   }
@@ -164,16 +167,24 @@ struct Params {
 @group(2) @binding(2) var S1_TEXTURE: texture_2d<f32>;
 @group(2) @binding(3) var S1_SAMPLER: sampler;
 
+struct FragmentOutput {
+  @location(0) Color: vec4<f32>,
+  @location(1) Brightness: vec4<f32>
+};
+
 @fragment
 fn main(
   @location(0) FragUV: vec2<f32>
-) -> @location(0) vec4<f32> {
+) -> FragmentOutput {
+  var output: FragmentOutput;
   var outputColor = textureSample(SOURCE_TEXTURE, SOURCE_SAMPLER, FragUV);
   var fragUV = FragUV;
 
   if (PARAMS.ENABLED == 0.0)
   {
-    return outputColor;
+    output.Color = outputColor;
+    output.Brightness = vec4<f32>(0.0, 0.0, 0.0, 1.0);
+    return output;
   }
 
   var tag = textureSample(TAGS_TEXTURE, TAGS_SAMPLER, fragUV);
@@ -268,8 +279,21 @@ fn main(
     }
   }
 
+  var brightColor = vec4<f32>(0.0, 0.0, 0.0, 1.0);
+  if (PARAMS.BRIGHTNESS_ENABLED == 1.0 && (flags & 128) == 128)
+  {
+    let luminance = dot(outputColor.rgb, vec3<f32>(0.2126, 0.7152, 0.0722));
+    if (luminance > PARAMS.BRIGHTNESS_THRESHOLD)
+    {
+      brightColor = vec4<f32>(outputColor.rgb, 1.0);
+    }
+  }
+
   ${data.INSERT_END}
-  return outputColor;
+
+  output.Color = outputColor;
+  output.Brightness = brightColor;
+  return output;
 }
 
 // *****************************************************************************************************************
@@ -428,9 +452,138 @@ fn NormalizeDepth(linearDepth: f32, near: f32, far: f32) -> f32 {
   return clamp((linearDepth - near) / (far - near), 0.0, 1.0);
 }`;
 
-//
 // -----------------------------------------------------------------------------------------------------------------
-//
+// MIDDLE ----------------------------------------------------------------------------------------------------------
+// -----------------------------------------------------------------------------------------------------------------
+
+export enum Gfx3PostMiddleParam {
+  BLOOM_ENABLED,
+  BLOOM_INTENSITY,
+  BLOOM_RADIUS,
+  COUNT
+};
+
+export const POST_MIDDLE_PIPELINE_DESC: any = {
+  label: 'POST middle pipeline',
+  layout: 'auto',
+  vertex: {
+    entryPoint: 'main',
+    buffers: [{
+      arrayStride: POST_SHADER_VERTEX_ATTR_COUNT * 4,
+      attributes: [{
+        shaderLocation: 0, /*position*/
+        offset: 0,
+        format: 'float32x2'
+      }, {
+        shaderLocation: 1, /*uv*/
+        offset: 2 * 4,
+        format: 'float32x2'
+      }]
+    }]
+  },
+  fragment: {
+    entryPoint: 'main',
+    targets: [{
+      format: navigator.gpu.getPreferredCanvasFormat(),
+      blend: {
+        color: {
+          srcFactor: 'one',
+          dstFactor: 'one-minus-src',
+          operation: 'add'
+        },
+        alpha: {
+          srcFactor: 'one',
+          dstFactor: 'one-minus-src',
+          operation: 'add'
+        }
+      }
+    }]
+  },
+  primitive: {
+    topology: 'triangle-list'
+  }
+};
+
+export const POST_MIDDLE_FRAGMENT_SHADER = (data: any): string => /* wgsl */`
+struct Params {
+  ${Gfx3RendererAbstract.generateWGSLStructFromEnum(Gfx3PostMiddleParam)}
+};
+
+@group(0) @binding(0) var<uniform> PARAMS: Params;
+@group(0) @binding(1) var SOURCE_TEXTURE: texture_2d<f32>;
+@group(0) @binding(2) var SOURCE_SAMPLER: sampler;
+@group(0) @binding(3) var BRIGHTNESS_TEXTURE: texture_2d<f32>;
+@group(0) @binding(4) var BRIGHTNESS_SAMPLER: sampler;
+
+@fragment
+fn main(
+  @location(0) FragUV: vec2<f32>
+) -> @location(0) vec4<f32> {
+  var outputColor = textureSample(SOURCE_TEXTURE, SOURCE_SAMPLER, FragUV);
+
+  let texelSize = 1.0 / vec2<f32>(textureDimensions(BRIGHTNESS_TEXTURE));
+  var bloom = vec3<f32>(0.0);
+  var totalWeight = 0.0;
+
+  for (var x = -4; x <= 4; x = x + 1)
+  {
+    for (var y = -4; y <= 4; y = y + 1)
+    {
+      let offset = vec2<f32>(f32(x), f32(y)) * texelSize * PARAMS.BLOOM_RADIUS;
+      let weight = exp(-f32(x * x + y * y) / 8.0);
+      bloom += textureSample(BRIGHTNESS_TEXTURE, BRIGHTNESS_SAMPLER, FragUV + offset).rgb * weight;
+      totalWeight += weight;
+    }
+  }
+
+  bloom = bloom / totalWeight;
+  return vec4<f32>(outputColor.rgb + bloom * PARAMS.BLOOM_INTENSITY, outputColor.a);
+}`;
+
+// -----------------------------------------------------------------------------------------------------------------
+// FINAL -----------------------------------------------------------------------------------------------------------
+// -----------------------------------------------------------------------------------------------------------------
+
+export const POST_FINAL_PIPELINE_DESC: any = {
+  label: 'POST final pipeline',
+  layout: 'auto',
+  vertex: {
+    entryPoint: 'main',
+    buffers: [{
+      arrayStride: POST_SHADER_VERTEX_ATTR_COUNT * 4,
+      attributes: [{
+        shaderLocation: 0, /*position*/
+        offset: 0,
+        format: 'float32x2'
+      }, {
+        shaderLocation: 1, /*uv*/
+        offset: 2 * 4,
+        format: 'float32x2'
+      }]
+    }]
+  },
+  fragment: {
+    entryPoint: 'main',
+    targets: [{
+      format: navigator.gpu.getPreferredCanvasFormat(),
+      blend: {
+        color: {
+          srcFactor: 'one',
+          dstFactor: 'one-minus-src',
+          operation: 'add'
+        },
+        alpha: {
+          srcFactor: 'one',
+          dstFactor: 'one-minus-src',
+          operation: 'add'
+        }
+      }
+    }]
+  },
+  primitive: {
+    topology: 'triangle-list'
+  }
+};
 
 export enum Gfx3PostFinalParam {
   RADIALBLUR_ENABLED,
@@ -440,20 +593,6 @@ export enum Gfx3PostFinalParam {
   RADIALBLUR_CENTER_Y,
   COUNT
 };
-
-export const POST_FINAL_VERTEX_SHADER = (data: any): string => /* wgsl */`
-struct VertexOutput {
-  @builtin(position) Position: vec4<f32>,
-  @location(0) FragUV: vec2<f32>,
-};
-
-@vertex
-fn main(@location(0) pos: vec2<f32>, @location(1) uv: vec2<f32>) -> VertexOutput {
-  var output: VertexOutput;
-  output.Position = vec4<f32>(pos, 0.0, 1.0);
-  output.FragUV = uv;
-  return output;
-}`;
 
 export const POST_FINAL_FRAGMENT_SHADER = (data: any): string => /* wgsl */`
 struct Params {
@@ -487,6 +626,6 @@ fn main(
 
     outputColor = combinedColor / f32(samples + 1);
   }
-  
+
   return outputColor;
 }`;

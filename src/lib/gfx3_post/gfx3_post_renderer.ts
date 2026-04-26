@@ -7,7 +7,8 @@ import { Gfx3RendererAbstract } from '../gfx3/gfx3_renderer_abstract';
 import { Gfx3StaticGroup } from '../gfx3/gfx3_group';
 import { Gfx3Texture, Gfx3RenderingTexture } from '../gfx3/gfx3_texture';
 import { POST_VERTEX_SHADER, POST_FRAGMENT_SHADER, POST_PIPELINE_DESC, POST_SHADER_VERTEX_ATTR_COUNT, POST_CUSTOM_PARAMS, POST_SHADER_INSERTS, Gfx3PostParam } from './gfx3_post_shader';
-import { POST_FINAL_VERTEX_SHADER, POST_FINAL_FRAGMENT_SHADER, Gfx3PostFinalParam } from './gfx3_post_shader';
+import { POST_MIDDLE_FRAGMENT_SHADER, POST_MIDDLE_PIPELINE_DESC, Gfx3PostMiddleParam } from './gfx3_post_shader';
+import { POST_FINAL_FRAGMENT_SHADER, POST_FINAL_PIPELINE_DESC, Gfx3PostFinalParam } from './gfx3_post_shader';
 
 export enum Gfx3PostShadowVolumeBlendMode {
   MUL = 0,
@@ -35,6 +36,13 @@ export class Gfx3PostRenderer extends Gfx3RendererAbstract {
   grp2: Gfx3StaticGroup;
   s0Texture: Gfx3Texture;
   s1Texture: Gfx3Texture;
+  // ---------------------------------------------------------------------
+  middleEnabled: boolean;
+  middlePipeline: GPURenderPipeline;
+  middleGrp0: Gfx3StaticGroup;
+  middleSourceTexture: Gfx3RenderingTexture;
+  middleBrightnessTexture: Gfx3RenderingTexture;
+  middleParams: Float32Array;
   // ---------------------------------------------------------------------
   finalEnabled: boolean;
   finalPipeline: GPURenderPipeline;
@@ -68,6 +76,8 @@ export class Gfx3PostRenderer extends Gfx3RendererAbstract {
     this.params[Gfx3PostParam.OUTLINE_CONSTANT] = 0.0;
     this.params[Gfx3PostParam.SHADOW_VOLUME_ENABLED] = 1.0;
     this.params[Gfx3PostParam.SHADOW_VOLUME_BLEND_MODE] = Gfx3PostShadowVolumeBlendMode.MUL;
+    this.params[Gfx3PostParam.BRIGHTNESS_ENABLED] = 0.0;
+    this.params[Gfx3PostParam.BRIGHTNESS_THRESHOLD] = 0.8;
     this.infos = this.grp0.setFloat(1, 'INFOS', 6);
     this.sourceTexture = this.grp0.setRenderingTexture(2, 'SOURCE_TEXTURE', gfx3Manager.createRenderingTexture());
     this.sourceTexture = this.grp0.setRenderingSampler(3, 'SOURCE_SAMPLER', this.sourceTexture);
@@ -103,8 +113,32 @@ export class Gfx3PostRenderer extends Gfx3RendererAbstract {
       1.0, -1.0, 1.0, 1.0 // second tri -> bottom right
     ]));
 
+    // -----------------------------------------------------------------------------------------------------------------
+    // MIDDLE ----------------------------------------------------------------------------------------------------------
+    // -----------------------------------------------------------------------------------------------------------------
+
+    this.middleEnabled = false;
+    this.middlePipeline = gfx3Manager.loadPipeline('POST_MIDDLE_PIPELINE', POST_VERTEX_SHADER({}), POST_MIDDLE_FRAGMENT_SHADER({}), POST_MIDDLE_PIPELINE_DESC);
+    this.middleSourceTexture = gfx3Manager.createRenderingTexture();
+    this.middleBrightnessTexture = gfx3Manager.createRenderingTexture('rgba16float', { magFilter: 'linear', minFilter: 'linear' });
+
+    this.middleGrp0 = gfx3Manager.createStaticGroup('POST_MIDDLE_PIPELINE', 0);
+    this.middleParams = this.middleGrp0.setFloat(0, 'PARAMS', Gfx3PostMiddleParam.COUNT);
+    this.middleParams[Gfx3PostMiddleParam.BLOOM_ENABLED] = 0.0;
+    this.middleParams[Gfx3PostMiddleParam.BLOOM_INTENSITY] = 1.0;
+    this.middleParams[Gfx3PostMiddleParam.BLOOM_RADIUS] = 2.0;
+    this.middleGrp0.setRenderingTexture(1, 'SOURCE_TEXTURE', this.middleSourceTexture);
+    this.middleGrp0.setRenderingSampler(2, 'SOURCE_SAMPLER', this.middleSourceTexture);
+    this.middleGrp0.setRenderingTexture(3, 'BRIGHTNESS_TEXTURE', this.middleBrightnessTexture);
+    this.middleGrp0.setRenderingSampler(4, 'BRIGHTNESS_SAMPLER', this.middleBrightnessTexture);
+    this.middleGrp0.allocate();
+
+    // -----------------------------------------------------------------------------------------------------------------
+    // FINAL -----------------------------------------------------------------------------------------------------------
+    // -----------------------------------------------------------------------------------------------------------------
+
     this.finalEnabled = false;
-    this.finalPipeline = gfx3Manager.loadPipeline('POST_FINAL_PIPELINE', POST_FINAL_VERTEX_SHADER({}), POST_FINAL_FRAGMENT_SHADER({}), POST_PIPELINE_DESC);
+    this.finalPipeline = gfx3Manager.loadPipeline('POST_FINAL_PIPELINE', POST_VERTEX_SHADER({}), POST_FINAL_FRAGMENT_SHADER({}), POST_FINAL_PIPELINE_DESC);
     this.finalSourceTexture = gfx3Manager.createRenderingTexture();
 
     this.finalGrp0 = gfx3Manager.createStaticGroup('POST_FINAL_PIPELINE', 0);
@@ -125,13 +159,20 @@ export class Gfx3PostRenderer extends Gfx3RendererAbstract {
    * The render function.
    */
   render(ts: number, destinationTexture: Gfx3RenderingTexture): void {
-    const firstPassView = this.finalEnabled ? this.finalSourceTexture.gpuTextureView : destinationTexture.gpuTextureView;
+    const firstPassView = this.middleEnabled
+      ? this.middleSourceTexture.gpuTextureView
+      : (this.finalEnabled ? this.finalSourceTexture.gpuTextureView : destinationTexture.gpuTextureView);
 
     const currentView = gfx3Manager.getCurrentView();
     const commandEncoder = gfx3Manager.getCommandEncoder();
     const passEncoder = commandEncoder.beginRenderPass({
       colorAttachments: [{
         view: firstPassView,
+        loadOp: 'clear',
+        storeOp: 'store'
+      }, {
+        view: this.middleBrightnessTexture.gpuTextureView,
+        clearValue: { r: 0, g: 0, b: 0, a: 1 },
         loadOp: 'clear',
         storeOp: 'store'
       }]
@@ -156,6 +197,26 @@ export class Gfx3PostRenderer extends Gfx3RendererAbstract {
     passEncoder.setVertexBuffer(0, this.vertexBuffer);
     passEncoder.draw(6);
     passEncoder.end();
+
+    if (this.middleEnabled) {
+      const bloomDestView = this.finalEnabled ? this.finalSourceTexture.gpuTextureView : destinationTexture.gpuTextureView;
+      const passEncoder = commandEncoder.beginRenderPass({
+        colorAttachments: [{
+          view: bloomDestView,
+          loadOp: 'clear',
+          storeOp: 'store'
+        }]
+      });
+
+      passEncoder.setPipeline(this.middlePipeline);
+      this.middleGrp0.beginWrite();
+      this.middleGrp0.write(0, this.middleParams);
+      this.middleGrp0.endWrite();
+      passEncoder.setBindGroup(0, this.middleGrp0.getBindGroup());
+      passEncoder.setVertexBuffer(0, this.vertexBuffer);
+      passEncoder.draw(6);
+      passEncoder.end();
+    }
 
     if (this.finalEnabled) {
       const passEncoder = commandEncoder.beginRenderPass({
@@ -212,20 +273,49 @@ export class Gfx3PostRenderer extends Gfx3RendererAbstract {
   }
 
   /**
+   * Enable or not the different pass.
+   *
+   * @param {boolean} firstPassEnabled - The first pass enable flag.
+   * @param {boolean} middlePassEnabled - The middle pass enable flag.
+   * @param {boolean} finalPassEnabled - The final pass enable flag.
+   */
+  enable(firstPassEnabled: boolean, middlePassEnabled: boolean, finalPassEnabled: boolean): void {
+    this.params[Gfx3PostParam.ENABLED] = firstPassEnabled ? 1.0 : 0.0;
+    this.middleEnabled = middlePassEnabled;
+    this.finalEnabled = finalPassEnabled;
+  }
+
+  /**
    * Set a parameter value.
    * 
    * @param {number} index - The param index.
    * @param {number} value - The value.
    */
-  setParam(index: number, value: number): void {
+  setParam(index: Gfx3PostParam, value: number): void {
     this.params[index] = value;
+  }
+
+  setMiddleParam(index: Gfx3PostMiddleParam, value: number): void {
+    this.middleParams[index] = value;
+  }
+
+  setFinalParam(index: Gfx3PostFinalParam, value: number): void {
+    this.finalParams[index] = value;
   }
 
   /**
    * Returns the specified param value.
    */
-  getParam(index: number): number {
+  getParam(index: Gfx3PostParam): number {
     return this.params[index];
+  }
+
+  getMiddleParam(index: Gfx3PostMiddleParam): number {
+    return this.middleParams[index];
+  }
+
+  getFinalParam(index: Gfx3PostFinalParam): number {
+    return this.finalParams[index];
   }
 
   /**
@@ -275,25 +365,6 @@ export class Gfx3PostRenderer extends Gfx3RendererAbstract {
   }
 
   /**
-   * Enable or not the final pass.
-   * 
-   * @param {boolean} enabled - The enable flag.
-   */
-  enableFinal(enabled: boolean): void {
-    this.finalEnabled = enabled;
-  }
-
-  /**
-   * Set a parameter value.
-   * 
-   * @param {number} index - The param index.
-   * @param {number} value - The value.
-   */
-  setFinalParam(index: number, value: number): void {
-    this.finalParams[index] = value;
-  }
-
-  /**
    * Returns the source texture.
    * Note: This instance is responsible to create the source texture used to rendering the previous pass.
    * This way, it is easy to chain multiple effects.
@@ -331,7 +402,14 @@ export class Gfx3PostRenderer extends Gfx3RendererAbstract {
     this.shadowVolDepthCWTexture = this.grp1.setRenderingTexture(3, 'SHADOW_VOL_DEPTH_CW_TEXTURE', gfx3ShadowVolumeRenderer.getDepthCWTexture());
     this.grp1.allocate();
 
-    this.finalSourceTexture = this.grp0.setRenderingTexture(1, 'FINAL_SOURCE_TEXTURE', gfx3Manager.createRenderingTexture());
+    this.middleSourceTexture.gpuTexture.destroy();
+    this.middleSourceTexture = this.middleGrp0.setRenderingTexture(1, 'SOURCE_TEXTURE', gfx3Manager.createRenderingTexture());
+    this.middleBrightnessTexture.gpuTexture.destroy();
+    this.middleBrightnessTexture = this.middleGrp0.setRenderingTexture(3, 'BRIGHTNESS_TEXTURE', this.middleBrightnessTexture = gfx3Manager.createRenderingTexture('rgba16float', { magFilter: 'linear', minFilter: 'linear' }));
+    this.middleGrp0.allocate();
+
+    this.finalSourceTexture.gpuTexture.destroy();
+    this.finalSourceTexture = this.finalGrp0.setRenderingTexture(1, 'FINAL_SOURCE_TEXTURE', gfx3Manager.createRenderingTexture());
     this.finalGrp0.allocate();
   }
 }
