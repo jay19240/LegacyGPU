@@ -57,7 +57,7 @@ class AirplaneScreen extends Screen {
       pitch: 0,
       roll: 0,
       speed: 0.015,
-      forward: [0, 0, 1],
+      forward: [0, 0, -1],
       matrix: UT.MAT4_IDENTITY(),
       size: [3.5, 0.6, 2.2]
     };
@@ -70,7 +70,7 @@ class AirplaneScreen extends Screen {
     this.camFollowPos = [
       this.airplane.pos[0],
       this.airplane.pos[1] + CAMERA_HEIGHT,
-      this.airplane.pos[2] - CAMERA_DISTANCE
+      this.airplane.pos[2] + CAMERA_DISTANCE
     ];
   }
 
@@ -98,10 +98,10 @@ class AirplaneScreen extends Screen {
     }
 
     if (inputManager.isActiveAction('UP')) {
-      this.airplane.pitch = UT.LERP(this.airplane.pitch, MAX_PITCH, PITCH_SPEED * dt);
+      this.airplane.pitch = UT.LERP(this.airplane.pitch, -MAX_PITCH, PITCH_SPEED * dt);
     }
     else if (inputManager.isActiveAction('DOWN')) {
-      this.airplane.pitch = UT.LERP(this.airplane.pitch, -MAX_PITCH, PITCH_SPEED * dt);
+      this.airplane.pitch = UT.LERP(this.airplane.pitch, MAX_PITCH, PITCH_SPEED * dt);
     }
     else {
       this.airplane.pitch = UT.LERP(this.airplane.pitch, 0, PITCH_RECENTER);
@@ -127,12 +127,7 @@ class AirplaneScreen extends Screen {
   }
 
   updateForward(): void {
-    // Axe local +Z transformé par MAT4_TRANSFORM([pitch, yaw, *]) en column-major.
-    const cp = Math.cos(this.airplane.pitch);
-    const sp = Math.sin(this.airplane.pitch);
-    const sy = Math.sin(this.airplane.yaw);
-    const cy = Math.cos(this.airplane.yaw);
-    this.airplane.forward = [-sy * cp, sp, cy * cp];
+    this.airplane.forward = UT.VEC3_FORWARD_NEGATIVE_Z(this.airplane.pitch, this.airplane.yaw);
   }
 
   updatePosition(ts: number): void {
@@ -152,10 +147,9 @@ class AirplaneScreen extends Screen {
   }
 
   updateTransform(): void {
-    // -roll pour aligner le sens du virage de cet engine (RotateZ +z fait monter l'aile droite).
     this.airplane.matrix = UT.MAT4_TRANSFORM(
       this.airplane.pos,
-      [this.airplane.pitch, this.airplane.yaw, -this.airplane.roll],
+      [this.airplane.pitch, this.airplane.yaw, this.airplane.roll],
       [1, 1, 1]
     );
   }
@@ -223,12 +217,12 @@ class AirplaneScreen extends Screen {
     ];
 
     const tail: Array<number> = [
-      0, 0, -this.airplane.size[2] / 2, 1, 1, 1,
-      0, 0, -this.airplane.size[2] / 2 - tailLength, 1, 1, 1,
-      -1, 0, -this.airplane.size[2] / 2 - tailLength, 1, 1, 1,
-      1, 0, -this.airplane.size[2] / 2 - tailLength, 1, 1, 1,
-      0, 0, -this.airplane.size[2] / 2 - tailLength, 1, 1, 1,
-      0, 1.2, -this.airplane.size[2] / 2 - tailLength, 1, 1, 1
+      0, 0, this.airplane.size[2] / 2, 1, 1, 1,
+      0, 0, this.airplane.size[2] / 2 + tailLength, 1, 1, 1,
+      -1, 0, this.airplane.size[2] / 2 + tailLength, 1, 1, 1,
+      1, 0, this.airplane.size[2] / 2 + tailLength, 1, 1, 1,
+      0, 0, this.airplane.size[2] / 2 + tailLength, 1, 1, 1,
+      0, 1.2, this.airplane.size[2] / 2 + tailLength, 1, 1, 1
     ];
 
     gfx3DebugRenderer.drawVertices(wing, 2, this.airplane.matrix);

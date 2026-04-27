@@ -80,7 +80,7 @@ class RacingShipScreen extends Screen {
       pitch: 0,
       matrix: UT.MAT4_IDENTITY(),
       size: [1.2, 0.4, 2.0],
-      forward: [0, 0, 1],
+      forward: [0, 0, -1],
       acceleration: 0,
       maxAcceleration: 0.1,
       maxSpeed: 0.1,
@@ -100,7 +100,7 @@ class RacingShipScreen extends Screen {
     this.ship.pos = [startPoint[0], startPoint[1] + 5, startPoint[2]];
     this.ship.yaw = UT.VEC2_ANGLE([normalPoint[0], normalPoint[2]]);
 
-    this.camFollowPos = [this.ship.pos[0], this.ship.pos[1] + 10, this.ship.pos[2] - 10];
+    this.camFollowPos = [this.ship.pos[0], this.ship.pos[1] + 10, this.ship.pos[2] + 10];
   }
 
   update(ts: number): void {
@@ -133,7 +133,7 @@ class RacingShipScreen extends Screen {
       this.ship.roll = UT.LERP(this.ship.roll, 0, 0.05);
     }
 
-    this.ship.forward = [-Math.sin(this.ship.yaw), 0, Math.cos(this.ship.yaw)];
+    this.ship.forward = UT.VEC3_FORWARD_NEGATIVE_Z(this.ship.pitch, this.ship.yaw);
   }
 
   updateAcceleration(ts: number) {
@@ -243,7 +243,7 @@ class RacingShipScreen extends Screen {
       Math.sqrt(this.railTangent[0] ** 2 + this.railTangent[2] ** 2)
     );
 
-    this.ship.pitch = UT.LERP(this.ship.pitch, slopeAngle, 0.1);
+    this.ship.pitch = UT.LERP(this.ship.pitch, -slopeAngle, 0.1);
   }
 
   updateTransform() {

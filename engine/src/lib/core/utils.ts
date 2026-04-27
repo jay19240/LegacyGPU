@@ -953,6 +953,23 @@ export class UT {
   }
 
   /**
+   * @param pitch - Positive pitch look at bottom
+   * @param yaw - Positive yaw look at right
+   */
+  static VEC3_FORWARD_NEGATIVE_Z(pitch: number, yaw: number): vec3 {
+    const cp = Math.cos(pitch);
+    const sp = Math.sin(pitch);
+    const sy = Math.sin(yaw);
+    const cy = Math.cos(yaw);
+
+    return [
+      sy * cp,
+      -sp,
+      -cy * cp
+    ];
+  }
+
+  /**
    * @param x - The first component.
    * @param y - The second component.
    * @param z - The third component.

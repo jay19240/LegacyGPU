@@ -19,12 +19,14 @@ class GameScreen extends Screen {
   async onEnter() {
     this.pack = await EnginePack3D.createFromFile('classic', './scene.blend.pak');
     this.player = this.pack.jsm.get('Player');
+
+    this.player.setRotationY(0.4);
     gfx3MeshRenderer.setDirLight(true, [0, -1, -1], [1, 1, 1], [0.2, 0.2, 0.2]);
   }
 
   update(ts: number) {
     this.pack.update(ts);
-    this.player.rotate(0, ts * 0.001, 0);
+    // this.player.rotate(0, ts * 0.001, 0);
   }
 
   draw() {
