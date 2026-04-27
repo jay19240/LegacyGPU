@@ -58,11 +58,11 @@ def unregister():
 class WARME_OT_export_pack(bpy.types.Operator):
   """Export Pack""" 
   bl_idname = "object.export_pack"
-  bl_label = "Export Pack"
+  bl_label = "Export Assets"
   bl_options = {'REGISTER', 'UNDO_GROUPED'}
 
   def execute(self, context):
-    functions.pack(bpy.path.abspath(context.scene.render.filepath), context)
+    functions.pack(bpy.path.abspath(context.scene.export_assets_path), context)
     self.report({'INFO'}, "Export successful ✔")
     return {"FINISHED"}
 
@@ -70,11 +70,11 @@ class WARME_OT_export_pack(bpy.types.Operator):
 class WARME_OT_export_world_json(bpy.types.Operator):
   """Export World""" 
   bl_idname = "object.export_world_json"
-  bl_label = "Export World (JSON)"
+  bl_label = "World (JSON)"
   bl_options = {'REGISTER', 'UNDO_GROUPED'}
 
   def execute(self, context):
-    functions.world_export_json(bpy.path.abspath(context.scene.render.filepath), "scene")
+    functions.world_export_json(bpy.path.abspath(context.scene.export_assets_path), "scene")
     self.report({'INFO'}, "Export successful ✔")
     return {"FINISHED"}
 
@@ -82,11 +82,11 @@ class WARME_OT_export_world_json(bpy.types.Operator):
 class WARME_OT_export_camera_json(bpy.types.Operator):
   """Export Camera""" 
   bl_idname = "object.export_camera_json"
-  bl_label = "Export Camera (JSON)"
+  bl_label = "Camera (JSON)"
   bl_options = {'REGISTER', 'UNDO_GROUPED'}
 
   def execute(self, context):
-    functions.camera_export_json(bpy.path.abspath(context.scene.render.filepath), "scene")
+    functions.camera_export_json(bpy.path.abspath(context.scene.export_assets_path), "scene")
     self.report({'INFO'}, "Export successful ✔")
     return {"FINISHED"}
 
@@ -94,102 +94,102 @@ class WARME_OT_export_camera_json(bpy.types.Operator):
 class WARME_OT_export_objects(bpy.types.Operator):
   """Export Objects""" 
   bl_idname = "object.export_objects"
-  bl_label = "Export Selected Objects"
+  bl_label = "Selected Objects"
   bl_options = {'REGISTER', 'UNDO_GROUPED'}
 
   def execute(self, context):
     for object in bpy.context.selected_objects:
       if (object.type == 'CAMERA'):
-        functions.camera_export(bpy.path.abspath(context.scene.render.filepath), object.name)
+        functions.camera_export(bpy.path.abspath(context.scene.export_assets_path), object.name)
         self.report({'INFO'}, "Export successful ✔")
         continue
       #endif
 
       if (utils.belong_to_collection(object, "JSM")):
         if (context.scene.world_properties.enable_export_has_binary):
-          functions.jsm_export_binary(object, bpy.path.abspath(context.scene.render.filepath), object.name)
+          functions.jsm_export_binary(object, bpy.path.abspath(context.scene.export_assets_path), object.name)
         else:
-          functions.jsm_export_json(object, bpy.path.abspath(context.scene.render.filepath), object.name)
+          functions.jsm_export_json(object, bpy.path.abspath(context.scene.export_assets_path), object.name)
         #endif
-        functions.mat_export_json(object, bpy.path.abspath(context.scene.render.filepath), object.name)
+        functions.mat_export_json(object, bpy.path.abspath(context.scene.export_assets_path), object.name)
         self.report({'INFO'}, "Export successful ✔")
       #endif
 
       if (utils.belong_to_collection(object, "JAM")):
         if (context.scene.world_properties.enable_export_has_binary):
-          functions.jam_export_binary(object, bpy.path.abspath(context.scene.render.filepath), object.name)
+          functions.jam_export_binary(object, bpy.path.abspath(context.scene.export_assets_path), object.name)
         else:
-          functions.jam_export_json(object, bpy.path.abspath(context.scene.render.filepath), object.name)
+          functions.jam_export_json(object, bpy.path.abspath(context.scene.export_assets_path), object.name)
         #endif
-        functions.mat_export_json(object, bpy.path.abspath(context.scene.render.filepath), object.name)
+        functions.mat_export_json(object, bpy.path.abspath(context.scene.export_assets_path), object.name)
         self.report({'INFO'}, "Export successful ✔")
       #endif
 
       if (utils.belong_to_collection(object, "JWM")):
         if (context.scene.world_properties.enable_export_has_binary):
-          functions.jwm_export_binary(object, bpy.path.abspath(context.scene.render.filepath), object.name)
+          functions.jwm_export_binary(object, bpy.path.abspath(context.scene.export_assets_path), object.name)
         else:
-          functions.jwm_export_json(object, bpy.path.abspath(context.scene.render.filepath), object.name)
+          functions.jwm_export_json(object, bpy.path.abspath(context.scene.export_assets_path), object.name)
         #endif
         self.report({'INFO'}, "Export successful ✔")
       #endif
 
       if (utils.belong_to_collection(object, "JNM")):
         if (context.scene.world_properties.enable_export_has_binary):
-          functions.jnm_export_binary(object, bpy.path.abspath(context.scene.render.filepath), object.name)
+          functions.jnm_export_binary(object, bpy.path.abspath(context.scene.export_assets_path), object.name)
         else:
-          functions.jnm_export_json(object, bpy.path.abspath(context.scene.render.filepath), object.name)
+          functions.jnm_export_json(object, bpy.path.abspath(context.scene.export_assets_path), object.name)
         #endif
         self.report({'INFO'}, "Export successful ✔")
       #endif
 
       if (utils.belong_to_collection(object, "JSV")):
         if (context.scene.world_properties.enable_export_has_binary):
-          functions.jsv_export_binary(object, bpy.path.abspath(context.scene.render.filepath), object.name)
+          functions.jsv_export_binary(object, bpy.path.abspath(context.scene.export_assets_path), object.name)
         else:
-          functions.jsv_export_json(object, bpy.path.abspath(context.scene.render.filepath), object.name)
+          functions.jsv_export_json(object, bpy.path.abspath(context.scene.export_assets_path), object.name)
         #endif
         self.report({'INFO'}, "Export successful ✔")
       #endif
 
       if (utils.belong_to_collection(object, "GRF")):
-        functions.grf_export_json(object, bpy.path.abspath(context.scene.render.filepath), object.name)
+        functions.grf_export_json(object, bpy.path.abspath(context.scene.export_assets_path), object.name)
         self.report({'INFO'}, "Export successful ✔")
       #endif
 
       if (utils.belong_to_collection(object, "JLM")):
         if (context.scene.world_properties.enable_export_has_binary):
-          functions.jlm_export_binary(object, bpy.path.abspath(context.scene.render.filepath), object.name)
+          functions.jlm_export_binary(object, bpy.path.abspath(context.scene.export_assets_path), object.name)
         else:
-          functions.jlm_export_json(object, bpy.path.abspath(context.scene.render.filepath), object.name)
+          functions.jlm_export_json(object, bpy.path.abspath(context.scene.export_assets_path), object.name)
         #endif
         self.report({'INFO'}, "Export successful ✔")
       #endif
 
       if (utils.belong_to_collection(object, "JLT")):
-        functions.jlt_export_json(object, bpy.path.abspath(context.scene.render.filepath), object.name)
+        functions.jlt_export_json(object, bpy.path.abspath(context.scene.export_assets_path), object.name)
         self.report({'INFO'}, "Export successful ✔")
       #endif
 
       # Special ------------------------------------------------------------------------------------------------------
 
       if (utils.belong_to_collection(object, "DCL")):
-        functions.special_export_dcl_json(object, bpy.path.abspath(context.scene.render.filepath), object.name)
+        functions.special_export_dcl_json(object, bpy.path.abspath(context.scene.export_assets_path), object.name)
         self.report({'INFO'}, "Export successful ✔")
       #endif
 
       if (utils.belong_to_collection(object, "SKY")):
-        functions.special_export_sky_json(object, bpy.path.abspath(context.scene.render.filepath), object.name)
+        functions.special_export_sky_json(object, bpy.path.abspath(context.scene.export_assets_path), object.name)
         self.report({'INFO'}, "Export successful ✔")
       #endif
 
       if (utils.belong_to_collection(object, "PRT")):
-        functions.special_export_prt_json(object, bpy.path.abspath(context.scene.render.filepath), object.name)
+        functions.special_export_prt_json(object, bpy.path.abspath(context.scene.export_assets_path), object.name)
         self.report({'INFO'}, "Export successful ✔")
       #endif
 
       if (utils.belong_to_collection(object, "ENT")):
-        functions.ent_export_json(object, bpy.path.abspath(context.scene.render.filepath), object.name)
+        functions.ent_export_json(object, bpy.path.abspath(context.scene.export_assets_path), object.name)
         self.report({'INFO'}, "Export successful ✔")
       #endif
     #endfor
@@ -199,12 +199,12 @@ class WARME_OT_export_objects(bpy.types.Operator):
 class WARME_OT_export_objects_as_wavefront(bpy.types.Operator):
   """Export As Wavefront""" 
   bl_idname = "object.export_objects_as_wavefront"
-  bl_label = "Export Selected Objects As Wavefront"
+  bl_label = "Selected Objects As Wavefront"
   bl_options = {'REGISTER', 'UNDO_GROUPED'}
 
   def execute(self, context):
     scene_name = os.path.basename(bpy.data.filepath)
-    functions.obj_export(bpy.path.abspath(context.scene.render.filepath), scene_name)
+    functions.obj_export(bpy.path.abspath(context.scene.export_assets_path), scene_name)
     self.report({'INFO'}, "Export successful ✔")
     return {"FINISHED"}
 

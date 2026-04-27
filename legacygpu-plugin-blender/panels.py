@@ -29,16 +29,15 @@ def unregister():
 
 class WARME_PT_options(bpy.types.Panel):
   bl_idname = "WARME_PT_options"
-  bl_label = "LGPU Exporter"
+  bl_label = "LGPU"
   bl_space_type = 'VIEW_3D'
   bl_region_type = 'UI'
-  bl_category = "LGPU Exporter"
+  bl_category = "LGPU"
   bl_context = "objectmode"
 
   def draw(self, context):
     pcoll = preview_collections["main"]
     engine_image = pcoll["engine"]
-
     layout = self.layout.column()
 
     box = layout.box()
@@ -46,9 +45,23 @@ class WARME_PT_options(bpy.types.Panel):
     row.alignment = 'CENTER'
     row.template_icon(icon_value=engine_image.icon_id, scale=10)
 
-    layout.label(text=f"Export path: {bpy.path.abspath(context.scene.render.filepath)}")
+    utils.draw_input_row(layout, context.scene, "export_assets_path", "Assets Path")
     layout.separator()
     layout.operator("object.export_pack")
+    layout.separator()
+    utils.draw_input_row(layout, context.scene, "export_engine_path", "Engine Path")
+    layout.separator()
+    layout.prop(context.scene, "auggie_prompt", text="")
+    layout.separator()
+    layout.operator("object.run_auggie", icon='PLAY')
+    layout.separator()
+    row = layout.row()
+    row.alignment = 'CENTER'
+    row.label(text=f"Generation status: {context.scene.auggie_status}")
+    layout.separator()
+    layout.operator("object.run_server")
+    layout.operator("object.kill_server")
+    layout.separator()
 
     # START EXPORT
     box, opened = utils.draw_foldout(layout, context.scene.world_properties, "show_export", "Export", 'EXPORT')
@@ -95,6 +108,8 @@ class WARME_PT_options(bpy.types.Panel):
       layout.operator("object.create_entity_aabb")
       layout.operator("object.create_entity_cylinder")
       layout.operator("object.create_entity_sphere")
+      layout.operator("object.create_entity_circle")
+      layout.operator("object.create_entity_plane")
     #END CREATE
 
     # START CAST
@@ -134,13 +149,6 @@ class WARME_PT_options(bpy.types.Panel):
       utils.draw_title_row(layout, "--- Others ---")
       utils.draw_input_row(layout, context.scene.world_properties, "ambient", "Ambient Color")
       utils.draw_input_row(layout, context.scene.world_properties, "decal_atlas", "Decal Atlas")
-      utils.draw_input_row(layout, context.scene.world_properties, "skybox_name", "Skybox Name")
-      utils.draw_input_row(layout, context.scene.world_properties, "skybox_right", "Skybox Right")
-      utils.draw_input_row(layout, context.scene.world_properties, "skybox_left", "Skybox Left")
-      utils.draw_input_row(layout, context.scene.world_properties, "skybox_top", "Skybox Top")
-      utils.draw_input_row(layout, context.scene.world_properties, "skybox_bottom", "Skybox Bottom")
-      utils.draw_input_row(layout, context.scene.world_properties, "skybox_front", "Skybox Front")
-      utils.draw_input_row(layout, context.scene.world_properties, "skybox_back", "Skybox Back")
       utils.draw_title_row(layout, "--- Custom Params ---")
       row = layout.row()
       row.prop(context.scene.world_properties, "world_s00_name", text="")
@@ -198,7 +206,7 @@ class WARME_PT_object(bpy.types.Panel):
   bl_label = "LGPU Object"
   bl_space_type = 'VIEW_3D'
   bl_region_type = 'UI'
-  bl_category = "LGPU Object Panel"
+  bl_category = "LGPU Object"
   bl_context = "objectmode"
 
   def draw(self, context):
@@ -425,8 +433,8 @@ class WARME_PT_object(bpy.types.Panel):
       row.prop(selected_object.entity_properties, "s15_value", text="")
     # END ENTITY
 
-    # START MESH
-    if selected and len(selected) == 1 and selected[0].type == 'MESH':
+    # START JSM/JAM
+    if selected and len(selected) == 1 and (utils.belong_to_collection(bpy.context.selected_objects[0], "JSM") or utils.belong_to_collection(bpy.context.selected_objects[0], "JAM")):
       selected_object = bpy.context.selected_objects[0]
       layout = self.layout.column()
 
@@ -718,7 +726,7 @@ class WARME_PT_object(bpy.types.Panel):
         row = layout.row()
         utils.draw_input_row(row, selected_object.mat_properties, "s1_texture", "Texture S1")
       #endif
-    # END MESH
+    # END JSM/JAM
 
 
 class WARME_PT_grf_node_editor(bpy.types.Panel):

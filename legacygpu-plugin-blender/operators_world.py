@@ -1,6 +1,10 @@
 import bpy
 import bmesh
 import math
+import threading
+import subprocess
+import os
+import signal
 from . import functions
 from . import utils
 # ----------------------------------------------------------------------------------
@@ -32,6 +36,11 @@ def register():
   bpy.utils.register_class(WARME_OT_create_entity_aabb)
   bpy.utils.register_class(WARME_OT_create_entity_cylinder)
   bpy.utils.register_class(WARME_OT_create_entity_sphere)
+  bpy.utils.register_class(WARME_OT_create_entity_circle)
+  bpy.utils.register_class(WARME_OT_create_entity_plane)
+  bpy.utils.register_class(WARME_OT_run_auggie)
+  bpy.utils.register_class(WARME_OT_run_server)
+  bpy.utils.register_class(WARME_OT_kill_server)
 
 
 def unregister():
@@ -60,6 +69,11 @@ def unregister():
   bpy.utils.unregister_class(WARME_OT_create_entity_aabb)
   bpy.utils.unregister_class(WARME_OT_create_entity_cylinder)
   bpy.utils.unregister_class(WARME_OT_create_entity_sphere)
+  bpy.utils.unregister_class(WARME_OT_create_entity_circle)
+  bpy.utils.unregister_class(WARME_OT_create_entity_plane)
+  bpy.utils.unregister_class(WARME_OT_run_auggie)
+  bpy.utils.unregister_class(WARME_OT_run_server)
+  bpy.utils.unregister_class(WARME_OT_kill_server)
 
 
 # ----------------------------------------------------------------------------------
@@ -130,7 +144,7 @@ class WARME_OT_create_jam(bpy.types.Operator):
 class WARME_OT_cast_to_jam(bpy.types.Operator):
   """Cast To JAM""" 
   bl_idname = "object.cast_to_jam"
-  bl_label = "To Animated Mesh"
+  bl_label = "Animated Mesh"
   bl_options = {'REGISTER', 'UNDO_GROUPED'}
 
   def execute(self, context):
@@ -172,7 +186,7 @@ class WARME_OT_create_jwm(bpy.types.Operator):
 class WARME_OT_cast_to_jwm(bpy.types.Operator):
   """Cast To JWM""" 
   bl_idname = "object.cast_to_jwm"
-  bl_label = "To Walk Mesh"
+  bl_label = "Walk Mesh"
   bl_options = {'REGISTER', 'UNDO_GROUPED'}
 
   def execute(self, context):
@@ -214,7 +228,7 @@ class WARME_OT_create_jnm(bpy.types.Operator):
 class WARME_OT_cast_to_jnm(bpy.types.Operator):
   """Cast To JNM""" 
   bl_idname = "object.cast_to_jnm"
-  bl_label = "To Hit Mesh"
+  bl_label = "Hit Mesh"
   bl_options = {'REGISTER', 'UNDO_GROUPED'}
 
   def execute(self, context):
@@ -256,7 +270,7 @@ class WARME_OT_create_jsv(bpy.types.Operator):
 class WARME_OT_cast_to_jsv(bpy.types.Operator):
   """Cast To JSV""" 
   bl_idname = "object.cast_to_jsv"
-  bl_label = "To Shadow Volume"
+  bl_label = "Shadow Volume"
   bl_options = {'REGISTER', 'UNDO_GROUPED'}
 
   def execute(self, context):
@@ -299,7 +313,7 @@ class WARME_OT_create_grf(bpy.types.Operator):
 class WARME_OT_cast_to_grf(bpy.types.Operator):
   """Cast To GRF""" 
   bl_idname = "object.cast_to_grf"
-  bl_label = "To Graph Node"
+  bl_label = "Graph Node"
   bl_options = {'REGISTER', 'UNDO_GROUPED'}
 
   def execute(self, context):
@@ -543,7 +557,7 @@ class WARME_OT_create_special_particles(bpy.types.Operator):
 class WARME_OT_create_entity_aabb(bpy.types.Operator):
   """Create Entity AABB""" 
   bl_idname = "object.create_entity_aabb"
-  bl_label = "Entity AABB"
+  bl_label = "AABB"
   bl_options = {'REGISTER', 'UNDO_GROUPED'}
 
   def execute(self, context):
@@ -564,7 +578,7 @@ class WARME_OT_create_entity_aabb(bpy.types.Operator):
 class WARME_OT_create_entity_cylinder(bpy.types.Operator):
   """Create Entity Cylinder""" 
   bl_idname = "object.create_entity_cylinder"
-  bl_label = "Entity Cylinder"
+  bl_label = "Cylinder"
   bl_options = {'REGISTER', 'UNDO_GROUPED'}
 
   def execute(self, context):
@@ -585,7 +599,7 @@ class WARME_OT_create_entity_cylinder(bpy.types.Operator):
 class WARME_OT_create_entity_sphere(bpy.types.Operator):
   """Create Entity Sphere""" 
   bl_idname = "object.create_entity_sphere"
-  bl_label = "Entity Sphere"
+  bl_label = "Sphere"
   bl_options = {'REGISTER', 'UNDO_GROUPED'}
 
   def execute(self, context):
@@ -606,7 +620,7 @@ class WARME_OT_create_entity_sphere(bpy.types.Operator):
 class WARME_OT_create_entity_circle(bpy.types.Operator):
   """Create Entity Circle""" 
   bl_idname = "object.create_entity_circle"
-  bl_label = "Entity Circle"
+  bl_label = "Circle"
   bl_options = {'REGISTER', 'UNDO_GROUPED'}
 
   def execute(self, context):
@@ -624,10 +638,10 @@ class WARME_OT_create_entity_circle(bpy.types.Operator):
     return {"FINISHED"}
 
 
-class WARME_OT_create_entity_circle(bpy.types.Operator):
+class WARME_OT_create_entity_plane(bpy.types.Operator):
   """Create Entity Plane""" 
   bl_idname = "object.create_entity_plane"
-  bl_label = "Entity Plane"
+  bl_label = "Plane"
   bl_options = {'REGISTER', 'UNDO_GROUPED'}
 
   def execute(self, context):
@@ -643,3 +657,161 @@ class WARME_OT_create_entity_circle(bpy.types.Operator):
 
     self.report({'INFO'}, "Creation successful ✔")
     return {"FINISHED"}
+
+
+class WARME_OT_run_auggie(bpy.types.Operator):
+  bl_idname = "object.run_auggie"
+  bl_label = "Export Gameplay"
+
+  def execute(self, context):
+    scene = context.scene
+    prompt = scene.auggie_prompt
+    
+    if "AUGGIE_TERMINAL" not in bpy.data.texts:
+      bpy.data.texts.new("AUGGIE_TERMINAL")
+    #endif
+
+    txt = bpy.data.texts["AUGGIE_TERMINAL"]
+    txt.write(f"\n>>> PROMPT: {prompt}\n")
+
+    text_area = None
+    for area in context.screen.areas:
+      if area.type == 'TEXT_EDITOR':
+        text_area = area
+        break
+      #endif
+    #endfor
+
+    if text_area:
+      text_area.spaces.active.text = txt
+    #endif
+    else:
+      context.area.type = 'TEXT_EDITOR'
+      context.area.spaces.active.text = txt
+    #endif
+
+    scene.auggie_status = "En cours..."
+    thread = threading.Thread(target=self.run_cli, args=(prompt, scene, txt.name, context))
+    thread.start()
+    return {'FINISHED'}
+
+  def run_cli(self, prompt, scene, txt_name, context):
+    txt = bpy.data.texts.get(txt_name)
+    try:
+      pre_prompt = (
+        "Analyse le code source du moteur de jeux Legacy. "
+        "Génère ton code dans le dossier game en t'inspirant des examples fournis avec celui-ci. "
+        "Les règles sont les suivantes: "
+        "- Tu dois créer un seul fichier minimaliste couvrant uniquement la demande, fonctionnelle, ni plus ni moins. "
+        "- Pour les modifications ultérieur, tu ne dois pas créer de fichiers mais réutiliser et modifier le fichier existant. "
+        "- Peu importe la taille du code source à générer, tu dois suivre ces règles. "
+        "- Tu dois toujours utilisé le fichier 'public/scene.blend.pak' pour analyser les ressources que l'utilisateur à créer. "
+        "- Tu dois jamais toucher aux dossiers lib et examples. "
+        "- Par default, laisse la caméra dans son état d'origine, sauf si l'utilisateur te demande explicitement de la bouger "
+        "Quelques Tips: "
+        "- Il te demandera d'utiliser certains de ces ressources, tu pourras les retrouver grâce aux différentes catégories d'objets EnginePackItemList (voir l'exemple: pack). "
+        "- Tu peux piocher la dedans comme dans un sac à bonbon et récupérer ce que tu as besoin. "
+        "- Liste de tous les formats et gestionnaire associés, si tu trouves un format dans l'archive, tu dois appeller sont renderer ou gestionnaire dans la demo: "
+        "  - bin = Fichier binaire "
+        "  - sst = Fichier Spritesheet "
+        "  - jsc = Fichier de Script en format JSON "
+        "  - snd = Fichier sonore "
+        "  - tex = Fichier de texture "
+        "  - mat = Fichier de Material "
+        "  - jam = Fichier de Mesh Animés; (gfx3MeshRenderer) "
+        "  - jsm = Fichier de Mesh Statique; (gfx3MeshRenderer) "
+        "  - obj = Fichier de Mesh Wavefront; (gfx3MeshRenderer) "
+        "  - dcl = Fichier de Decal; necessite; (gfx3MeshRenderer) "
+        "  - jas = Fichier de Sprite Animés; (gfx3SpriteRenderer) "
+        "  - jss = Fichier de Sprite Statique; (gfx3SpriteRenderer) "
+        "  - sky = Fichier de Skybox; (gfx3SkyboxRenderer) "
+        "  - prt = Fichier de Particles; (gfx3ParticlesRenderer) "
+        "  - jwm = Fichier Walkmesh (FF7, Metal Gear, ...) "
+        "  - jnm = Fichier Hitmesh (UT, Quake, ...) "
+        "  - jlm = Fichier de lignes "
+        "  - crv = Fichier de courbes Catmull-rom "
+        "  - jsv = Fichier d'Ombres volumétriques; (gfx3ShadowVolumeRenderer) "
+        "  - jlt = Fichier de Lumières "
+        "  - grf = Fichier de Graph 3D "
+        "  - grd = Fichier de Grille 3D "
+        "  - ent = Fichier d'entité "
+        "Fait attention à bien appeller les gestionnaires lorsque cela est necessaires (Le moteur necessite d'appeller ces fonctions pour des raisons de performances), voici une liste complete typique: "
+        " gfx3Manager.beginRender(); "
+        " gfx3MeshShadowRenderer.render(); "
+        " gfx3ShadowVolumeRenderer.render(); "
+        " gfx3Manager.setDestinationTexture(gfx3PostRenderer.getSourceTexture()); "
+        " gfx3Manager.beginPassRender(0); "
+        " gfx3SkyboxRenderer.render(); "
+        " gfx3DebugRenderer.render(); "
+        " gfx3FlareRenderer.render(); "
+        " gfx3MeshRenderer.render(ts); "
+        " gfx3SpriteRenderer.render(); "
+        " gfx3ParticlesRenderer.render(); "
+        " gfx3Manager.endPassRender(); "
+        " gfx3PostRenderer.render(ts, gfx3Manager.getCurrentRenderingTexture()); "
+        " gfx3Manager.endRender(); "
+        "Dernière chose, ne lance jamais le projet. "
+        "A présent, voici la demande de l'utilisateur: "
+      )
+
+      full_prompt = f"{pre_prompt} {prompt}"
+      full_prompt_escaped = full_prompt.replace('"', '\\"')
+
+      cmd = f'npx --yes auggie -w {bpy.path.abspath(context.scene.export_engine_path)} --print "{full_prompt}"'
+      process = subprocess.Popen(
+        cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, 
+        shell=True, text=True, bufsize=1
+      )
+
+      for line in process.stdout:
+        if txt:
+          txt.write(line)
+        #endif
+        print(line.strip())
+      #endfor
+
+      process.wait()
+      scene.auggie_status = "Terminé !" if process.returncode == 0 else "Erreur"
+
+    except Exception as e:
+      if txt: txt.write(f"\nERREUR: {str(e)}\n")
+      scene.auggie_status = "Erreur"
+
+
+class WARME_OT_run_server(bpy.types.Operator):
+  bl_idname = "object.run_server"
+  bl_label = "Run Server"
+
+  def execute(self, context):
+    try:
+      subprocess.Popen(
+        ["npm", "run", "dev"], 
+        cwd=bpy.path.abspath(context.scene.export_engine_path), 
+        shell=True
+      )
+    except Exception as e:
+      print(f"Erreur lors du lancement de npm : {e}")
+    #except
+    return {'FINISHED'}
+
+
+class WARME_OT_kill_server(bpy.types.Operator):
+  bl_idname = "object.kill_server"
+  bl_label = "Stop Server"
+  bl_description = "Tue brutalement tous les processus Node.js en cours"
+
+  def execute(self, context):
+    try:
+      if os.name == 'nt':  # Windows
+        subprocess.run(['taskkill', '/F', '/IM', 'node.exe', '/T'], capture_output=True)
+      else:  # Mac / Linux
+        subprocess.run(['pkill', '-9', 'node'], capture_output=True)
+      #endif
+
+      context.scene.auggie_status = "Serveurs arrêtés"
+      self.report({'INFO'}, "Tous les processus Node ont été coupés.")
+        
+    except Exception as e:
+      self.report({'ERROR'}, f"Erreur lors du nettoyage : {str(e)}")
+
+    return {'FINISHED'}

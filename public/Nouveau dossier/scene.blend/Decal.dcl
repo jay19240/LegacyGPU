@@ -1,1 +1,0 @@
-{"Ident": "DCL", "PositionX": 5.8363, "PositionY": -0.0152, "PositionZ": -2.3341, "RotationX": -0.0, "RotationY": -1.570796251296997, "RotationZ": 0.0, "SizeX": 1.0, "SizeY": 1.0, "SizeZ": 7.210000038146973, "GroupId": 0, "SourceX": 0, "SourceY": 0, "SourceWidth": 1600, "SourceHeight": 1600, "Opacity": 1.0}

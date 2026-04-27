@@ -41,8 +41,17 @@ def register():
   bpy.utils.register_class(WARME_PG_EntityProperties)
   bpy.types.Object.entity_properties = bpy.props.PointerProperty(type=WARME_PG_EntityProperties)
 
+  bpy.types.Scene.export_assets_path = bpy.props.StringProperty(name="Assets Path", default="", subtype='FILE_PATH')
+  bpy.types.Scene.export_engine_path = bpy.props.StringProperty(name="Engine Path", default="", subtype='FILE_PATH')
+  bpy.types.Scene.auggie_prompt = bpy.props.StringProperty(name="Prompt", default="")
+  bpy.types.Scene.auggie_status = bpy.props.StringProperty(name="Status", default="Prêt")
+  bpy.types.Scene.auggie_output = bpy.props.StringProperty(name="Output", default="")
+
 
 def unregister():
+  bpy.utils.unregister_class(TweenColor)
+  bpy.utils.unregister_class(TweenNumber)
+  bpy.utils.unregister_class(TweenVector3)
   bpy.utils.unregister_class(JamAnimation)
   bpy.utils.unregister_class(MaterialAnimation)
   bpy.utils.unregister_class(WARME_PG_MatProperties)
