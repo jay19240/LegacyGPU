@@ -1,12 +1,10 @@
-import Jolt from 'jolt-physics';
-// ---------------------------------------------------------------------------------------
 import { inputManager } from '@lib/input/input_manager';
 import { gfx3DebugRenderer } from '@lib/gfx3/gfx3_debug_renderer';
 import { gfx3Manager } from '@lib/gfx3/gfx3_manager';
 import { Gfx3JoltEntity, gfx3JoltManager } from '@lib/gfx3_jolt/gfx3_jolt_manager';
 import { Screen } from '@lib/screen/screen';
 import { Gfx3CameraOrbit } from '@lib/gfx3_camera/gfx3_camera_orbit';
-import { Gfx3Jolt, JOLT_LAYER_MOVING, JOLT_QUAT_TO_VEC4 } from '@lib/gfx3_jolt/gfx3_jolt_manager';
+import { Gfx3Jolt, JOLT_LAYER_MOVING } from '@lib/gfx3_jolt/gfx3_jolt_manager';
 // ---------------------------------------------------------------------------------------
 
 const LEVELS = [{
@@ -250,10 +248,6 @@ class ThreeCasualScreen extends Screen {
       x: -slopeWidth / 2,
       y: wallHeight / 2,
       z: 0,
-      qx: 0,
-      qy: 0,
-      qz: 0,
-      qw: 1,
       width: 1,
       height: wallHeight,
       depth: wallLength
@@ -293,8 +287,6 @@ class ThreeCasualScreen extends Screen {
   }
 
   #createCan(x: number, y: number, z: number): Gfx3JoltEntity {
-    // Rotation de 90° sur l'axe Z pour coucher la canette et qu'elle roule le long de la pente
-
     return gfx3JoltManager.addCapsule({
       x: x,
       y: y,

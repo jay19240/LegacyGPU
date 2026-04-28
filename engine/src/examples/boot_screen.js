@@ -45,6 +45,7 @@ import { MotorJoltScreen } from './motor-jolt/motor_jolt_screen';
 import { TrailsTestScreen } from './trails/trails_test_screen';
 import { Particles2DScreen } from './particles-2d/particles_2d_screen';
 import { AirplaneScreen } from './airplane/airplane_screen';
+import { WaterScreen } from './water/water_screen';
 
 class BootScreen extends Screen {
   constructor() {
@@ -92,6 +93,7 @@ class BootScreen extends Screen {
     this.uiExamples.add('36', '3D Trails');
     this.uiExamples.add('37', '2D Particles');
     this.uiExamples.add('38', '3D Airplane');
+    this.uiExamples.add('39', '3D Water');
     this.uiExamples.setEnabledWidget(31, false);
     uiManager.addWidget(this.uiExamples, 'position:absolute; top:10px; bottom:10px; left:10px; right:10px');
 
@@ -221,6 +223,9 @@ class BootScreen extends Screen {
         break;
       case '38':
         screenManager.requestSetScreen(new AirplaneScreen());
+        break;
+      case '39':
+        screenManager.requestSetScreen(new WaterScreen());
         break;
       default:
         console.log('Unknown template ID:', data.id);

@@ -288,21 +288,21 @@ export class Gfx3MeshOBJ extends Gfx3Mesh implements Poolable<Gfx3MeshOBJ> {
 
       if (line.startsWith('Kd ')) {
         const a = extract(line, 3).split(' ');
-        curMat.setParam(Gfx3MatParam.DIFFUSE_R, parseFloat(a[0]));
-        curMat.setParam(Gfx3MatParam.DIFFUSE_G, parseFloat(a[1]));
-        curMat.setParam(Gfx3MatParam.DIFFUSE_B, parseFloat(a[2]));
+        curMat.setParam(Gfx3MatParam.LIGHT_DIFFUSE_R, parseFloat(a[0]));
+        curMat.setParam(Gfx3MatParam.LIGHT_DIFFUSE_G, parseFloat(a[1]));
+        curMat.setParam(Gfx3MatParam.LIGHT_DIFFUSE_B, parseFloat(a[2]));
       }
 
       if (line.startsWith('Ks ')) {
         const a = extract(line, 3).split(' ');
-        curMat.setParam(Gfx3MatParam.SPECULAR_R, parseFloat(a[0]));
-        curMat.setParam(Gfx3MatParam.SPECULAR_G, parseFloat(a[1]));
-        curMat.setParam(Gfx3MatParam.SPECULAR_B, parseFloat(a[2]));
+        curMat.setParam(Gfx3MatParam.LIGHT_SPECULAR_R, parseFloat(a[0]));
+        curMat.setParam(Gfx3MatParam.LIGHT_SPECULAR_G, parseFloat(a[1]));
+        curMat.setParam(Gfx3MatParam.LIGHT_SPECULAR_B, parseFloat(a[2]));
       }
 
       if (line.startsWith('Ns ')) {
         const a = extract(line, 3);
-        curMat.setParam(Gfx3MatParam.SPECULAR_FACTOR, parseFloat(a));
+        curMat.setParam(Gfx3MatParam.LIGHT_SPECULAR_FACTOR, parseFloat(a));
       }
 
       if (line.startsWith('d')) {
@@ -312,9 +312,9 @@ export class Gfx3MeshOBJ extends Gfx3Mesh implements Poolable<Gfx3MeshOBJ> {
 
       if (line.startsWith('Ke ')) {
         const a = extract(line, 3).split(' ');
-        curMat.setParam(Gfx3MatParam.EMISSIVE_R, parseFloat(a[0]));
-        curMat.setParam(Gfx3MatParam.EMISSIVE_G, parseFloat(a[1]));
-        curMat.setParam(Gfx3MatParam.EMISSIVE_B, parseFloat(a[2]));
+        curMat.setParam(Gfx3MatParam.LIGHT_EMISSIVE_R, parseFloat(a[0]));
+        curMat.setParam(Gfx3MatParam.LIGHT_EMISSIVE_G, parseFloat(a[1]));
+        curMat.setParam(Gfx3MatParam.LIGHT_EMISSIVE_B, parseFloat(a[2]));
       }
 
       if (line.startsWith('map_Kd ')) {

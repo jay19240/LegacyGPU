@@ -1,7 +1,7 @@
 // @todo: - drift missing, doing that later...
 import { gfx3TextureManager } from '@lib/gfx3/gfx3_texture_manager';
 import { Gfx3MeshJSM } from '@lib/gfx3_mesh/gfx3_mesh_jsm';
-import { Gfx3PhysicsJWM, WalkPoint } from '@lib/gfx3_physics/gfx3_physics_jwm';
+import { Gfx3PhysicsJWM, Gfx3JWMPoint } from '@lib/gfx3_physics/gfx3_physics_jwm';
 import { UT, CurveMapItem } from '@lib/core/utils';
 // ---------------------------------------------------------------------------------------
 import { Wheel, DEFAULT_WHEEL_POSITIONS, WheelPosition } from './wheel';
@@ -42,7 +42,7 @@ export class CarController {
   frontWheels: Array<Wheel>;
   // ------------------------------------ walkmesh ------------------------------------------------------
   walkmesh: Gfx3PhysicsJWM;
-  chassis: Array<WalkPoint>;
+  chassis: Array<Gfx3JWMPoint>;
   // ------------------------------------ vars ----------------------------------------------------------
   rotation: number;
   speed: number;

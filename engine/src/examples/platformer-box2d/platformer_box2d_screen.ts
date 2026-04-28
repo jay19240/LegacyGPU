@@ -34,7 +34,7 @@ class PlatformerBox2DScreen extends Screen {
       startY: 0,
       endX: 250 * BOX2D_PM,
       endY: 0,
-      metaData: { name: 'platform1' }
+      meta: { name: 'platform1' }
     });
 
     this.eid = await this.#createEntity();

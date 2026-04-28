@@ -62,6 +62,8 @@ export * from './gfx3_sprite/gfx3_sprite_jss';
 export * from './gfx3_sprite/gfx3_sprite';
 // gfx3 trail --------------------------------------------------------------------------------
 export * from './gfx3_trail/gfx3_trail';
+// gfx3 water --------------------------------------------------------------------------------
+export * from './gfx3_water/gfx3_water';
 // motion ------------------------------------------------------------------------------------
 export * from './motion/motion';
 // screen ------------------------------------------------------------------------------------
@@ -114,6 +116,8 @@ export * from './gfx3_sprite/gfx3_sprite_renderer';
 export * from './gfx3_sprite/gfx3_sprite_shader';
 export * from './gfx3_trail/gfx3_trail_renderer';
 export * from './gfx3_trail/gfx3_trail_shader';
+export * from './gfx3_water/gfx3_water_renderer';
+export * from './gfx3_water/gfx3_water_shader';
 export * from './input/input_manager';
 export * from './screen/screen_manager';
 export * from './sound/sound_manager';

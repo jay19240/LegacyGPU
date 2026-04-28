@@ -82,7 +82,7 @@ class PlatformerArcadeScreen extends Screen {
     const cameraDeltaY = gfx2Manager.getCameraPositionY() - previousCameraPositionY;
 
     this.scrolling.setMove(-cameraDeltaX, -cameraDeltaY);
-    this.scrolling.update();
+    this.scrolling.update(ts);
   }
 
   draw() {
