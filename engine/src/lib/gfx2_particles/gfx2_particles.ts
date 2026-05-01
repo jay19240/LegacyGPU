@@ -1,4 +1,5 @@
 import { gfx2Manager } from '../gfx2/gfx2_manager';
+import { gfx2TextureManager } from '../gfx2/gfx2_texture_manager';
 import { UT } from '../core/utils';
 import { Tween } from '../core/tween';
 import { Gfx2Drawable } from '../gfx2/gfx2_drawable';
@@ -221,6 +222,59 @@ export class Gfx2Particles extends Gfx2Drawable implements Gfx2ParticlesOptions 
         this.tintedTextures.set(i.toFixed(1), texture);
       }
     }
+  }
+
+  /**
+   * Load asynchronously data and create particles from a json file (prt).
+   * 
+   * @param {string} path - The file path.
+   * @param {string} textureDir - The textures directory.
+   */
+  static async createFromFile(path: string, textureDir: string = ''): Promise<Gfx2Particles> {
+    const response = await fetch(path);
+    const json = await response.json();
+
+    if (!json.hasOwnProperty('Ident') || json['Ident'] != 'PRT') {
+      throw new Error('Gfx2Particles::createFromFile(): File not valid !');
+    }
+
+    const particle = new Gfx2Particles({
+      texture: json['Texture'] ? await gfx2TextureManager.loadTexture(textureDir + json['Texture']) : undefined,
+      positionStyle: json['PositionStyle'],
+      positionBase: json['PositionBase'],
+      positionSpread: json['PositionSpread'],
+      positionCircleRadiusBase: json['PositionCircleRadiusBase'],
+      positionRadiusSpread: json['PositionRadiusSpread'],
+      velocityStyle: json['VelocityStyle'],
+      velocityBase: json['VelocityBase'],
+      velocitySpread: json['VelocitySpread'],
+      velocityExplodeSpeedBase: json['VelocityExploseSpeedBase'],
+      velocityExplodeSpeedSpread: json['VelocityExploseSpeedSpread'],
+      colorBase: json['ColorBase'],
+      colorSpread: json['ColorSpread'],
+      colorTween: new Tween<vec3>(json['ColorTweenTimes'], json['ColorTweenValues'], json['ColorTweenTransition']),
+      sizeBase: json['SizeBase'],
+      sizeSpread: json['SizeSpread'],
+      sizeTween: new Tween<number>(json['SizeTweenTimes'], json['SizeTweenValues'], json['SizeTweenTransition']),
+      opacityBase: json['OpacityBase'],
+      opacitySpread: json['OpacitySpread'],
+      opacityTween: new Tween<number>(json['OpacityTweenTimes'], json['OpacityTweenValues'], json['OpacityTweenTransition']),
+      accelerationBase: json['AccelerationBase'],
+      accelerationSpread: json['AccelerationSpread'],
+      accelerationTween: new Tween<vec2>(json['AccelerationTweenTimes'], json['AccelerationTweenValues'], json['AccelerationTweenTransition']),
+      angleBase: json['AngleBase'],
+      angleSpread: json['AngleSpread'],
+      angleVelocityBase: json['AngleVelocityBase'],
+      angleVelocitySpread: json['AngleVelocitySpread'],
+      angleAccelerationBase: json['AngleAccelerationBase'],
+      angleAccelerationSpread: json['AngleAccelerationSpread'],
+      particleDeathAge: json['ParticleDeathAge'],
+      particlesPerSecond: json['ParticlesPerSecond'],
+      particleQuantity: json['ParticleQuantity'],
+      emitterDeathAge: json['EmitterDeathAge']
+    });
+
+    return particle;
   }
 
   /**

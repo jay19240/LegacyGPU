@@ -243,3 +243,13 @@ def process_tween_number(collection, prefix, obj_target):
   
   obj_target[f"{prefix}Times"] = list(times)
   obj_target[f"{prefix}Values"] = list(values)
+
+
+def write_string(f, s):
+  """Utilitaire pour écrire une chaîne de caractères en binaire"""
+  if s is None: s = ""
+  # On encode en utf-8
+  b_str = s.encode('utf-8')
+  # On écrit la longueur (format 'i' pour int 4 octets) puis le contenu
+  f.write(struct.pack('<i', len(b_str)))
+  f.write(b_str)

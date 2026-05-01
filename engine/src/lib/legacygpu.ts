@@ -64,6 +64,9 @@ export * from './gfx3_mesh/gfx3_mesh_light';
 export * from './gfx3_mesh/gfx3_mesh_material';
 export * from './gfx3_mesh/gfx3_mesh_obj';
 export * from './gfx3_mesh/gfx3_mesh';
+// gfx3 noise --------------------------------------------------------------------------------
+export * from './gfx3_noise/gfx3_noise_manager';
+export * from './gfx3_noise/gfx3_noise_shader';
 // gfx3 particles ----------------------------------------------------------------------------
 export * from './gfx3_particles/gfx3_particles_params';
 export * from './gfx3_particles/gfx3_particles';
@@ -80,6 +83,8 @@ export * from './gfx3_skybox/gfx3_skybox';
 export * from './gfx3_sprite/gfx3_sprite_jas';
 export * from './gfx3_sprite/gfx3_sprite_jss';
 export * from './gfx3_sprite/gfx3_sprite';
+// gfx3 water --------------------------------------------------------------------------------
+export * from './gfx3_water/gfx3_water';
 // motion ------------------------------------------------------------------------------------
 export * from './motion/motion';
 // screen ------------------------------------------------------------------------------------
@@ -128,6 +133,8 @@ export * from './gfx3_particles/gfx3_particles_renderer';
 export * from './gfx3_particles/gfx3_particles_shader';
 export * from './gfx3_trail/gfx3_trail_renderer';
 export * from './gfx3_trail/gfx3_trail_shader';
+export * from './gfx3_water/gfx3_water_renderer';
+export * from './gfx3_water/gfx3_water_shader';
 export * from './gfx3_post/gfx3_post_renderer';
 export * from './gfx3_post/gfx3_post_shader';
 export * from './gfx3_shadow_volume/gfx3_shadow_volume_renderer';

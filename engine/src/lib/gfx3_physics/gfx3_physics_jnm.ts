@@ -69,7 +69,7 @@ export class Gfx3PhysicsJNM {
   }
 
   /**
-   * Load asynchronously navmesh data from a json file (jnm).
+   * Load asynchronously hitmesh data from a json file (jnm).
    * 
    * @param {string} path - The file path.
    * @param {number} bspMaxChildren - The maximum of children per bsp node.

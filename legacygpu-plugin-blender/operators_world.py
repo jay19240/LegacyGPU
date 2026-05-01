@@ -5,6 +5,7 @@ import threading
 import subprocess
 import os
 import signal
+import webbrowser
 from . import functions
 from . import utils
 # ----------------------------------------------------------------------------------
@@ -21,6 +22,7 @@ def register():
   bpy.utils.register_class(WARME_OT_cast_to_jnm)
   bpy.utils.register_class(WARME_OT_create_jsv)
   bpy.utils.register_class(WARME_OT_cast_to_jsv)
+  bpy.utils.register_class(WARME_OT_create_jwa)
   bpy.utils.register_class(WARME_OT_create_grf)
   bpy.utils.register_class(WARME_OT_cast_to_grf)
   bpy.utils.register_class(WARME_OT_create_jlm_points)
@@ -41,7 +43,8 @@ def register():
   bpy.utils.register_class(WARME_OT_run_auggie)
   bpy.utils.register_class(WARME_OT_run_server)
   bpy.utils.register_class(WARME_OT_kill_server)
-
+  bpy.utils.register_class(WARME_OT_run_game)
+  
 
 def unregister():
   bpy.utils.unregister_class(WARME_OT_create_jsm)
@@ -54,6 +57,7 @@ def unregister():
   bpy.utils.unregister_class(WARME_OT_cast_to_jnm)
   bpy.utils.unregister_class(WARME_OT_create_jsv)
   bpy.utils.unregister_class(WARME_OT_cast_to_jsv)
+  bpy.utils.unregister_class(WARME_OT_create_jwa)
   bpy.utils.unregister_class(WARME_OT_create_grf)
   bpy.utils.unregister_class(WARME_OT_cast_to_grf)
   bpy.utils.unregister_class(WARME_OT_create_jlm_points)
@@ -74,6 +78,7 @@ def unregister():
   bpy.utils.unregister_class(WARME_OT_run_auggie)
   bpy.utils.unregister_class(WARME_OT_run_server)
   bpy.utils.unregister_class(WARME_OT_kill_server)
+  bpy.utils.unregister_class(WARME_OT_run_game)
 
 
 # ----------------------------------------------------------------------------------
@@ -102,7 +107,7 @@ class WARME_OT_create_jsm(bpy.types.Operator):
 class WARME_OT_cast_to_jsm(bpy.types.Operator):
   """Cast To JSM""" 
   bl_idname = "object.cast_to_jsm"
-  bl_label = "To Static Mesh"
+  bl_label = "Static Mesh"
   bl_options = {'REGISTER', 'UNDO_GROUPED'}
 
   def execute(self, context):
@@ -283,6 +288,34 @@ class WARME_OT_cast_to_jsv(bpy.types.Operator):
       self.report({'INFO'}, "Cast successful ✔")
     #endfor
 
+    return {"FINISHED"}
+
+
+# ----------------------------------------------------------------------------------
+# JWA
+# ----------------------------------------------------------------------------------
+class WARME_OT_create_jwa(bpy.types.Operator):
+  """Create JWA""" 
+  bl_idname = "object.create_jwa"
+  bl_label = "Water"
+  bl_options = {'REGISTER', 'UNDO_GROUPED'}
+
+  def execute(self, context):
+    bpy.ops.mesh.primitive_grid_add(
+      size=20, 
+      x_subdivisions=33, 
+      y_subdivisions=33
+    )
+
+    grid = context.active_object
+    grid.name = "Water"
+    grid.color = (0, 0, 1, 1)
+
+    collection = utils.get_or_create_collection("JWA")
+    utils.unlink_from_all_collections(grid)
+    collection.objects.link(grid)
+
+    self.report({'INFO'}, "Creation successful ✔")
     return {"FINISHED"}
 
 
@@ -661,7 +694,7 @@ class WARME_OT_create_entity_plane(bpy.types.Operator):
 
 class WARME_OT_run_auggie(bpy.types.Operator):
   bl_idname = "object.run_auggie"
-  bl_label = "Export Gameplay"
+  bl_label = "Send to Agent"
 
   def execute(self, context):
     scene = context.scene
@@ -701,13 +734,26 @@ class WARME_OT_run_auggie(bpy.types.Operator):
       pre_prompt = (
         "Analyse le code source du moteur de jeux Legacy. "
         "Génère ton code dans le dossier game en t'inspirant des examples fournis avec celui-ci. "
+        "Indications sur les repères: "
+        "- Repère de la main droite "
+        "- L'axe X pointe vers la droite "
+        "- L'axe Y pointe vers le haut "
+        "- L'axe Z pointe vers l'extérieur de l'écran (convention OpenGL) "
+        "- Le mouvement des entités sont toujours vers forward (-Z), utilise la fonction VEC3_FORWARD_NEGATIVE_Z pour convertir les angles vers l'axe forward. "
+        "- Les exemples airplane et racing_ship sont de bons exemples à suivres pour que tu utilises les orientations correctement "
+        "Indications sur la physique: "
+        "- Tu dois toujours priorisé les classes Gfx3PhysicsJNM et Gfx3PhysicsJWM quand cela est possible "
+        "- Tu dois utilisés les classes physiques de bases et des calcules mathématique en priorité "
         "Les règles sont les suivantes: "
+        "- Fait bien attention aux fonctionnalités présentes dans le moteur pour éviter de les recoder, ne réinvente pas la roue quand c'est pas necessaire "
         "- Tu dois créer un seul fichier minimaliste couvrant uniquement la demande, fonctionnelle, ni plus ni moins. "
         "- Pour les modifications ultérieur, tu ne dois pas créer de fichiers mais réutiliser et modifier le fichier existant. "
         "- Peu importe la taille du code source à générer, tu dois suivre ces règles. "
+        "- Tu dois toujours priorisé la physique manuelle mathématique pure et utilisé les fonctions de rotations, position, scale et utilitaire (UT) autant que possible "
         "- Tu dois toujours utilisé le fichier 'public/scene.blend.pak' pour analyser les ressources que l'utilisateur à créer. "
         "- Tu dois jamais toucher aux dossiers lib et examples. "
         "- Par default, laisse la caméra dans son état d'origine, sauf si l'utilisateur te demande explicitement de la bouger "
+        "- Tu peux écrire plusieurs classes dans le même fichier "
         "Quelques Tips: "
         "- Il te demandera d'utiliser certains de ces ressources, tu pourras les retrouver grâce aux différentes catégories d'objets EnginePackItemList (voir l'exemple: pack). "
         "- Tu peux piocher la dedans comme dans un sac à bonbon et récupérer ce que tu as besoin. "
@@ -798,7 +844,6 @@ class WARME_OT_run_server(bpy.types.Operator):
 class WARME_OT_kill_server(bpy.types.Operator):
   bl_idname = "object.kill_server"
   bl_label = "Stop Server"
-  bl_description = "Tue brutalement tous les processus Node.js en cours"
 
   def execute(self, context):
     try:
@@ -814,4 +859,18 @@ class WARME_OT_kill_server(bpy.types.Operator):
     except Exception as e:
       self.report({'ERROR'}, f"Erreur lors du nettoyage : {str(e)}")
 
+    return {'FINISHED'}
+
+
+class WARME_OT_run_game(bpy.types.Operator):
+  bl_idname = "object.run_game"
+  bl_label = "Run the Game"
+
+  def execute(self, context):
+    try:
+      webbrowser.open("http://localhost:5173/game.html" )
+      self.report({'INFO'}, f"Lancement effectué")
+    except Exception as e:
+      self.report({'ERROR'}, f"Impossible d'ouvrir le navigateur : {e}")
+    #except
     return {'FINISHED'}

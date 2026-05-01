@@ -71,7 +71,7 @@ export class Gfx3Trail extends Gfx3Drawable implements Gfx3TrailOptions {
   }
 
   /**
-   * The update function. Ages existing points and rebuilds geometry.
+   * The update function.
    *
    * @param {number} ts - The timestep in milliseconds.
    */

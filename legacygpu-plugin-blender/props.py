@@ -41,9 +41,12 @@ def register():
   bpy.utils.register_class(WARME_PG_EntityProperties)
   bpy.types.Object.entity_properties = bpy.props.PointerProperty(type=WARME_PG_EntityProperties)
 
+  bpy.utils.register_class(WARME_PG_WaterProperties)
+  bpy.types.Object.water_properties = bpy.props.PointerProperty(type=WARME_PG_WaterProperties)
+
   bpy.types.Scene.export_assets_path = bpy.props.StringProperty(name="Assets Path", default="", subtype='FILE_PATH')
   bpy.types.Scene.export_engine_path = bpy.props.StringProperty(name="Engine Path", default="", subtype='FILE_PATH')
-  bpy.types.Scene.auggie_prompt = bpy.props.StringProperty(name="Prompt", default="")
+  bpy.types.Scene.auggie_prompt = bpy.props.StringProperty(name="Prompt", default="Write your prompt here...")
   bpy.types.Scene.auggie_status = bpy.props.StringProperty(name="Status", default="Prêt")
   bpy.types.Scene.auggie_output = bpy.props.StringProperty(name="Output", default="")
 
@@ -63,6 +66,7 @@ def unregister():
   bpy.utils.unregister_class(WARME_PG_SkyboxProperties)
   bpy.utils.unregister_class(WARME_PG_ParticlesProperties)
   bpy.utils.unregister_class(WARME_PG_EntityProperties)
+  bpy.utils.unregister_class(WARME_PG_WaterProperties)
 
 
 # -------------------------------------------------------------------------------
@@ -148,6 +152,7 @@ def update_shadow_depth(self, context):
   shadow = bpy.data.objects["ShadowProjector"]
   shadow.scale[2] = self.depth
   update_trigger_export(self, context)
+
 
 # -------------------------------------------------------------------------------
 # PROPERTIES
@@ -1231,6 +1236,10 @@ class WARME_PG_MatProperties(bpy.types.PropertyGroup):
 
 
 class WARME_PG_WorldProperties(bpy.types.PropertyGroup):
+  show_game: bpy.props.BoolProperty(
+    name="Game",
+    default=False
+  )
   show_export: bpy.props.BoolProperty(
     name="Export",
     default=False
@@ -2145,5 +2154,223 @@ class WARME_PG_EntityProperties(bpy.types.PropertyGroup):
   s15_value: bpy.props.StringProperty(
     name="S15",
     description="Custom slot value 15",
+    update=update_trigger_export
+  )
+
+
+class WARME_PG_WaterProperties(bpy.types.PropertyGroup):
+  wave_amplitude: bpy.props.FloatProperty(
+    name="Wave Amplitude",
+    description="Set the wave amplitude factor",
+    subtype='NONE',
+    default=(0.3),
+    update=update_trigger_export
+  )
+  wave_scale: bpy.props.FloatProperty(
+    name="Wave Scale",
+    description="Set the perlin noise scale",
+    subtype='NONE',
+    default=(0.18),
+    update=update_trigger_export
+  )
+  wave_speed: bpy.props.FloatProperty(
+    name="Wave Speed",
+    description="Set the perlin scroll speed",
+    subtype='NONE',
+    default=(0.35),
+    update=update_trigger_export
+  )
+  wave_choppiness: bpy.props.FloatProperty(
+    name="Wave Choppiness",
+    description="Set how waves are sharp",
+    subtype='NONE',
+    default=(1.0),
+    update=update_trigger_export
+  )
+  wave_step_x: bpy.props.FloatProperty(
+    name="Wave Step X",
+    description="Set the horizontal surface step (0.5 = high level of details)",
+    subtype='NONE',
+    default=(0.5),
+    update=update_trigger_export
+  )
+  wave_step_z: bpy.props.FloatProperty(
+    name="Wave Step Z",
+    description="Set the depth surface step (0.5 = high level of details)",
+    subtype='NONE',
+    default=(0.5),
+    update=update_trigger_export
+  )
+  normal_map_enabled: bpy.props.BoolProperty(
+    name="Normal Map Enabled",
+    description="Enable or not the water normal map",
+    default=False,
+    update=update_trigger_export
+  )
+  normal_map: bpy.props.StringProperty(
+    name="Normal Map",
+    description="Normal Map texture",
+    default="",
+    subtype='FILE_PATH',
+    update=update_trigger_export
+  )
+  normal_map_scroll_x: bpy.props.FloatProperty(
+    name="Normal Map Scroll X",
+    description="Set the normal map horizontal scroll",
+    subtype='NONE',
+    default=(0.0),
+    update=update_trigger_export
+  )
+  normal_map_scroll_y: bpy.props.FloatProperty(
+    name="Normal Map Scroll Y",
+    description="Set the normal map vertical scroll",
+    subtype='NONE',
+    default=(0.0),
+    update=update_trigger_export
+  )
+  normal_map_intensity: bpy.props.FloatProperty(
+    name="Normal Map Intensity",
+    description="Set the normal map intensity",
+    subtype='NONE',
+    default=(0.5),
+    update=update_trigger_export
+  )
+  normal_map_scale: bpy.props.FloatProperty(
+    name="Normal Map Scale",
+    description="Set the normal map scale",
+    subtype='NONE',
+    default=(0.2),
+    update=update_trigger_export
+  )
+  surface_color_enabled: bpy.props.BoolProperty(
+    name="Surface Color Enabled",
+    description="Enable or not the water surface color tint",
+    default=False,
+    update=update_trigger_export
+  )
+  surface_color: bpy.props.FloatVectorProperty(
+    name="Surface Color",
+    description="Set the surface color tint",
+    subtype='COLOR',
+    default=(0.04, 0.18, 0.28),
+    min=0.0, max=1.0,
+    update=update_trigger_export
+  )
+  surface_color_factor: bpy.props.FloatProperty(
+    name="Surface Color Factor",
+    description="Set the surface color factor",
+    subtype='NONE',
+    default=(0.9),
+    update=update_trigger_export
+  )
+  optics_env_map_enabled: bpy.props.BoolProperty(
+    name="Optics Env Map Enabled",
+    description="Enable or not the reflectivity",
+    default=False,
+    update=update_trigger_export
+  )
+  optics_env_map_right: bpy.props.StringProperty(
+    name="Cubemap Right",
+    description="Set the cubemap right texture",
+    default="",
+    subtype='FILE_PATH',
+    update=update_trigger_export
+  )
+  optics_env_map_left: bpy.props.StringProperty(
+    name="Cubemap Left",
+    description="Set the cubemap left texture",
+    default="",
+    subtype='FILE_PATH',
+    update=update_trigger_export
+  )
+  optics_env_map_top: bpy.props.StringProperty(
+    name="Cubemap Top",
+    description="Set the cubemap top texture",
+    default="",
+    subtype='FILE_PATH',
+    update=update_trigger_export
+  )
+  optics_env_map_bottom: bpy.props.StringProperty(
+    name="Cubemap Bottom",
+    description="Set the cubemap bottom texture",
+    default="",
+    subtype='FILE_PATH',
+    update=update_trigger_export
+  )
+  optics_env_map_front: bpy.props.StringProperty(
+    name="Cubemap Front",
+    description="Set the cubemap front texture",
+    default="",
+    subtype='FILE_PATH',
+    update=update_trigger_export
+  )
+  optics_env_map_back: bpy.props.StringProperty(
+    name="Cubemap Back",
+    description="Set the cubemap back texture",
+    default="",
+    subtype='FILE_PATH',
+    update=update_trigger_export
+  )
+  optics_env_intensity: bpy.props.FloatProperty(
+    name="Optics Env Map Intensity",
+    description="Set the reflectivity factor",
+    subtype='NONE',
+    default=(1.0),
+    update=update_trigger_export
+  )
+  optics_fresnel_power: bpy.props.FloatProperty(
+    name="Optics Fresnel Power",
+    description="Set the reflectivity distortion power",
+    subtype='NONE',
+    default=(4.0),
+    update=update_trigger_export
+  )
+  optics_fresnel_biais: bpy.props.FloatProperty(
+    name="Optics Fresnel Biais",
+    description="Set the reflectivity factor",
+    subtype='NONE',
+    default=(0.4),
+    update=update_trigger_export
+  )
+  sun_enabled: bpy.props.BoolProperty(
+    name="Sun Enabled",
+    description="Enable or not the sun",
+    default=False,
+    update=update_trigger_export
+  )
+  sun_direction_x: bpy.props.FloatProperty(
+    name="Sun Direction X",
+    description="Set the sun direction",
+    subtype='NONE',
+    default=(-0.4),
+    update=update_trigger_export
+  )
+  sun_direction_y: bpy.props.FloatProperty(
+    name="Sun Direction Y",
+    description="Set the sun direction",
+    subtype='NONE',
+    default=(-1.0),
+    update=update_trigger_export
+  )
+  sun_direction_z: bpy.props.FloatProperty(
+    name="Sun Direction Z",
+    description="Set the sun direction",
+    subtype='NONE',
+    default=(-0.3),
+    update=update_trigger_export
+  )
+  sun_color: bpy.props.FloatVectorProperty(
+    name="Sun Color",
+    description="Set the sun color",
+    subtype='COLOR',
+    default=(1.0, 0.9, 0.8),
+    min=0.0, max=1.0,
+    update=update_trigger_export
+  )
+  sun_color_factor: bpy.props.FloatProperty(
+    name="Sun Intensity",
+    description="Set the sun intensity",
+    subtype='NONE',
+    default=(0.8),
     update=update_trigger_export
   )

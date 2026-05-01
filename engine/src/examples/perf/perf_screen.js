@@ -11,8 +11,8 @@ import { Gfx3Material } from '@lib/gfx3_mesh/gfx3_mesh_material';
 import { Gfx3MatParam } from '@lib/gfx3_mesh/gfx3_mesh_shader';
 // ---------------------------------------------------------------------------------------
 
-const GRID_WIDTH = 100;
-const GRID_HEIGHT = 100;
+const GRID_WIDTH = 200;
+const GRID_HEIGHT = 200;
 const GRID_SPACE = 5;
 
 class Transform {
@@ -34,6 +34,7 @@ class PerfScreen extends Screen {
     this.bigMesh = null;
     this.skySphere = null;
     this.transformations = [];
+    this.matrices = [];
     this.handleKeyUpCb = this.handleKeyUp.bind(this);
   }
 
@@ -90,11 +91,13 @@ class PerfScreen extends Screen {
     const r = Math.PI * 2 * 4 / this.transformations.length;
     let n = 0;
 
+    this.matrices = [];
+
     for (const t of this.transformations) {
       t.a[0] += ts / 500.0;
       t.a[2] += ts / 1000.0;
       t.p[1] = Math.sin(n + this.colFac) * 3;
-      UT.MAT4_TRANSFORM(t.p, t.a, t.s, t.m);
+      this.matrices.push(UT.MAT4_TRANSFORM(t.p, t.a, t.s, t.m));
       n += r;
     }
 
@@ -110,9 +113,7 @@ class PerfScreen extends Screen {
       this.bigMesh.draw();
     }
     else {
-      for (const t of this.transformations) {
-        gfx3MeshRenderer.drawMesh(this.obj, t.m);
-      }
+      gfx3MeshRenderer.drawInstanceMesh(this.obj, this.matrices);
     }
 
     gfx3Manager.endDrawing();

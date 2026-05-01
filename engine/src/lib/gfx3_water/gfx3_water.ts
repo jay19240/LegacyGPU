@@ -3,9 +3,9 @@ import { gfx3WaterRenderer } from './gfx3_water_renderer';
 import { Gfx3StaticGroup } from '../gfx3/gfx3_group';
 import { Gfx3Drawable } from '../gfx3/gfx3_drawable';
 import { Gfx3Texture } from '../gfx3/gfx3_texture';
-import { WATER_SHADER_VERTEX_ATTR_COUNT, WATER_MAX_IMPACTS } from './gfx3_water_shader';
+import { Gfx3WaterParam, WATER_SHADER_VERTEX_ATTR_COUNT, WATER_MAX_IMPACTS } from './gfx3_water_shader';
 
-interface WaterImpact {
+export interface Gfx3WaterImpact {
   x: number;
   z: number;
   strength: number;
@@ -15,67 +15,153 @@ interface WaterImpact {
 };
 
 /**
- * A water plane drawable. The grid surface is displaced in the vertex shader
- * by a 2-octave 2D Perlin noise field (drifting in two distinct directions to
- * avoid any preferred axis). Impacts locally boost the noise amplitude over a
- * smooth radial zone, preserving the underlying Perlin pattern. Per-vertex
- * normals are recomputed from the height field via central differences sampled
- * directly on the GPU. Shading combines environment cubemap reflection
- * (Fresnel-blended), a tangent-space normal map for fine detail, and a
- * directional sun.
+ * A water plane drawable.
  */
 export class Gfx3Water extends Gfx3Drawable {
   texturesChanged: boolean;
+  dataChanged: boolean;
+  impacts: Array<Gfx3WaterImpact>;
+  impactsBuffer: Float32Array;
+  params: Float32Array;  
   grp2: Gfx3StaticGroup;
   envMap: Gfx3Texture;
   normalMap: Gfx3Texture;
-  waveParams: Float32Array; // 20 floats: nMap + color + optics + sunParams + sunColor
-  wave: { amplitude: number, scale: number, speed: number, choppiness: number };
-  impacts: Array<WaterImpact>;
-  width: number;
-  depth: number;
-  segX: number;
-  segZ: number;
-  stepX: number;
-  stepZ: number;
-  gridX: Float32Array;
-  gridZ: Float32Array;
-  gridU: Float32Array;
-  gridV: Float32Array;
-  vertexData: Float32Array;
 
   constructor() {
     super(WATER_SHADER_VERTEX_ATTR_COUNT);
     this.texturesChanged = false;
+    this.dataChanged = false;
+    this.impacts = [];
+    this.impactsBuffer = new Float32Array(8 * WATER_MAX_IMPACTS);
+
+    this.params = new Float32Array(Gfx3WaterParam.COUNT);
+    this.params[Gfx3WaterParam.WAVE_AMPLITUDE] = 0.3;
+    this.params[Gfx3WaterParam.WAVE_SCALE] = 0.18;
+    this.params[Gfx3WaterParam.WAVE_SPEED] = 0.35;
+    this.params[Gfx3WaterParam.WAVE_CHOPPINESS] = 1.0;
+    this.params[Gfx3WaterParam.WAVE_STEP_X] = 0.5;
+    this.params[Gfx3WaterParam.WAVE_STEP_Z] = 0.5;
+    // --------------------------------------------------------------------------------------------------------
+    this.params[Gfx3WaterParam.NORMAL_MAP_ENABLED] = 1.0;
+    this.params[Gfx3WaterParam.NORMAL_MAP_SCROLL_X] = 0.04;
+    this.params[Gfx3WaterParam.NORMAL_MAP_SCROLL_Y] = 0.03;
+    this.params[Gfx3WaterParam.NORMAL_MAP_INTENSITY] = 0.5;
+    this.params[Gfx3WaterParam.NORMAL_MAP_SCALE] = 6.0;
+    // --------------------------------------------------------------------------------------------------------
+    this.params[Gfx3WaterParam.SURFACE_COLOR_ENABLED] = 1.0;
+    this.params[Gfx3WaterParam.SURFACE_COLOR_R] = 0.04;
+    this.params[Gfx3WaterParam.SURFACE_COLOR_G] = 0.18;
+    this.params[Gfx3WaterParam.SURFACE_COLOR_B] = 0.28;
+    this.params[Gfx3WaterParam.SURFACE_COLOR_FACTOR] = 0.92;
+    // --------------------------------------------------------------------------------------------------------
+    this.params[Gfx3WaterParam.OPTICS_ENV_MAP_ENABLED] = 1.0;
+    this.params[Gfx3WaterParam.OPTICS_ENV_INTENSITY] = 1.0;
+    this.params[Gfx3WaterParam.OPTICS_FRESNEL_POWER] = 4.0;
+    this.params[Gfx3WaterParam.OPTICS_FRESNEL_BIAS] = 0.4;    
+    // --------------------------------------------------------------------------------------------------------
+    this.params[Gfx3WaterParam.SUN_ENABLED] = 1.0;
+    this.params[Gfx3WaterParam.SUN_DIRECTION_X] = -0.4;
+    this.params[Gfx3WaterParam.SUN_DIRECTION_Y] = -1.0;
+    this.params[Gfx3WaterParam.SUN_DIRECTION_Z] = -0.3;
+    this.params[Gfx3WaterParam.SUN_SPECULAR_POWER] = 1.0;
+    this.params[Gfx3WaterParam.SUN_COLOR_R] = 1.0;
+    this.params[Gfx3WaterParam.SUN_COLOR_G] = 0.95;
+    this.params[Gfx3WaterParam.SUN_COLOR_B] = 0.85;
+    this.params[Gfx3WaterParam.SUN_COLOR_FACTOR] = 1.0;
+    
+
     this.grp2 = gfx3Manager.createStaticGroup('WATER_PIPELINE', 2);
     this.envMap = this.grp2.setTexture(0, 'ENV_MAP_TEXTURE', gfx3Manager.createCubeMapFromBitmap(), { dimension: 'cube' });
     this.envMap = this.grp2.setSampler(1, 'ENV_MAP_SAMPLER', this.envMap);
     this.normalMap = this.grp2.setTexture(2, 'NORMAL_MAP_TEXTURE', gfx3Manager.createTextureFromBitmap());
     this.normalMap = this.grp2.setSampler(3, 'NORMAL_MAP_SAMPLER', this.normalMap);
     this.grp2.allocate();
+  }
 
-    this.waveParams = new Float32Array(20);
-    this.wave = { amplitude: 0.30, scale: 0.18, speed: 0.35, choppiness: 1.0 };
-    this.setNormalMapInfos(0.04, 0.03, 0.5, 6.0);
-    this.setSurfaceColor(0.04, 0.18, 0.28, 0.92);
-    this.setOptics(1.0, 4.0, 0.4, 0.15);
-    this.setSun(-0.4, -1.0, -0.3, 80.0);
-    this.setSunColor(1.0, 0.95, 0.85, 1.0);
+  /**
+   * Load asynchronously water data from a json file (jwa).
+   * 
+   * @param {string} path - The file path.
+   */
+  async loadFromFile(path: string): Promise<void> {
+    const response = await fetch(path);
+    const json = await response.json();
 
-    this.impacts = [];
-    this.width = 0;
-    this.depth = 0;
-    this.segX = 0;
-    this.segZ = 0;
-    this.stepX = 0;
-    this.stepZ = 0;
-    this.gridX = new Float32Array(0);
-    this.gridZ = new Float32Array(0);
-    this.gridU = new Float32Array(0);
-    this.gridV = new Float32Array(0);
-    this.vertexData = new Float32Array(0);
+    if (!json.hasOwnProperty('Ident') || json['Ident'] != 'JWA') {
+      throw new Error('Gfx3Water::loadFromFile(): File not valid !');
+    }
 
-    this.buildGrid(20, 20, 32, 32);
+    this.beginVertices(json['NumVertices']);
+
+    for (let i = 0; i < json['NumVertices']; i++) {
+      this.defineVertex(
+        json['Vertices'][i * 3 + 0],
+        json['Vertices'][i * 3 + 1],
+        json['Vertices'][i * 3 + 2],
+        json['TextureCoords'][i * 2 + 0],
+        json['TextureCoords'][i * 2 + 1],
+        json['Colors'][i * 3 + 0],
+        json['Colors'][i * 3 + 1],
+        json['Colors'][i * 3 + 2]
+      );
+    }
+
+    this.endVertices();
+  }
+
+  /**
+   * Load asynchronously water data from a binary file (bwa).
+   * 
+   * @param {string} path - The file path.
+   */
+  async loadFromBinaryFile(path: string): Promise<void> {
+    const response = await fetch(path);
+    const buffer = await response.arrayBuffer();
+    const data = new Float32Array(buffer);
+    const dataInt = new Int32Array(buffer);
+    let offset = 0;
+
+    const numVertices = dataInt[0];
+    offset += 1;
+
+    const vertices = [];
+    for (let i = 0; i < numVertices; i++) {
+      vertices.push(data[offset + (i * 3) + 0], data[offset + (i * 3) + 1], data[offset + (i * 3) + 2]);
+    }
+
+    offset += numVertices * 3;
+
+    const texcoords = [];
+    for (let i = 0; i < numVertices; i++) {
+      texcoords.push(data[offset + (i * 2) + 0], data[offset + (i * 2) + 1]);
+    }
+
+    offset += numVertices * 2;
+
+    const colors = [];
+    for (let i = 0; i < numVertices; i++) {
+      colors.push(data[offset + (i * 3) + 0], data[offset + (i * 3) + 1], data[offset + (i * 3) + 2]);
+    }
+
+    this.beginVertices(numVertices);
+
+    for (let i = 0; i < numVertices; i++) {
+      this.defineVertex(
+        vertices[i * 3 + 0],
+        vertices[i * 3 + 1],
+        vertices[i * 3 + 2],
+        texcoords[i * 2 + 0],
+        texcoords[i * 2 + 1],
+        0,
+        1,
+        0,
+        colors[i * 3 + 0],
+        colors[i * 3 + 1],
+        colors[i * 3 + 2]
+      );
+    }
+
+    this.endVertices();
   }
 
   /**
@@ -94,201 +180,36 @@ export class Gfx3Water extends Gfx3Drawable {
   }
 
   /**
-   * Build a planar grid mesh on the XZ plane centered at the origin.
-   *
-   * @param {number} width - Total size on X axis.
-   * @param {number} depth - Total size on Z axis.
-   * @param {number} segX - Number of subdivisions along X.
-   * @param {number} segZ - Number of subdivisions along Z.
-   */
-  buildGrid(width: number, depth: number, segX: number, segZ: number): void {
-    this.width = width;
-    this.depth = depth;
-    this.segX = segX;
-    this.segZ = segZ;
-    this.stepX = width / segX;
-    this.stepZ = depth / segZ;
-
-    const halfW = width * 0.5;
-    const halfD = depth * 0.5;
-    const cols = segX + 1;
-    const rows = segZ + 1;
-    const pointCount = cols * rows;
-
-    this.gridX = new Float32Array(pointCount);
-    this.gridZ = new Float32Array(pointCount);
-    this.gridU = new Float32Array(pointCount);
-    this.gridV = new Float32Array(pointCount);
-
-    for (let iz = 0; iz < rows; iz++) {
-      for (let ix = 0; ix < cols; ix++) {
-        const k = iz * cols + ix;
-        this.gridX[k] = -halfW + ix * this.stepX;
-        this.gridZ[k] = -halfD + iz * this.stepZ;
-        this.gridU[k] = ix / segX;
-        this.gridV[k] = iz / segZ;
-      }
-    }
-
-    const vertexCount = segX * segZ * 6;
-    this.vertexData = new Float32Array(vertexCount * WATER_SHADER_VERTEX_ATTR_COUNT);
-    this.beginVertices(vertexCount);
-    this.fillVertexData();
-    this.setVertices(Array.from(this.vertexData));
-  }
-
-  /**
-   * Per-frame update: only manages impact lifecycle. Heights and normals are
-   * computed entirely on the GPU in the vertex shader.
+   * The update function.
    */
   update(_ts: number): void {
     const time = performance.now() / 1000;
     this.impacts = this.impacts.filter(i => time - i.startTime < i.lifetime);
-  }
-
-  fillVertexData(): void {
-    const cols = this.segX + 1;
-    const stride = WATER_SHADER_VERTEX_ATTR_COUNT;
-    let o = 0;
-    for (let iz = 0; iz < this.segZ; iz++) {
-      for (let ix = 0; ix < this.segX; ix++) {
-        const k00 = iz * cols + ix;
-        const k10 = k00 + 1;
-        const k01 = k00 + cols;
-        const k11 = k01 + 1;
-        o = this.writeVertex(o, stride, k00); o = this.writeVertex(o, stride, k10); o = this.writeVertex(o, stride, k01);
-        o = this.writeVertex(o, stride, k01); o = this.writeVertex(o, stride, k10); o = this.writeVertex(o, stride, k11);
-      }
-    }
-  }
-
-  writeVertex(o: number, stride: number, k: number): number {
-    this.vertexData[o + 0] = this.gridX[k];
-    this.vertexData[o + 1] = 0.0;
-    this.vertexData[o + 2] = this.gridZ[k];
-    this.vertexData[o + 3] = 0.0;
-    this.vertexData[o + 4] = 1.0;
-    this.vertexData[o + 5] = 0.0;
-    this.vertexData[o + 6] = this.gridU[k];
-    this.vertexData[o + 7] = this.gridV[k];
-    return o + stride;
+    this.#fillImpactsBuffer(time);
   }
 
   /**
-   * Pack all per-frame shader data (waveParams + wave + grid + impacts) into the
-   * supplied buffer at the given offset. Layout (92 floats):
-   *   0..20   waveParams (nMap + color + optics + sun + sunColor)
-   *   20..24  WAVE_PARAMS  (amp, scale, speed, choppiness)
-   *   24..28  GRID_INFO    (stepX, stepZ, impactCount, _)
-   *   28..60  IMPACTS_A[8] (x, z, strength, radius)
-   *   60..92  IMPACTS_B[8] (age, lifetime, _, _)
+   * Set a parameter value.
+   * 
+   * @param {number} key - The param key.
+   * @param {number} value - The param value.
    */
-  writeShaderData(target: Float32Array, offset: number): void {
-    for (let i = 0; i < 20; i++) target[offset + i] = this.waveParams[i];
-    target[offset + 20] = this.wave.amplitude;
-    target[offset + 21] = this.wave.scale;
-    target[offset + 22] = this.wave.speed;
-    target[offset + 23] = this.wave.choppiness;
-    target[offset + 24] = this.stepX;
-    target[offset + 25] = this.stepZ;
-    target[offset + 27] = 0;
-
-    const time = performance.now() / 1000;
-    const aBase = offset + 28;
-    const bBase = offset + 60;
-    let count = 0;
-    for (let i = 0; i < this.impacts.length && count < WATER_MAX_IMPACTS; i++) {
-      const im = this.impacts[i];
-      const age = time - im.startTime;
-      if (age <= 0 || age >= im.lifetime) continue;
-      target[aBase + count * 4 + 0] = im.x;
-      target[aBase + count * 4 + 1] = im.z;
-      target[aBase + count * 4 + 2] = im.strength;
-      target[aBase + count * 4 + 3] = im.radius;
-      target[bBase + count * 4 + 0] = age;
-      target[bBase + count * 4 + 1] = im.lifetime;
-      target[bBase + count * 4 + 2] = 0;
-      target[bBase + count * 4 + 3] = 0;
-      count++;
-    }
-    target[offset + 26] = count;
-    for (let i = count; i < WATER_MAX_IMPACTS; i++) {
-      for (let j = 0; j < 4; j++) {
-        target[aBase + i * 4 + j] = 0;
-        target[bBase + i * 4 + j] = 0;
-      }
-    }
+  setParam(key: number, value: number): void {
+    this.params[key] = value;
+    this.dataChanged = true;
   }
 
   /**
-   * Configure the Perlin-noise driven wave field.
-   *
-   * @param {number} amplitude - Vertical amplitude in world units.
-   * @param {number} scale - Spatial frequency of the noise (smaller = larger waves).
-   * @param {number} speed - Drift speed of the noise field over time.
-   * @param {number} choppiness - Peak sharpness exponent (1 = smooth, >1 = sharper crests).
+   * Returns the specified param value.
+   * 
+   * @param {number} key - The param key.
    */
-  setWave(amplitude: number, scale: number, speed: number, choppiness: number): void {
-    this.wave.amplitude = amplitude;
-    this.wave.scale = scale;
-    this.wave.speed = speed;
-    this.wave.choppiness = choppiness;
+  getParam(key: number): number {
+    return this.params[key];
   }
 
   /**
-   * Configure the normal map scrolling and intensity.
-   */
-  setNormalMapInfos(scrollX: number, scrollY: number, intensity: number, scale: number): void {
-    this.waveParams[0] = scrollX;
-    this.waveParams[1] = scrollY;
-    this.waveParams[2] = intensity;
-    this.waveParams[3] = scale;
-  }
-
-  /**
-   * Set the base water color.
-   */
-  setSurfaceColor(r: number, g: number, b: number, opacity: number): void {
-    this.waveParams[4] = r;
-    this.waveParams[5] = g;
-    this.waveParams[6] = b;
-    this.waveParams[7] = opacity;
-  }
-
-  /**
-   * Set the env map intensity, Fresnel parameters and reflection distortion.
-   */
-  setOptics(envIntensity: number, fresnelPower: number, fresnelBias: number, distortion: number): void {
-    this.waveParams[8] = envIntensity;
-    this.waveParams[9] = fresnelPower;
-    this.waveParams[10] = fresnelBias;
-    this.waveParams[11] = distortion;
-  }
-
-  /**
-   * Set the sun direction (pointing from sun towards surface) and specular sharpness.
-   */
-  setSun(dirX: number, dirY: number, dirZ: number, specularPower: number): void {
-    this.waveParams[12] = dirX;
-    this.waveParams[13] = dirY;
-    this.waveParams[14] = dirZ;
-    this.waveParams[15] = specularPower;
-  }
-
-  /**
-   * Set the sun color and specular intensity multiplier.
-   */
-  setSunColor(r: number, g: number, b: number, intensity: number): void {
-    this.waveParams[16] = r;
-    this.waveParams[17] = g;
-    this.waveParams[18] = b;
-    this.waveParams[19] = intensity;
-  }
-
-  /**
-   * Register a new impact at the given local XZ coordinates. The impact adds an
-   * additive amplitude boost over a smooth radial zone, modulating the existing
-   * Perlin noise rather than overwriting it.
+   * Register a new impact at the given local XZ coordinates.
    *
    * @param {number} x - Local X coordinate.
    * @param {number} z - Local Z coordinate.
@@ -321,7 +242,7 @@ export class Gfx3Water extends Gfx3Drawable {
   }
 
   /**
-   * Returns the bindgroup(2).
+   * Returns the bindgroup(1).
    */
   getGroup02(): Gfx3StaticGroup {
     if (this.texturesChanged) {
@@ -334,5 +255,34 @@ export class Gfx3Water extends Gfx3Drawable {
     }
 
     return this.grp2;
+  }
+
+  #fillImpactsBuffer(time: number): void {
+    let count = 0;
+
+    for (let i = 0; i < this.impacts.length && count < WATER_MAX_IMPACTS; i++) {
+      const im = this.impacts[i];
+      const age = time - im.startTime;
+      if (age <= 0 || age >= im.lifetime) {
+        continue;
+      }
+
+      const base = count * 8;
+      this.impactsBuffer[base + 0] = im.x;
+      this.impactsBuffer[base + 1] = im.z;
+      this.impactsBuffer[base + 2] = im.strength;
+      this.impactsBuffer[base + 3] = im.radius;
+      this.impactsBuffer[base + 4] = age;
+      this.impactsBuffer[base + 5] = im.lifetime;
+      this.impactsBuffer[base + 6] = 0;
+      this.impactsBuffer[base + 7] = 0;
+      count++;
+    }
+
+    this.params[Gfx3WaterParam.WAVE_IMPACT_COUNT] = count;
+ 
+    for (let i = count * 8; i < this.impactsBuffer.length; i++) {
+      this.impactsBuffer[i] = 0;
+    }
   }
 }

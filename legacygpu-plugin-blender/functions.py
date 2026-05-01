@@ -651,6 +651,160 @@ def jsv_export_binary(selected_obj, path, filename):
 
 
 # ----------------------------------------------------------------------------------
+# JWA
+# ----------------------------------------------------------------------------------
+def jwa_export(selected_obj):
+  obj = {
+    "Ident": "JWA",
+    "NumVertices": -1,
+    "Vertices": [],
+    "TextureCoords": [],
+    "Normals": [],
+    "Colors": []
+  }
+
+  # Triangulate selected object
+  utils.triangulate_mesh(selected_obj)
+
+  # Fetch selected object
+  dg = bpy.context.evaluated_depsgraph_get()
+
+  # Get current mesh data
+  dg.update()
+  obj_eval = selected_obj.evaluated_get(dg)
+  mesh = obj_eval.to_mesh()
+  mesh.transform(bpy.context.object.matrix_world)
+
+  obj['WaveAmplitude'] = selected_obj.water_properties.wave_amplitude
+  obj['WaveScale'] = selected_obj.water_properties.wave_scale
+  obj['WaveSpeed'] = selected_obj.water_properties.wave_speed
+  obj['WaveChoppiness'] = selected_obj.water_properties.wave_choppiness
+  obj['WaveStepX'] = selected_obj.water_properties.wave_step_x
+  obj['WaveStepZ'] = selected_obj.water_properties.wave_step_z
+  obj['NormalMapEnabled'] = selected_obj.water_properties.normal_map_enabled
+  obj['NormalMap'] = bpy.path.basename(selected_obj.water_properties.normal_map)
+  obj['NormalMapScrollX'] = selected_obj.water_properties.normal_map_scroll_x
+  obj['NormalMapScrollY'] = selected_obj.water_properties.normal_map_scroll_y
+  obj['NormalMapIntensity'] = selected_obj.water_properties.normal_map_intensity
+  obj['NormalMapScale'] = selected_obj.water_properties.normal_map_scale
+  obj['SurfaceColorEnabled'] = selected_obj.water_properties.surface_color_enabled
+  obj['SurfaceColorR'] = selected_obj.water_properties.surface_color[0]
+  obj['SurfaceColorG'] = selected_obj.water_properties.surface_color[1]
+  obj['SurfaceColorB'] = selected_obj.water_properties.surface_color[2]
+  obj['SurfaceColorFactor'] = selected_obj.water_properties.surface_color_factor
+  obj['EnvMapEnabled'] = selected_obj.water_properties.optics_env_map_enabled
+  obj['EnvMapRight'] = bpy.path.basename(selected_obj.water_properties.optics_env_map_right)
+  obj['EnvMapLeft'] = bpy.path.basename(selected_obj.water_properties.optics_env_map_left)
+  obj['EnvMapTop'] = bpy.path.basename(selected_obj.water_properties.optics_env_map_top)
+  obj['EnvMapBottom'] = bpy.path.basename(selected_obj.water_properties.optics_env_map_bottom)
+  obj['EnvMapFront'] = bpy.path.basename(selected_obj.water_properties.optics_env_map_front)
+  obj['EnvMapBack'] = bpy.path.basename(selected_obj.water_properties.optics_env_map_back)
+  obj['EnvMapIntensity'] = selected_obj.water_properties.optics_env_intensity
+  obj['FresnelPower'] = selected_obj.water_properties.optics_fresnel_power
+  obj['FresnelBiais'] = selected_obj.water_properties.optics_fresnel_biais
+  obj['SunEnabled'] = selected_obj.water_properties.sun_enabled
+  obj['SunDirectionX'] = selected_obj.water_properties.sun_direction_x
+  obj['SunDirectionY'] = selected_obj.water_properties.sun_direction_y
+  obj['SunDirectionZ'] = selected_obj.water_properties.sun_direction_z
+  obj['SunColorR'] = selected_obj.water_properties.sun_color[0]
+  obj['SunColorG'] = selected_obj.water_properties.sun_color[1]
+  obj['SunColorB'] = selected_obj.water_properties.sun_color[2]
+  obj['SunColorFactor'] = selected_obj.water_properties.sun_color_factor
+
+  # Vertices, Colors
+  for tri in mesh.polygons:
+    if len(tri.loop_indices) != 3: raise NameError('Object not triangulate !')
+    for li in tri.loop_indices:
+      if (len(mesh.vertex_colors) == 0): raise NameError('Object is not colored !')
+      color = mesh.vertex_colors[0].data[li].color
+      vert = mesh.vertices[mesh.loops[li].vertex_index]
+      obj["Vertices"].append(utils.get_xyz_transformed(vert.co, 0))
+      obj["Vertices"].append(utils.get_xyz_transformed(vert.co, 1))
+      obj["Vertices"].append(utils.get_xyz_transformed(vert.co, 2))
+      obj["TextureCoords"].append(round(mesh.uv_layers.active.data[li].uv[0], 4))
+      obj["TextureCoords"].append(1 - round(mesh.uv_layers.active.data[li].uv[1], 4))
+      obj["Colors"].append(round(color[0], 4))
+      obj["Colors"].append(round(color[1], 4))
+      obj["Colors"].append(round(color[2], 4))
+    #endfor
+  #endfor
+
+  # NumVertices
+  obj["NumVertices"] = int(len(obj["Vertices"]) / 3)
+
+  # Destriangulate selected object
+  utils.destriangulate_mesh(selected_obj)
+
+  return obj
+
+
+def jwa_export_json(selected_obj, path, filename):
+  file = utils.get_available_filename(path, filename, 'jwa')
+  data = jwa_export(selected_obj)
+
+  with open(file, 'w', encoding='utf-8') as f:
+    json.dump(data, f, ensure_ascii=False)
+  #endwith
+
+
+def jwa_export_binary(selected_obj, path, filename):
+  file = utils.get_available_filename(path, filename, 'bsv')
+  data = jsv_export(selected_obj)
+
+  with open(file, "wb") as f:
+    f.write(struct.pack('<fffffffffffffffffffffffffffff?i',
+      data["NumVertices"],
+      data['WaveAmplitude'],
+      data['WaveScale'],
+      data['WaveSpeed'],
+      data['WaveChoppiness'],
+      data['WaveStepX'],
+      data['WaveStepZ'],
+      data['NormalMapEnabled'],
+      data['NormalMapScrollX'],
+      data['NormalMapScrollY'],
+      data['NormalMapIntensity'],
+      data['NormalMapScale'],
+      data['SurfaceColorEnabled'],
+      data['SurfaceColorR'],
+      data['SurfaceColorG'],
+      data['SurfaceColorB'],
+      data['SurfaceColorFactor'],
+      data['EnvMapEnabled'],
+      data['EnvMapIntensity'],
+      data['FresnelPower'],
+      data['FresnelBiais'],
+      data['SunEnabled'],
+      data['SunDirectionX'],
+      data['SunDirectionY'],
+      data['SunDirectionZ'],
+      data['SunColorR'],
+      data['SunColorG'],
+      data['SunColorB'],
+      data['SunColorFactor']
+    ))
+
+    utils.write_string(f, data['NormalMap'])
+    utils.write_string(f, data['EnvMapRight'])
+    utils.write_string(f, data['EnvMapLeft'])
+    utils.write_string(f, data['EnvMapTop'])
+    utils.write_string(f, data['EnvMapBottom'])
+    utils.write_string(f, data['EnvMapFront'])
+    utils.write_string(f, data['EnvMapBack'])
+
+    for vert in data["Vertices"]:
+      buf = struct.pack('<f', vert)
+      f.write(buf)
+    #endfor
+
+    for color in data["Colors"]:
+      buf = struct.pack('<f', color)
+      f.write(buf)
+    #endfor
+  #endwith
+
+
+# ----------------------------------------------------------------------------------
 # JLT
 # ----------------------------------------------------------------------------------
 def jlt_export(selected_obj):
@@ -884,11 +1038,11 @@ def mat_export(selected_obj):
   obj["DisplacementMapScaleY"] = selected_obj.mat_properties.displacement_map_scale[1]
   obj["DisplacementMapRotationAngle"] = selected_obj.mat_properties.displacement_map_rotation_angle
   obj["DisplacementMapFactor"] = selected_obj.mat_properties.displacement_map_factor
-  obj["DisplaceTexture"] = selected_obj.mat_properties.displace_texture
-  obj["DisplaceSecondaryTexture"] = selected_obj.mat_properties.displace_secondary_texture
-  obj["DisplaceNormalMap"] = selected_obj.mat_properties.displace_normal_map
-  obj["DisplaceDissolveMap"] = selected_obj.mat_properties.displace_dissolve_map
-  obj["DisplaceEnvMap"] = selected_obj.mat_properties.displace_env_map
+  obj["DisplaceTextureEnabled"] = selected_obj.mat_properties.displace_texture
+  obj["DisplaceSecondaryTextureEnabled"] = selected_obj.mat_properties.displace_secondary_texture
+  obj["DisplaceNormalMapEnabled"] = selected_obj.mat_properties.displace_normal_map
+  obj["DisplaceDissolveMapEnabled"] = selected_obj.mat_properties.displace_dissolve_map
+  obj["DisplaceEnvMapEnabled"] = selected_obj.mat_properties.displace_env_map
   # ----------------------------------------------------------------------------------
   obj["DissolveMap"] = bpy.path.basename(selected_obj.mat_properties.dissolve_map)
   obj["DissolveMapScrollAngle"] = selected_obj.mat_properties.dissolve_map_scroll_angle
@@ -1385,6 +1539,18 @@ def pack(path, context):
         else:
           jsv_export_json(obj, path, obj.name)
           path_list.append(path + obj.name + '.jsv')
+        #endif
+      #endfor
+    #endif
+
+    if (collection.name == "JWA"):
+      for obj in collection.objects:
+        if context.scene.world_properties.enable_export_has_binary:
+          jwa_export_binary(obj, path, obj.name)
+          path_list.append(path + obj.name + '.bwa')
+        else:
+          jwa_export_json(obj, path, obj.name)
+          path_list.append(path + obj.name + '.jwa')
         #endif
       #endfor
     #endif

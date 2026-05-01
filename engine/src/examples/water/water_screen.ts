@@ -12,6 +12,7 @@ import { Screen } from '@lib/screen/screen';
 import { Gfx3CameraOrbit } from '@lib/gfx3_camera/gfx3_camera_orbit';
 import { Gfx3Skybox } from '@lib/gfx3_skybox/gfx3_skybox';
 import { Gfx3Water } from '@lib/gfx3_water/gfx3_water';
+import { Gfx3WaterParam } from '@lib/gfx3_water/gfx3_water_shader';
 // ---------------------------------------------------------------------------------------
 
 class WaterScreen extends Screen {
@@ -61,7 +62,7 @@ class WaterScreen extends Screen {
     }));
 
     this.water = new Gfx3Water();
-    this.water.buildGrid(60, 60, 80, 80);
+    await this.water.loadFromFile('./Water.jwa');
     this.water.setEnvMap(await gfx3TextureManager.loadCubemapTexture({
       right: './examples/viewer/skybox/sky_right.png',
       left: './examples/viewer/skybox/sky_left.png',
@@ -72,18 +73,12 @@ class WaterScreen extends Screen {
     }));
     this.water.setNormalMap(await gfx3TextureManager.loadTexture('./textures/waternormals.jpg', { addressModeU: 'repeat', addressModeV: 'repeat' }));
 
-    this.water.setWave(0.30, 0.18, 0.35, 1.0);
-    this.water.setNormalMapInfos(0.04, 0.03, 0.5, 6.0);
-    this.water.setSurfaceColor(0.04, 0.18, 0.28, 0.92);
-    this.water.setOptics(1.0, 5.0, 0.7, 0.15);
-    this.water.setSun(-0.4, -1.0, -0.3, 80.0);
-    this.water.setSunColor(1.0, 0.95, 0.85, 1.0);
-
     gfx3MeshRenderer.setDirLight(true, [0, -1, -0.3], [1, 1, 1], [0.2, 0.25, 0.3]);
 
-    this.infobox = CREATE_UI_INFOBOX();
-    uiManager.addNode(this.infobox, 'position:absolute; bottom:10px; right:10px');
-    this.tweakPanel = CREATE_UI_TWEAK_PANEL(this.water, {
+    const infobox = CREATE_UI_INFOBOX();
+    uiManager.addNode(infobox, 'position:absolute; bottom:10px; right:10px');
+    this.infobox = infobox;
+    const tweakPanel = CREATE_UI_TWEAK_PANEL(this.water, {
       getStrength: () => this.impactStrength,
       setStrength: (v: number) => { this.impactStrength = v; },
       getRadius: () => this.impactRadius,
@@ -92,7 +87,8 @@ class WaterScreen extends Screen {
       setLifetime: (v: number) => { this.impactLifetime = v; },
       dropRandom: () => this.dropRandomImpact()
     });
-    uiManager.addNode(this.tweakPanel, 'position:absolute; top:10px; left:10px');
+    uiManager.addNode(tweakPanel, 'position:absolute; top:10px; left:10px');
+    this.tweakPanel = tweakPanel;
     eventManager.subscribe(inputManager, 'E_MOUSE_DOWN_ONCE', this, this.handleMouseDownCb);
     document.addEventListener('contextmenu', this.handleContextMenuCb);
   }
@@ -204,15 +200,6 @@ function CREATE_UI_INFOBOX(): HTMLElement {
   return box;
 }
 
-type WaterTweakState = {
-  wave: { a: number, sc: number, sp: number, ch: number };
-  normal: { sx: number, sy: number, i: number, sc: number };
-  surface: { r: number, g: number, b: number, o: number };
-  optics: { ei: number, fp: number, fb: number, dt: number };
-  sun: { dx: number, dy: number, dz: number, sp: number };
-  sunColor: { r: number, g: number, b: number, i: number };
-};
-
 type ImpactCtrl = {
   getStrength: () => number;
   setStrength: (v: number) => void;
@@ -224,15 +211,6 @@ type ImpactCtrl = {
 };
 
 function CREATE_UI_TWEAK_PANEL(water: Gfx3Water, impact: ImpactCtrl): HTMLElement {
-  const state: WaterTweakState = {
-    wave: { a: 0.30, sc: 0.18, sp: 0.35, ch: 1.0 },
-    normal: { sx: 0.04, sy: 0.03, i: 0.5, sc: 6.0 },
-    surface: { r: 0.04, g: 0.18, b: 0.28, o: 0.92 },
-    optics: { ei: 1.0, fp: 5.0, fb: 0.7, dt: 0.15 },
-    sun: { dx: -0.4, dy: -1.0, dz: -0.3, sp: 80.0 },
-    sunColor: { r: 1.0, g: 0.95, b: 0.85, i: 1.0 }
-  };
-
   const panel = document.createElement('div');
   panel.style.cssText = 'background:rgba(0,0,0,0.55); padding:8px 10px; color:#fff; font-family:monospace; font-size:11px; backdrop-filter:blur(4px); width:320px; max-height:90vh; overflow-y:auto; border-radius:4px;';
 
@@ -241,48 +219,50 @@ function CREATE_UI_TWEAK_PANEL(water: Gfx3Water, impact: ImpactCtrl): HTMLElemen
   title.style.cssText = 'font-weight:bold; font-size:13px; margin-bottom:6px; padding-bottom:4px; border-bottom:1px solid #555;';
   panel.appendChild(title);
 
-  const refreshWave = () => water.setWave(state.wave.a, state.wave.sc, state.wave.sp, state.wave.ch);
-  const refreshNormal = () => water.setNormalMapInfos(state.normal.sx, state.normal.sy, state.normal.i, state.normal.sc);
-  const refreshSurface = () => water.setSurfaceColor(state.surface.r, state.surface.g, state.surface.b, state.surface.o);
-  const refreshOptics = () => water.setOptics(state.optics.ei, state.optics.fp, state.optics.fb, state.optics.dt);
-  const refreshSun = () => water.setSun(state.sun.dx, state.sun.dy, state.sun.dz, state.sun.sp);
-  const refreshSunColor = () => water.setSunColor(state.sunColor.r, state.sunColor.g, state.sunColor.b, state.sunColor.i);
+  const bind = (key: number, min: number, max: number, step: number, label: string, group: HTMLElement) => {
+    ADD_SLIDER(group, label, min, max, step, water.getParam(key), v => water.setParam(key, v));
+  };
 
   const gWave = ADD_GROUP(panel, 'Wave (Perlin)');
-  ADD_SLIDER(gWave, 'amplitude', 0, 1.5, 0.01, state.wave.a, v => { state.wave.a = v; refreshWave(); });
-  ADD_SLIDER(gWave, 'scale', 0.01, 1.0, 0.005, state.wave.sc, v => { state.wave.sc = v; refreshWave(); });
-  ADD_SLIDER(gWave, 'speed', 0, 2, 0.01, state.wave.sp, v => { state.wave.sp = v; refreshWave(); });
-  ADD_SLIDER(gWave, 'choppiness', 1, 4, 0.05, state.wave.ch, v => { state.wave.ch = v; refreshWave(); });
+  bind(Gfx3WaterParam.WAVE_AMPLITUDE, 0, 1.5, 0.01, 'amplitude', gWave);
+  bind(Gfx3WaterParam.WAVE_SCALE, 0.01, 1.0, 0.005, 'scale', gWave);
+  bind(Gfx3WaterParam.WAVE_SPEED, 0, 2, 0.01, 'speed', gWave);
+  bind(Gfx3WaterParam.WAVE_CHOPPINESS, 1, 4, 0.05, 'choppiness', gWave);
+  bind(Gfx3WaterParam.WAVE_STEP_X, 0.05, 5, 0.05, 'stepX', gWave);
+  bind(Gfx3WaterParam.WAVE_STEP_Z, 0.05, 5, 0.05, 'stepZ', gWave);
 
   const gNormal = ADD_GROUP(panel, 'Normal Map');
-  ADD_SLIDER(gNormal, 'scrollX', -0.2, 0.2, 0.005, state.normal.sx, v => { state.normal.sx = v; refreshNormal(); });
-  ADD_SLIDER(gNormal, 'scrollY', -0.2, 0.2, 0.005, state.normal.sy, v => { state.normal.sy = v; refreshNormal(); });
-  ADD_SLIDER(gNormal, 'intensity', 0, 2, 0.01, state.normal.i, v => { state.normal.i = v; refreshNormal(); });
-  ADD_SLIDER(gNormal, 'scale', 0.1, 30, 0.1, state.normal.sc, v => { state.normal.sc = v; refreshNormal(); });
+  bind(Gfx3WaterParam.NORMAL_MAP_ENABLED, 0, 1, 1, 'enabled', gNormal);
+  bind(Gfx3WaterParam.NORMAL_MAP_SCROLL_X, -0.2, 0.2, 0.005, 'scrollX', gNormal);
+  bind(Gfx3WaterParam.NORMAL_MAP_SCROLL_Y, -0.2, 0.2, 0.005, 'scrollY', gNormal);
+  bind(Gfx3WaterParam.NORMAL_MAP_INTENSITY, 0, 2, 0.01, 'intensity', gNormal);
+  bind(Gfx3WaterParam.NORMAL_MAP_SCALE, 0.1, 30, 0.1, 'scale', gNormal);
 
   const gSurf = ADD_GROUP(panel, 'Surface');
-  ADD_SLIDER(gSurf, 'red', 0, 1, 0.01, state.surface.r, v => { state.surface.r = v; refreshSurface(); });
-  ADD_SLIDER(gSurf, 'green', 0, 1, 0.01, state.surface.g, v => { state.surface.g = v; refreshSurface(); });
-  ADD_SLIDER(gSurf, 'blue', 0, 1, 0.01, state.surface.b, v => { state.surface.b = v; refreshSurface(); });
-  ADD_SLIDER(gSurf, 'opacity', 0, 1, 0.01, state.surface.o, v => { state.surface.o = v; refreshSurface(); });
+  bind(Gfx3WaterParam.SURFACE_COLOR_ENABLED, 0, 1, 1, 'enabled', gSurf);
+  bind(Gfx3WaterParam.SURFACE_COLOR_R, 0, 1, 0.01, 'red', gSurf);
+  bind(Gfx3WaterParam.SURFACE_COLOR_G, 0, 1, 0.01, 'green', gSurf);
+  bind(Gfx3WaterParam.SURFACE_COLOR_B, 0, 1, 0.01, 'blue', gSurf);
+  bind(Gfx3WaterParam.SURFACE_COLOR_FACTOR, 0, 1, 0.01, 'opacity', gSurf);
 
   const gOpt = ADD_GROUP(panel, 'Optics');
-  ADD_SLIDER(gOpt, 'envIntensity', 0, 3, 0.01, state.optics.ei, v => { state.optics.ei = v; refreshOptics(); });
-  ADD_SLIDER(gOpt, 'fresnelPower', 0.1, 10, 0.1, state.optics.fp, v => { state.optics.fp = v; refreshOptics(); });
-  ADD_SLIDER(gOpt, 'reflectivity', 0, 1, 0.01, state.optics.fb, v => { state.optics.fb = v; refreshOptics(); });
-  ADD_SLIDER(gOpt, 'distortion', 0, 1, 0.01, state.optics.dt, v => { state.optics.dt = v; refreshOptics(); });
+  bind(Gfx3WaterParam.OPTICS_ENV_MAP_ENABLED, 0, 1, 1, 'envEnabled', gOpt);
+  bind(Gfx3WaterParam.OPTICS_ENV_INTENSITY, 0, 3, 0.01, 'envIntensity', gOpt);
+  bind(Gfx3WaterParam.OPTICS_FRESNEL_POWER, 0.1, 10, 0.1, 'fresnelPower', gOpt);
+  bind(Gfx3WaterParam.OPTICS_FRESNEL_BIAS, 0, 1, 0.01, 'reflectivity', gOpt);
 
   const gSun = ADD_GROUP(panel, 'Sun');
-  ADD_SLIDER(gSun, 'dirX', -1, 1, 0.05, state.sun.dx, v => { state.sun.dx = v; refreshSun(); });
-  ADD_SLIDER(gSun, 'dirY', -1, 1, 0.05, state.sun.dy, v => { state.sun.dy = v; refreshSun(); });
-  ADD_SLIDER(gSun, 'dirZ', -1, 1, 0.05, state.sun.dz, v => { state.sun.dz = v; refreshSun(); });
-  ADD_SLIDER(gSun, 'specPower', 1, 500, 1, state.sun.sp, v => { state.sun.sp = v; refreshSun(); });
+  bind(Gfx3WaterParam.SUN_ENABLED, 0, 1, 1, 'enabled', gSun);
+  bind(Gfx3WaterParam.SUN_DIRECTION_X, -1, 1, 0.05, 'dirX', gSun);
+  bind(Gfx3WaterParam.SUN_DIRECTION_Y, -1, 1, 0.05, 'dirY', gSun);
+  bind(Gfx3WaterParam.SUN_DIRECTION_Z, -1, 1, 0.05, 'dirZ', gSun);
+  bind(Gfx3WaterParam.SUN_SPECULAR_POWER, 1, 500, 1, 'specPower', gSun);
 
   const gSunCol = ADD_GROUP(panel, 'Sun Color');
-  ADD_SLIDER(gSunCol, 'red', 0, 1, 0.01, state.sunColor.r, v => { state.sunColor.r = v; refreshSunColor(); });
-  ADD_SLIDER(gSunCol, 'green', 0, 1, 0.01, state.sunColor.g, v => { state.sunColor.g = v; refreshSunColor(); });
-  ADD_SLIDER(gSunCol, 'blue', 0, 1, 0.01, state.sunColor.b, v => { state.sunColor.b = v; refreshSunColor(); });
-  ADD_SLIDER(gSunCol, 'intensity', 0, 5, 0.05, state.sunColor.i, v => { state.sunColor.i = v; refreshSunColor(); });
+  bind(Gfx3WaterParam.SUN_COLOR_R, 0, 1, 0.01, 'red', gSunCol);
+  bind(Gfx3WaterParam.SUN_COLOR_G, 0, 1, 0.01, 'green', gSunCol);
+  bind(Gfx3WaterParam.SUN_COLOR_B, 0, 1, 0.01, 'blue', gSunCol);
+  bind(Gfx3WaterParam.SUN_COLOR_FACTOR, 0, 5, 0.05, 'intensity', gSunCol);
 
   const gImp = ADD_GROUP(panel, 'Impact');
   ADD_SLIDER(gImp, 'strength', 0, 5, 0.05, impact.getStrength(), v => impact.setStrength(v));

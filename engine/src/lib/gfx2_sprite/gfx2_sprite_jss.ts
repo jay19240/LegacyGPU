@@ -65,6 +65,11 @@ export class Gfx2SpriteJSS extends Gfx2Drawable implements Poolable<Gfx2SpriteJS
     const ctx = gfx2Manager.getContext();
     ctx.scale(this.flip[0] ? -1 : 1, this.flip[1] ? -1 : 1);
 
+    if (this.offsetFactorEnabled) {
+      this.offset[0] = this.textureRect[2] * this.offsetFactor[0];
+      this.offset[1] = this.textureRect[3] * this.offsetFactor[1];
+    }
+
     if (this.blendColorMode == '') {
       ctx.drawImage(
         this.texture,
@@ -124,7 +129,7 @@ export class Gfx2SpriteJSS extends Gfx2Drawable implements Poolable<Gfx2SpriteJS
    */
   setTextureRect(left: number, top: number, width: number, height: number): void {
     this.textureRect = [left, top, width, height];
-    this.boundingRect = Gfx2BoundingRect.createFromCoord(this.textureRect[0], this.textureRect[1], this.textureRect[2], this.textureRect[3]);
+    this.boundingRect = Gfx2BoundingRect.createFromCoord(left, top, width, height);
   }
 
   /**
@@ -185,8 +190,9 @@ export class Gfx2SpriteJSS extends Gfx2Drawable implements Poolable<Gfx2SpriteJS
     super.clone(jss);
     jss.texture = this.texture;
     jss.tintedTexture = this.tintedTexture;
-    jss.textureRect = [this.textureRect[0], this.textureRect[1], this.textureRect[2], this.textureRect[3]]
-    jss.flip = [this.flip[0], this.flip[1]];
+    jss.textureRect = [this.textureRect[0], this.textureRect[1], this.textureRect[2], this.textureRect[3]];
+    jss.blendColor = [this.blendColor[0], this.blendColor[1], this.blendColor[2]];
+    jss.blendColorMode = this.blendColorMode;
     return jss;
   }
 }

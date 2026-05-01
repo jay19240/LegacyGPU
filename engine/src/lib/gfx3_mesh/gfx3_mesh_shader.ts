@@ -156,6 +156,21 @@ export enum Gfx3MatParam {
   COUNT
 };
 
+export enum Gfx3SceneInfos {
+  CAMERA_POS_X,
+  CAMERA_POS_Y,
+  CAMERA_POS_Z,
+  AMBIENT_R,
+  AMBIENT_G,
+  AMBIENT_B,
+  POINT_LIGHT_COUNT,
+  SPOT_LIGHT_COUNT,
+  DECAL_COUNT,
+  DELTA_TIME,
+  TIME,
+  COUNT
+};
+
 export const MESH_MAT_CUSTOM_PARAMS = {
   MAT_S00: 'S00',
   MAT_S01: 'S01',
@@ -203,6 +218,7 @@ export const MESH_SHADER_VERTEX_ATTR_COUNT = 17;
 export const MESH_MAX_POINT_LIGHTS = 64;
 export const MESH_MAX_SPOT_LIGHTS = 16;
 export const MESH_MAX_DECALS = 64;
+export const MESH_STORAGE_SIZE = 45;
 
 export const MESH_PIPELINE_DESC: any = {
   label: 'Mesh pipeline',
@@ -320,17 +336,7 @@ struct MaterialParams {
 
 const STRUCT_SCENE_INFOS = (data: any): string => `
 struct SceneInfos {
-  CAMERA_POS_X: f32,
-  CAMERA_POS_Y: f32,
-  CAMERA_POS_Z: f32,
-  AMBIENT_R: f32,
-  AMBIENT_G: f32,
-  AMBIENT_B: f32,
-  POINT_LIGHT_COUNT: f32,
-  SPOT_LIGHT_COUNT: f32,
-  DECAL_COUNT: f32,
-  DELTA_TIME: f32,
-  TIME: f32,
+  ${Gfx3RendererAbstract.generateWGSLStructFromEnum(Gfx3SceneInfos)}
   ${data.SCENE_S00}: f32,
   ${data.SCENE_S01}: f32,
   ${data.SCENE_S02}: f32,
@@ -349,14 +355,6 @@ struct SceneInfos {
   ${data.SCENE_S15}: f32
 };`;
 
-const STRUCT_MESH_INFOS = `
-struct MeshInfos {
-  MVPC_MATRIX: mat4x4<f32>,
-  M_MATRIX: mat4x4<f32>,
-  NORM_MATRIX: mat3x3<f32>,
-  TAG: vec4<f32>
-};`;
-
 const STRUCT_JAM_FRAME_VERTEX = `
 struct JamFrameVertex {
   POSITION: vec3<f32>,
@@ -367,25 +365,26 @@ struct JamFrameVertex {
   BITANGENT: vec3<f32>
 };`;
 
-const STRUCT_VERTEX_OUTPUT = `
-struct VertexOutput {
-  @builtin(position) Position: vec4<f32>,
-  @location(0) FragPos: vec3<f32>,
-  @location(1) FragUV: vec2<f32>,
-  @location(2) FragColor: vec3<f32>,
-  @location(3) FragNormal: vec3<f32>,
-  @location(4) FragTangent: vec3<f32>,
-  @location(5) FragBinormal: vec3<f32>,
-  @location(6) FragShadowPos: vec3<f32>,
-  @location(7) FragGouraudColor: vec3<f32>
-}`;
+const STRUCT_MESH = `
+struct Mesh {
+  MVPC_00: f32, MVPC_01: f32, MVPC_02: f32, MVPC_03: f32,
+  MVPC_10: f32, MVPC_11: f32, MVPC_12: f32, MVPC_13: f32,
+  MVPC_20: f32, MVPC_21: f32, MVPC_22: f32, MVPC_23: f32,
+  MVPC_30: f32, MVPC_31: f32, MVPC_32: f32, MVPC_33: f32,
 
-const STRUCT_FRAG_OUT = `
-struct FragOutput {
-  @location(0) Base: vec4f,
-  @location(1) Normal: vec4f,
-  @location(2) Tag: vec4f,
-  @location(3) Ch1: vec4f
+  M_00: f32, M_01: f32, M_02: f32, M_03: f32,
+  M_10: f32, M_11: f32, M_12: f32, M_13: f32,
+  M_20: f32, M_21: f32, M_22: f32, M_23: f32,
+  M_30: f32, M_31: f32, M_32: f32, M_33: f32,
+
+  NORM_00: f32, NORM_01: f32, NORM_02: f32,
+  NORM_10: f32, NORM_11: f32, NORM_12: f32,
+  NORM_20: f32, NORM_21: f32, NORM_22: f32,
+
+  TAG_R: f32,
+  TAG_G: f32,
+  TAG_B: f32,
+  TAG_A: f32
 }`;
 
 const STRUCT_POINT_LIGHT = `
@@ -442,20 +441,32 @@ struct Decal {
 }`;
 
 export const MESH_VERTEX_SHADER = (data: any): string => /* wgsl */`
-${STRUCT_VERTEX_OUTPUT}
-${STRUCT_MESH_INFOS}
+struct VertexOutput {
+  @builtin(position) Position: vec4<f32>,
+  @location(0) FragPos: vec3<f32>,
+  @location(1) FragUV: vec2<f32>,
+  @location(2) FragColor: vec3<f32>,
+  @location(3) FragNormal: vec3<f32>,
+  @location(4) FragTangent: vec3<f32>,
+  @location(5) FragBinormal: vec3<f32>,
+  @location(6) FragShadowPos: vec3<f32>,
+  @location(7) FragGouraudColor: vec3<f32>,
+  @location(8) @interpolate(flat) FragTag: vec4<f32>,
+}
+
 ${STRUCT_MAT_PARAMS(data)}
 ${STRUCT_SCENE_INFOS(data)}
 ${STRUCT_JAM_FRAME_VERTEX}
 ${STRUCT_POINT_LIGHT}
 ${STRUCT_DIR_LIGHT}
+${STRUCT_MESH}
 
 @group(0) @binding(0) var<uniform> SCENE: SceneInfos;
 @group(0) @binding(1) var<uniform> LVP_MATRIX: mat4x4<f32>;
 @group(0) @binding(2) var<uniform> DIR_LIGHT: DirLight;
 @group(0) @binding(3) var<uniform> POINT_LIGHTS: array<PointLight, ${MESH_MAX_POINT_LIGHTS}>;
 // --------------------------------------------------------------------------------------------
-@group(1) @binding(0) var<uniform> MESH: MeshInfos;
+@group(1) @binding(0) var<storage, read> MESHES: array<Mesh>;
 // --------------------------------------------------------------------------------------------
 @group(2) @binding(0) var<uniform> MAT: MaterialParams;
 // --------------------------------------------------------------------------------------------
@@ -463,6 +474,7 @@ ${STRUCT_DIR_LIGHT}
 
 @vertex
 fn main(
+  @builtin(instance_index) instanceIdx: u32,
   @builtin(vertex_index) vertexIndex: u32,
   @location(0) Position: vec4<f32>,
   @location(1) TexUV: vec2<f32>,
@@ -477,6 +489,7 @@ fn main(
   var normal = Normal;
   var tangent = Tangent;
   var binormal = Binormal;
+  var mesh = MESHES[instanceIdx];
 
   if (MAT.JAM_IS_ANIMATED == 1.0)
   {
@@ -544,27 +557,48 @@ fn main(
     binormal.z = mix(baz, bbz, interpolationFactor);
   }
 
-  var posFromLight = LVP_MATRIX * MESH.M_MATRIX * position;
+  var mMatrix = mat4x4<f32>(
+    mesh.M_00, mesh.M_01, mesh.M_02, mesh.M_03,
+    mesh.M_10, mesh.M_11, mesh.M_12, mesh.M_13,
+    mesh.M_20, mesh.M_21, mesh.M_22, mesh.M_23,
+    mesh.M_30, mesh.M_31, mesh.M_32, mesh.M_33
+  );
+
+  var mvpcMatrix = mat4x4<f32>(
+    mesh.MVPC_00, mesh.MVPC_01, mesh.MVPC_02, mesh.MVPC_03,
+    mesh.MVPC_10, mesh.MVPC_11, mesh.MVPC_12, mesh.MVPC_13,
+    mesh.MVPC_20, mesh.MVPC_21, mesh.MVPC_22, mesh.MVPC_23,
+    mesh.MVPC_30, mesh.MVPC_31, mesh.MVPC_32, mesh.MVPC_33
+  );
+
+  var normMatrix = mat3x3<f32>(
+    mesh.NORM_00, mesh.NORM_01, mesh.NORM_02,
+    mesh.NORM_10, mesh.NORM_11, mesh.NORM_12,
+    mesh.NORM_20, mesh.NORM_21, mesh.NORM_22,
+  );
+
+  var posFromLight = LVP_MATRIX * mMatrix * position;
   var gouraudColor = vec3<f32>(SCENE.AMBIENT_R, SCENE.AMBIENT_G, SCENE.AMBIENT_B);
-  var worldPos = vec4(MESH.M_MATRIX * position).xyz;
+  var worldPos = vec4(mMatrix * position).xyz;
 
   if (MAT.LIGHT_GOURAUD_SHADING_ENABLED == 1.0)
   {
-    gouraudColor += CalcGouraudShading(worldPos, normal);
+    gouraudColor += CalcGouraudShading(worldPos, normal, normMatrix);
   }
 
   ${data.VERT_INSERT}
 
   var output: VertexOutput;
-  output.Position = MESH.MVPC_MATRIX * position;
+  output.Position = mvpcMatrix * position;
   output.FragPos = worldPos.xyz;
   output.FragUV = texUV;
   output.FragColor = color;
-  output.FragNormal = MESH.NORM_MATRIX * normal;
-  output.FragTangent = MESH.NORM_MATRIX * tangent;
-  output.FragBinormal = MESH.NORM_MATRIX * binormal;
+  output.FragNormal = normMatrix * normal;
+  output.FragTangent = normMatrix * tangent;
+  output.FragBinormal = normMatrix * binormal;
   output.FragShadowPos = vec3(posFromLight.xy * vec2(0.5, -0.5) + vec2(0.5), posFromLight.z); // Convert XY to (0, 1) and Y is flipped because texture coords are Y-down.
   output.FragGouraudColor = gouraudColor;
+  output.FragTag = vec4(mesh.TAG_R, mesh.TAG_G, mesh.TAG_B, mesh.TAG_A);
 
   if (MAT.JITTER_VERTEX_ENABLED == 1.0)
   {
@@ -591,12 +625,12 @@ fn CalcJitterVertex(position: vec4<f32>) -> vec2<f32>
 // *****************************************************************************************************************
 // CALC GOURAUD SHADING
 // *****************************************************************************************************************
-fn CalcGouraudShading(worldPos: vec3<f32>, normal: vec3<f32>) -> vec3<f32>
+fn CalcGouraudShading(worldPos: vec3<f32>, normal: vec3<f32>, normMatrix: mat3x3<f32>) -> vec3<f32>
 {
   var result = vec3<f32>(0.0, 0.0, 0.0);
 
   if (DIR_LIGHT.ENABLED == 1.0 && (DIR_LIGHT.GROUP == 0.0 || DIR_LIGHT.GROUP == MAT.LIGHT_GROUP)) {
-    let n = normalize(MESH.NORM_MATRIX * normal);
+    let n = normalize(normMatrix * normal);
     let l = normalize(-DIR_LIGHT.DIR);
     let diffuseFactor = max(dot(n, l), 0.0);
     result += diffuseFactor * DIR_LIGHT.DIFFUSE * DIR_LIGHT.INTENSITY;
@@ -606,7 +640,7 @@ fn CalcGouraudShading(worldPos: vec3<f32>, normal: vec3<f32>) -> vec3<f32>
   {
     if (POINT_LIGHTS[i].GROUP == 0.0 || POINT_LIGHTS[i].GROUP == MAT.LIGHT_GROUP)
     {
-      let n = normalize(MESH.NORM_MATRIX * normal);
+      let n = normalize(normMatrix * normal);
       let l = normalize(POINT_LIGHTS[i].POSITION - worldPos.xyz);      
       let diffuseFactor = max(dot(n, l), 0.0);
 
@@ -620,8 +654,13 @@ fn CalcGouraudShading(worldPos: vec3<f32>, normal: vec3<f32>) -> vec3<f32>
 }`;
 
 export const MESH_FRAGMENT_SHADER = (data: any): string => /* wgsl */`
-${STRUCT_FRAG_OUT}
-${STRUCT_MESH_INFOS}
+struct FragOutput {
+  @location(0) Base: vec4f,
+  @location(1) Normal: vec4f,
+  @location(2) Tag: vec4f,
+  @location(3) Ch1: vec4f
+}
+
 ${STRUCT_MAT_PARAMS(data)}
 ${STRUCT_SCENE_INFOS(data)}
 ${STRUCT_POINT_LIGHT}
@@ -640,8 +679,6 @@ ${STRUCT_DECAL}
 @group(0) @binding(8) var DECAL_ATLAS_SAMPLER: sampler;
 @group(0) @binding(9) var SHADOW_MAP_TEXTURE: texture_depth_2d;
 @group(0) @binding(10) var SHADOW_MAP_SAMPLER: sampler_comparison;
-// --------------------------------------------------------------------------------------------
-@group(1) @binding(0) var<uniform> MESH: MeshInfos;
 // --------------------------------------------------------------------------------------------
 @group(2) @binding(0) var<uniform> MAT: MaterialParams;
 // --------------------------------------------------------------------------------------------
@@ -683,7 +720,8 @@ fn main(
   @location(4) FragTangent: vec3<f32>,
   @location(5) FragBinormal: vec3<f32>,
   @location(6) FragShadowPos: vec3<f32>,
-  @location(7) FragGouraudColor: vec3<f32>
+  @location(7) FragGouraudColor: vec3<f32>,
+  @location(8) @interpolate(flat) FragTag: vec4<f32>
 ) -> FragOutput {
   var fragPos = FragPos;
   var fragUV = FragUV;
@@ -696,7 +734,8 @@ fn main(
   var cameraPos = vec3(SCENE.CAMERA_POS_X, SCENE.CAMERA_POS_Y, SCENE.CAMERA_POS_Z);
   var shadow = 1.0;
   var viewDirWorld = normalize(fragPos - cameraPos);
-  var flags = u32(MESH.TAG.b);
+
+  var flags = u32(FragTag.b);
   var matS0 = textureSample(MAT_S0_TEXTURE, MAT_S0_TEXTURE_SAMPLER, fragUV);
   var matS1 = textureSample(MAT_S1_TEXTURE, MAT_S1_TEXTURE_SAMPLER, fragUV);
   var outputColor = vec4(0.0, 0.0, 0.0, 1.0);
@@ -899,7 +938,7 @@ fn main(
 
   var output: FragOutput;
   output.Normal = vec4(normalize(fragNormal), 1.0);
-  output.Tag = MESH.TAG;
+  output.Tag = FragTag;
 
   if ((flags & 64) == 64)
   {

@@ -49,19 +49,25 @@ class WARME_PT_options(bpy.types.Panel):
     layout.separator()
     layout.operator("object.export_pack")
     layout.separator()
-    utils.draw_input_row(layout, context.scene, "export_engine_path", "Engine Path")
-    layout.separator()
-    layout.prop(context.scene, "auggie_prompt", text="")
-    layout.separator()
-    layout.operator("object.run_auggie", icon='PLAY')
-    layout.separator()
-    row = layout.row()
-    row.alignment = 'CENTER'
-    row.label(text=f"Generation status: {context.scene.auggie_status}")
-    layout.separator()
-    layout.operator("object.run_server")
-    layout.operator("object.kill_server")
-    layout.separator()
+
+    # START GAME
+    box, opened = utils.draw_foldout(layout, context.scene.world_properties, "show_game", "Game", 'ALIASED')
+    if opened:
+      utils.draw_input_row(layout, context.scene, "export_engine_path", "Engine Path")
+      layout.separator()
+      layout.prop(context.scene, "auggie_prompt", text="")
+      layout.separator()
+      layout.operator("object.run_auggie", icon='PLAY')
+      layout.separator()
+      row = layout.row()
+      row.alignment = 'CENTER'
+      row.label(text=f"Generation status: {context.scene.auggie_status}")
+      layout.separator()
+      layout.operator("object.run_server")
+      layout.operator("object.kill_server")
+      layout.separator()
+      layout.operator("object.run_game")
+    # END GAME
 
     # START EXPORT
     box, opened = utils.draw_foldout(layout, context.scene.world_properties, "show_export", "Export", 'EXPORT')
@@ -85,6 +91,7 @@ class WARME_PT_options(bpy.types.Panel):
       layout.operator("object.create_jam")
       layout.operator("object.create_jwm")
       layout.operator("object.create_jnm")
+      layout.operator("object.create_jwa")
       layout.operator("object.create_jsv")
       layout.operator("object.create_grf")
 
@@ -375,7 +382,7 @@ class WARME_PT_object(bpy.types.Panel):
       utils.draw_input_row(layout, selected_object.decal_properties, "group", "Group")
       utils.draw_input_row(layout, selected_object.decal_properties, "source_position", "Source Position")
       utils.draw_input_row(layout, selected_object.decal_properties, "source_size", "Source Size")
-      layout.prop(selected_object.light_properties, "opacity")
+      utils.draw_input_row(layout, selected_object.decal_properties, "opacity", "Opacity")
     # END DECAL
 
     # START ENTITY
@@ -432,6 +439,47 @@ class WARME_PT_object(bpy.types.Panel):
       row.prop(selected_object.entity_properties, "s15_name", text="")
       row.prop(selected_object.entity_properties, "s15_value", text="")
     # END ENTITY
+
+    # START WATER
+    if selected and len(selected) == 1 and utils.belong_to_collection(bpy.context.selected_objects[0], "JWA"):
+      selected_object = bpy.context.selected_objects[0]
+      layout = self.layout.column()
+      utils.draw_input_row(layout, selected_object.water_properties, "wave_amplitude", "Wave Amplitude")
+      utils.draw_input_row(layout, selected_object.water_properties, "wave_scale", "Wave Scale")
+      utils.draw_input_row(layout, selected_object.water_properties, "wave_speed", "Wave Speed")
+      utils.draw_input_row(layout, selected_object.water_properties, "wave_choppiness", "Wave Choppiness")
+      utils.draw_input_row(layout, selected_object.water_properties, "wave_step_x", "Wave Step X")
+      utils.draw_input_row(layout, selected_object.water_properties, "wave_step_z", "Wave Step Z")
+      layout.separator(type="LINE")
+      utils.draw_input_row(layout, selected_object.water_properties, "normal_map_enabled", "Normal Map Enabled")
+      utils.draw_input_row(layout, selected_object.water_properties, "normal_map", "Normal Map Texture")
+      utils.draw_input_row(layout, selected_object.water_properties, "normal_map_scroll_x", "Normal Map Scroll X")
+      utils.draw_input_row(layout, selected_object.water_properties, "normal_map_scroll_y", "Normal Map Scroll Y")
+      utils.draw_input_row(layout, selected_object.water_properties, "normal_map_intensity", "Normal Map Intensity")
+      utils.draw_input_row(layout, selected_object.water_properties, "normal_map_scale", "Normal Map Scale")
+      layout.separator(type="LINE")
+      utils.draw_input_row(layout, selected_object.water_properties, "surface_color_enabled", "Surface Color Enabled")
+      utils.draw_input_row(layout, selected_object.water_properties, "surface_color", "Surface Color")
+      utils.draw_input_row(layout, selected_object.water_properties, "surface_color_factor", "Surface Color Factor")
+      layout.separator(type="LINE")
+      utils.draw_input_row(layout, selected_object.water_properties, "optics_env_map_enabled", "Env Map Enabled")
+      utils.draw_input_row(layout, selected_object.water_properties, "optics_env_map_right", "Env Map Right")
+      utils.draw_input_row(layout, selected_object.water_properties, "optics_env_map_left", "Env Map Left")
+      utils.draw_input_row(layout, selected_object.water_properties, "optics_env_map_top", "Env Map Top")
+      utils.draw_input_row(layout, selected_object.water_properties, "optics_env_map_bottom", "Env Map Bottom")
+      utils.draw_input_row(layout, selected_object.water_properties, "optics_env_map_front", "Env Map Front")
+      utils.draw_input_row(layout, selected_object.water_properties, "optics_env_map_back", "Env Map Back")
+      utils.draw_input_row(layout, selected_object.water_properties, "optics_env_intensity", "Env Map Intensity")
+      utils.draw_input_row(layout, selected_object.water_properties, "optics_fresnel_power", "Fresnel Power")
+      utils.draw_input_row(layout, selected_object.water_properties, "optics_fresnel_biais", "Fresnel Biais")
+      layout.separator(type="LINE")
+      utils.draw_input_row(layout, selected_object.water_properties, "sun_enabled", "Sun Enabled")
+      utils.draw_input_row(layout, selected_object.water_properties, "sun_direction_x", "Sun Direction X")
+      utils.draw_input_row(layout, selected_object.water_properties, "sun_direction_y", "Sun Direction Y")
+      utils.draw_input_row(layout, selected_object.water_properties, "sun_direction_z", "Sun Direction Z")
+      utils.draw_input_row(layout, selected_object.water_properties, "sun_color", "Sun Color")
+      utils.draw_input_row(layout, selected_object.water_properties, "sun_color_factor", "Sun Color Factor")
+    # END WATER
 
     # START JSM/JAM
     if selected and len(selected) == 1 and (utils.belong_to_collection(bpy.context.selected_objects[0], "JSM") or utils.belong_to_collection(bpy.context.selected_objects[0], "JAM")):

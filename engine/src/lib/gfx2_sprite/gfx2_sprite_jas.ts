@@ -183,6 +183,11 @@ export class Gfx2SpriteJAS extends Gfx2Drawable implements Poolable<Gfx2SpriteJA
 
     ctx.scale(this.flip[0] ? -1 : 1, this.flip[1] ? -1 : 1);
 
+    if (this.offsetFactorEnabled) {
+      this.offset[0] = currentFrame.width * this.offsetFactor[0];
+      this.offset[1] = currentFrame.height * this.offsetFactor[1];
+    }
+
     if (this.blendColorMode == '') {
       ctx.drawImage(
         this.texture,
@@ -335,11 +340,11 @@ export class Gfx2SpriteJAS extends Gfx2Drawable implements Poolable<Gfx2SpriteJA
    */
   clone(jas: Gfx2SpriteJAS = new Gfx2SpriteJAS()): Gfx2SpriteJAS {
     super.clone(jas);
-    jas.flip = [this.flip[0], this.flip[1]];
     jas.animations = this.animations;
     jas.texture = this.texture;
     jas.tintedTexture = this.tintedTexture;
-    jas.offsetFactor = [this.offsetFactor[0], this.offsetFactor[1]];
+    jas.blendColor = [this.blendColor[0], this.blendColor[1], this.blendColor[2]];
+    jas.blendColorMode = this.blendColorMode;
     jas.currentAnimation = null;
     jas.currentAnimationFrameIndex = 0;
     jas.looped = false;

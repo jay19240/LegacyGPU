@@ -65,10 +65,11 @@ export class Gfx2Drawable implements Poolable<Gfx2Drawable> {
     const ctx = gfx2Manager.getContext();
     ctx.save();
     ctx.globalAlpha = this.opacity;
-    ctx.translate(-this.offset[0], -this.offset[1]);
+    
     ctx.translate(this.position[0], this.position[1]);
     ctx.rotate(this.rotation);
     ctx.scale(this.scale[0], this.scale[1]);
+    ctx.translate(-this.offset[0], -this.offset[1]);
     this.onRender();
     ctx.globalAlpha = 1.0;
     ctx.restore();  
@@ -486,8 +487,11 @@ export class Gfx2Drawable implements Poolable<Gfx2Drawable> {
   clone(drawable: Gfx2Drawable = new Gfx2Drawable()): Gfx2Drawable {
     drawable.position = [this.position[0], this.position[1]];
     drawable.rotation = this.rotation;
+    drawable.flip = [this.flip[0], this.flip[1]];
     drawable.scale = [this.scale[0], this.scale[1]];
     drawable.offset = [this.offset[0], this.offset[1]];
+    drawable.offsetFactor = [this.offsetFactor[0], this.offsetFactor[1]];
+    drawable.offsetFactorEnabled = this.offsetFactorEnabled;
     drawable.visible = this.visible;
     drawable.opacity = this.opacity;
     drawable.z = this.z;

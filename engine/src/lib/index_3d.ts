@@ -46,6 +46,9 @@ export * from './gfx3_mesh/gfx3_mesh_light';
 export * from './gfx3_mesh/gfx3_mesh_material';
 export * from './gfx3_mesh/gfx3_mesh_obj';
 export * from './gfx3_mesh/gfx3_mesh';
+// gfx3 noise --------------------------------------------------------------------------------
+export * from './gfx3_noise/gfx3_noise_manager';
+export * from './gfx3_noise/gfx3_noise_shader';
 // gfx3 particles ----------------------------------------------------------------------------
 export * from './gfx3_particles/gfx3_particles_params';
 export * from './gfx3_particles/gfx3_particles';

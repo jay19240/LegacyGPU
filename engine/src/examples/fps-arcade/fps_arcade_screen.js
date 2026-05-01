@@ -17,7 +17,7 @@ import { Player } from './player';
 const POST_SHADER_FRAG_INSERT = `
 if(tag.r == 1.0f)
 {
-  return ch1;
+  outputColor = ch1;
 }`;
 
 class FPSArcadeScreen extends Screen {

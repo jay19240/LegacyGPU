@@ -55,11 +55,6 @@ export class Gfx3Sprite extends Gfx3Drawable implements Poolable<Gfx3Sprite> {
    * The draw function.
    */
   draw(): void {
-    if (this.offsetFactorEnabled) {
-      this.offset[0] = this.boundingBox.getWidth() * this.offsetFactor[0];
-      this.offset[1] = this.boundingBox.getHeight() * this.offsetFactor[1];
-    }
-
     gfx3SpriteRenderer.drawSprite(this);
   }
 

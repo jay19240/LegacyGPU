@@ -152,6 +152,15 @@ class WARME_OT_export_objects(bpy.types.Operator):
         self.report({'INFO'}, "Export successful ✔")
       #endif
 
+      if (utils.belong_to_collection(object, "JWA")):
+        if (context.scene.world_properties.enable_export_has_binary):
+          functions.jwa_export_binary(object, bpy.path.abspath(context.scene.export_assets_path), object.name)
+        else:
+          functions.jwa_export_json(object, bpy.path.abspath(context.scene.export_assets_path), object.name)
+        #endif
+        self.report({'INFO'}, "Export successful ✔")
+      #endif
+
       if (utils.belong_to_collection(object, "GRF")):
         functions.grf_export_json(object, bpy.path.abspath(context.scene.export_assets_path), object.name)
         self.report({'INFO'}, "Export successful ✔")

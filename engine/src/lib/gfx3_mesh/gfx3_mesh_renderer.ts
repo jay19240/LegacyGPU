@@ -5,22 +5,18 @@ import { gfx3TextureManager } from '../gfx3/gfx3_texture_manager';
 import { UT } from '../core/utils';
 import { Gfx3RendererAbstract } from '../gfx3/gfx3_renderer_abstract';
 import { Gfx3Texture, Gfx3RenderingTexture } from '../gfx3/gfx3_texture';
-import { Gfx3StaticGroup, Gfx3DynamicGroup } from '../gfx3/gfx3_group';
+import { Gfx3StaticGroup } from '../gfx3/gfx3_group';
 import { Gfx3Mesh } from './gfx3_mesh';
-import { MESH_PIPELINE_DESC, MESH_VERTEX_SHADER, MESH_FRAGMENT_SHADER, MESH_MAX_POINT_LIGHTS, MESH_MAX_SPOT_LIGHTS, MESH_MAX_DECALS, MESH_MAT_CUSTOM_PARAMS, MESH_SCENE_CUSTOM_PARAMS, MESH_SHADER_INSERTS } from './gfx3_mesh_shader';
-
-interface Gfx3MeshCommand {
-  mesh: Gfx3Mesh;
-  matrix: mat4;
-};
+import { Gfx3SceneInfos, MESH_PIPELINE_DESC, MESH_VERTEX_SHADER, MESH_FRAGMENT_SHADER, MESH_MAX_POINT_LIGHTS, MESH_MAX_SPOT_LIGHTS, MESH_MAX_DECALS, MESH_STORAGE_SIZE, MESH_MAT_CUSTOM_PARAMS, MESH_SCENE_CUSTOM_PARAMS, MESH_SHADER_INSERTS } from './gfx3_mesh_shader';
 
 /**
  * Singleton mesh renderer.
  */
 export class Gfx3MeshRenderer extends Gfx3RendererAbstract {
   shadowEnabled: boolean;
-  textureChanged: boolean;
-  meshCommands: Array<Gfx3MeshCommand>;
+  meshInstanceCommands: Map<Gfx3Mesh, mat4[]>;
+  meshInstanceCount: number;
+  mvpcMatrix: Float32Array;
   grp0: Gfx3StaticGroup;
   sceneInfos: Float32Array;
   lvpMatrix: Float32Array;
@@ -31,8 +27,8 @@ export class Gfx3MeshRenderer extends Gfx3RendererAbstract {
   fog: Float32Array;
   decalAtlas: Gfx3Texture;
   shadowMap: Gfx3Texture;
-  grp1: Gfx3DynamicGroup;
-  meshInfos: Float32Array;
+  grp1: Gfx3StaticGroup;
+  meshInstances: Float32Array;
 
   constructor() {
     super('MESH_PIPELINE', MESH_VERTEX_SHADER, MESH_FRAGMENT_SHADER, MESH_PIPELINE_DESC, {
@@ -42,15 +38,23 @@ export class Gfx3MeshRenderer extends Gfx3RendererAbstract {
     });
 
     this.shadowEnabled = false;
-    this.textureChanged = false;
-    this.meshCommands = [];
+    this.meshInstanceCommands = new Map();
+    this.meshInstanceCount = 0;
+    this.mvpcMatrix = new Float32Array(16);
 
     this.grp0 = gfx3Manager.createStaticGroup('MESH_PIPELINE', 0);
-    this.sceneInfos = this.grp0.setFloat(0, 'SCENE_INFOS', 27);
-    this.sceneInfos[3] = 0.5;
-    this.sceneInfos[4] = 0.5;
-    this.sceneInfos[5] = 0.5;
-
+    this.sceneInfos = this.grp0.setFloat(0, 'SCENE_INFOS', Gfx3SceneInfos.COUNT + 16);
+    this.sceneInfos[Gfx3SceneInfos.CAMERA_POS_X] = 0.0;
+    this.sceneInfos[Gfx3SceneInfos.CAMERA_POS_Y] = 0.0;
+    this.sceneInfos[Gfx3SceneInfos.CAMERA_POS_Z] = 0.0;
+    this.sceneInfos[Gfx3SceneInfos.AMBIENT_R] = 0.5;
+    this.sceneInfos[Gfx3SceneInfos.AMBIENT_G] = 0.5;
+    this.sceneInfos[Gfx3SceneInfos.AMBIENT_B] = 0.5;
+    this.sceneInfos[Gfx3SceneInfos.POINT_LIGHT_COUNT] = 0;
+    this.sceneInfos[Gfx3SceneInfos.SPOT_LIGHT_COUNT] = 0;
+    this.sceneInfos[Gfx3SceneInfos.DECAL_COUNT] = 0;
+    this.sceneInfos[Gfx3SceneInfos.DELTA_TIME] = 0;
+    this.sceneInfos[Gfx3SceneInfos.TIME] = 0;
     this.lvpMatrix = this.grp0.setFloat(1, 'LVP_MATRIX', 16);
     this.dirLight = this.grp0.setFloat(2, 'DIR_LIGHT', 16);
     this.pointLights = this.grp0.setFloat(3, 'POINT_LIGHTS', 20 * MESH_MAX_POINT_LIGHTS);
@@ -62,8 +66,8 @@ export class Gfx3MeshRenderer extends Gfx3RendererAbstract {
     this.shadowMap = this.grp0.setTexture(9, 'SHADOW_MAP_TEXTURE', gfx3MeshShadowRenderer.getDepthTexture());
     this.shadowMap = this.grp0.setSampler(10, 'SHADOW_MAP_SAMPLER', this.shadowMap);
 
-    this.grp1 = gfx3Manager.createDynamicGroup('MESH_PIPELINE', 1);
-    this.meshInfos = this.grp1.setFloat(0, 'MESH_MATRICES', 16 * 5);
+    this.grp1 = gfx3Manager.createStaticGroup('MESH_PIPELINE', 1, GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST);
+    this.meshInstances = this.grp1.setStorageFloat(0, 'MESHES', MESH_STORAGE_SIZE);
 
     this.grp0.allocate();
     this.grp1.allocate();
@@ -144,18 +148,26 @@ export class Gfx3MeshRenderer extends Gfx3RendererAbstract {
       }]
     }) : gfx3Manager.getPassEncoder();
 
+    const viewMatrix = currentView.getCameraViewMatrix();
     const bpcMatrix = currentView.getBillboardProjectionClipMatrix();
     const vpcMatrix = currentView.getViewProjectionClipMatrix();
+    const invMatrix = UT.MAT4_INVERT(UT.MAT4_TRANSLATE(viewMatrix[12], viewMatrix[13], viewMatrix[14]));
+    const bpciMatrix = UT.MAT4_MULTIPLY(bpcMatrix, invMatrix);
+    const vpciMatrix = UT.MAT4_MULTIPLY(vpcMatrix, invMatrix);
+
     passEncoder.setPipeline(this.pipeline);
 
-    if (this.textureChanged) {
-      this.grp0.setTexture(7, 'DECAL_ATLAS_TEXTURE', this.decalAtlas);
-      this.grp0.allocate();
-      this.textureChanged = false;
-    }
+    const cameraPos = currentView.getCameraPosition();
+    const timeStamp = em.getTimeStamp();
+
+    this.sceneInfos[Gfx3SceneInfos.CAMERA_POS_X] = cameraPos[0];
+    this.sceneInfos[Gfx3SceneInfos.CAMERA_POS_Y] = cameraPos[1];
+    this.sceneInfos[Gfx3SceneInfos.CAMERA_POS_Z] = cameraPos[2];
+    this.sceneInfos[Gfx3SceneInfos.DELTA_TIME] = ts;
+    this.sceneInfos[Gfx3SceneInfos.TIME] = timeStamp;
 
     this.grp0.beginWrite();
-    this.grp0.write(0, BUILD_SCENE_INFOS(currentView.getCameraPosition(), ts, em.getTimeStamp(), this.sceneInfos));
+    this.grp0.write(0, this.sceneInfos);
     this.grp0.write(1, gfx3MeshShadowRenderer.getLVPMatrix());
     this.grp0.write(2, this.dirLight);
     this.grp0.write(3, this.pointLights);
@@ -165,42 +177,102 @@ export class Gfx3MeshRenderer extends Gfx3RendererAbstract {
     this.grp0.endWrite();
     passEncoder.setBindGroup(0, this.grp0.getBindGroup());
 
-    if (this.grp1.getSize() < this.meshCommands.length) {
-      this.grp1.allocate(this.meshCommands.length);
+    if (this.meshInstances.length < this.meshInstanceCount * MESH_STORAGE_SIZE) {
+      this.meshInstances = this.grp1.setStorageFloat(0, 'MESHES', this.meshInstanceCount * MESH_STORAGE_SIZE);
+      this.grp1.allocate();
+    }
+
+    let globalInstanceIndex = 0;
+    for (const [mesh, matrices] of this.meshInstanceCommands) {
+      const instanceCount = matrices.length;
+      const tag = mesh.getTag();
+      const matrix = mesh.billboard ?
+      (mesh.hasViewInversion() ? bpciMatrix : bpcMatrix) :
+      (mesh.hasViewInversion() ? vpciMatrix : vpcMatrix);
+
+      for (let j = 0; j < instanceCount; j++) {
+        const mMatrix = matrices[j];
+        const offset = globalInstanceIndex * MESH_STORAGE_SIZE;
+
+        UT.MAT4_MULTIPLY(matrix, mMatrix, this.mvpcMatrix);
+        this.meshInstances[offset + 0] = this.mvpcMatrix[0];
+        this.meshInstances[offset + 1] = this.mvpcMatrix[1];
+        this.meshInstances[offset + 2] = this.mvpcMatrix[2];
+        this.meshInstances[offset + 3] = this.mvpcMatrix[3];
+        this.meshInstances[offset + 4] = this.mvpcMatrix[4];
+        this.meshInstances[offset + 5] = this.mvpcMatrix[5];
+        this.meshInstances[offset + 6] = this.mvpcMatrix[6];
+        this.meshInstances[offset + 7] = this.mvpcMatrix[7];
+        this.meshInstances[offset + 8] = this.mvpcMatrix[8];
+        this.meshInstances[offset + 9] = this.mvpcMatrix[9];
+        this.meshInstances[offset + 10] = this.mvpcMatrix[10];
+        this.meshInstances[offset + 11] = this.mvpcMatrix[11];
+        this.meshInstances[offset + 12] = this.mvpcMatrix[12];
+        this.meshInstances[offset + 13] = this.mvpcMatrix[13];
+        this.meshInstances[offset + 14] = this.mvpcMatrix[14];
+        this.meshInstances[offset + 15] = this.mvpcMatrix[15];
+
+        this.meshInstances[offset + 16] = mMatrix[0];
+        this.meshInstances[offset + 17] = mMatrix[1];
+        this.meshInstances[offset + 18] = mMatrix[2];
+        this.meshInstances[offset + 19] = mMatrix[3];
+        this.meshInstances[offset + 20] = mMatrix[4];
+        this.meshInstances[offset + 21] = mMatrix[5];
+        this.meshInstances[offset + 22] = mMatrix[6];
+        this.meshInstances[offset + 23] = mMatrix[7];
+        this.meshInstances[offset + 24] = mMatrix[8];
+        this.meshInstances[offset + 25] = mMatrix[9];
+        this.meshInstances[offset + 26] = mMatrix[10];
+        this.meshInstances[offset + 27] = mMatrix[11];
+        this.meshInstances[offset + 28] = mMatrix[12];
+        this.meshInstances[offset + 29] = mMatrix[13];
+        this.meshInstances[offset + 30] = mMatrix[14];
+        this.meshInstances[offset + 31] = mMatrix[15];
+
+        this.meshInstances[offset + 32] = mMatrix[0];
+        this.meshInstances[offset + 33] = mMatrix[1];
+        this.meshInstances[offset + 34] = mMatrix[2];
+        this.meshInstances[offset + 35] = mMatrix[4];
+        this.meshInstances[offset + 36] = mMatrix[5];
+        this.meshInstances[offset + 37] = mMatrix[6];
+        this.meshInstances[offset + 38] = mMatrix[8];
+        this.meshInstances[offset + 39] = mMatrix[9];
+        this.meshInstances[offset + 40] = mMatrix[10];
+
+        this.meshInstances[offset + 41] = tag[0];
+        this.meshInstances[offset + 42] = tag[1];
+        this.meshInstances[offset + 43] = tag[2];
+        this.meshInstances[offset + 44] = tag[3];
+
+        globalInstanceIndex++;
+      }
     }
 
     this.grp1.beginWrite();
-
-    for (let i = 0; i < this.meshCommands.length; i++) {
-      const command = this.meshCommands[i];
-      const matrix = command.mesh.billboard ? bpcMatrix : vpcMatrix;
-
-      if (command.mesh.hasViewInversion()) {
-        const viewMatrix = currentView.getCameraViewMatrix();
-        UT.MAT4_MULTIPLY(matrix, UT.MAT4_INVERT(UT.MAT4_TRANSLATE(viewMatrix[12], viewMatrix[13], viewMatrix[14])), matrix);
-      }
-
-      this.grp1.write(0, BUILD_MESH_INFOS(matrix, command.matrix, command.mesh.getTag(), this.meshInfos) as Float32Array);
-      passEncoder.setBindGroup(1, this.grp1.getBindGroup(i));
-
-      const grp2 = command.mesh.mat.getGroup02();
-      const grp3 = command.mesh.mat.getGroup03();
-      passEncoder.setBindGroup(2, grp2.getBindGroup());
-      passEncoder.setBindGroup(3, grp3.getBindGroup());
-
-      passEncoder.setVertexBuffer(0, gfx3Manager.getVertexBuffer(), command.mesh.getVertexSubBufferOffset(), command.mesh.getVertexSubBufferSize());
-      passEncoder.draw(command.mesh.getVertexCount());
-    }
-
+    this.grp1.writeStorage(0, this.meshInstances.subarray(0, this.meshInstanceCount * MESH_STORAGE_SIZE));
     this.grp1.endWrite();
 
-    this.sceneInfos[6] = 0;
+    passEncoder.setBindGroup(1, this.grp1.getBindGroup());
+
+    let currentFirstInstance = 0;
+    for (const [mesh, matrices] of this.meshInstanceCommands) {
+      const grp2 = mesh.mat.getGroup02();
+      const grp3 = mesh.mat.getGroup03();
+      passEncoder.setBindGroup(2, grp2.getBindGroup());
+      passEncoder.setBindGroup(3, grp3.getBindGroup());
+      passEncoder.setVertexBuffer(0, gfx3Manager.getVertexBuffer(), mesh.getVertexSubBufferOffset(), mesh.getVertexSubBufferSize());
+      passEncoder.draw(mesh.getVertexCount(), matrices.length, 0, currentFirstInstance);
+      currentFirstInstance += matrices.length;
+    }
+
+    this.sceneInfos[Gfx3SceneInfos.POINT_LIGHT_COUNT] = 0;
     this.pointLights.fill(0);
-    this.sceneInfos[7] = 0;
+    this.sceneInfos[Gfx3SceneInfos.SPOT_LIGHT_COUNT] = 0;
     this.spotLights.fill(0);
-    this.sceneInfos[8] = 0;
+    this.sceneInfos[Gfx3SceneInfos.DECAL_COUNT] = 0;
     this.decals.fill(0);
-    this.meshCommands = [];
+    this.meshInstanceCommands.clear();
+    this.meshInstanceCount = 0;
 
     if (destinationTexture) {
       passEncoder.end();
@@ -278,8 +350,9 @@ export class Gfx3MeshRenderer extends Gfx3RendererAbstract {
    * @param {Gfx3Texture} decalAtlas - The decal texture atlas.
    */
   setDecalAtlas(decalAtlas: Gfx3Texture): void {
-    this.decalAtlas = decalAtlas;
-    this.textureChanged = true;
+    this.decalAtlas = this.grp0.setTexture(7, 'DECAL_ATLAS_TEXTURE', decalAtlas);
+    this.decalAtlas = this.grp0.setSampler(8, 'DECAL_ATLAS_SAMPLER', this.decalAtlas);
+    this.grp0.allocate();
   }
 
   /**
@@ -356,11 +429,25 @@ export class Gfx3MeshRenderer extends Gfx3RendererAbstract {
    */
   drawMesh(mesh: Gfx3Mesh, matrix: mat4 | null = null): void {
     const meshMatrix = matrix ?? mesh.getTransformMatrix();
-    this.meshCommands.push({ mesh: mesh, matrix: meshMatrix });
+    this.drawInstanceMesh(mesh, [meshMatrix]);
+  }
+
+  drawInstanceMesh(mesh: Gfx3Mesh, matrices: mat4[]): void {
+    if (!this.meshInstanceCommands.has(mesh)) {
+      this.meshInstanceCommands.set(mesh, matrices);
+    }
+    else {
+      const command = this.meshInstanceCommands.get(mesh)!;
+      command.push(...matrices);
+    }
 
     if (this.shadowEnabled && mesh.mat.isShadowCasting()) {
-      gfx3MeshShadowRenderer.drawMesh(mesh, meshMatrix);
+      for (const matrix of matrices) {
+        gfx3MeshShadowRenderer.drawMesh(mesh, matrix);
+      }
     }
+
+    this.meshInstanceCount += matrices.length;
   }
 
   /**
@@ -369,9 +456,9 @@ export class Gfx3MeshRenderer extends Gfx3RendererAbstract {
    * @param {vec3} ambientColor - The ambient color.
    */
   setAmbientColor(ambientColor: vec3): void {
-    this.sceneInfos[3] = ambientColor[0];
-    this.sceneInfos[4] = ambientColor[1];
-    this.sceneInfos[5] = ambientColor[2];
+    this.sceneInfos[Gfx3SceneInfos.AMBIENT_R] = ambientColor[0];
+    this.sceneInfos[Gfx3SceneInfos.AMBIENT_G] = ambientColor[1];
+    this.sceneInfos[Gfx3SceneInfos.AMBIENT_B] = ambientColor[2];
   }
 
   /**
@@ -386,7 +473,7 @@ export class Gfx3MeshRenderer extends Gfx3RendererAbstract {
       throw new Error('Gfx3MeshRenderer::setCustomParam(): Custom param name not found !');
     }
 
-    this.sceneInfos[11 + paramIndex] = value;
+    this.sceneInfos[Gfx3SceneInfos.COUNT + paramIndex] = value;
   }
 
   /**
@@ -400,7 +487,7 @@ export class Gfx3MeshRenderer extends Gfx3RendererAbstract {
       throw new Error('Gfx3MeshRenderer::getCustomParam(): Custom param name not found !');
     }
 
-    return this.sceneInfos[11 + paramIndex];
+    return this.sceneInfos[Gfx3SceneInfos.COUNT + paramIndex];
   }
 
   /**
@@ -598,41 +685,3 @@ export class Gfx3MeshRenderer extends Gfx3RendererAbstract {
 }
 
 export const gfx3MeshRenderer = new Gfx3MeshRenderer();
-
-// -------------------------------------------------------------------------------------------
-// HELPFUL
-// -------------------------------------------------------------------------------------------
-
-function BUILD_SCENE_INFOS(camPos: vec3, ts: number, timeStamp: number, out: Float32Array): Float32Array {
-  out[0] = camPos[0];
-  out[1] = camPos[1];
-  out[2] = camPos[2];
-  out[9] = ts;
-  out[10] = timeStamp;
-  return out;
-}
-
-function BUILD_MESH_INFOS(vpcMatrix: mat4, mMatrix: mat4, meshTags: vec4, out: Float32Array): Float32Array {
-  // 4x4 mvpc matrix
-  UT.MAT4_MULTIPLY(vpcMatrix, mMatrix, out);
-  // 4x4 model matrix
-  out.set(mMatrix, 16);
-  // 3x3 normal matrix
-  out[32 + 0] = mMatrix[0];
-  out[32 + 1] = mMatrix[1];
-  out[32 + 2] = mMatrix[2];
-  out[32 + 3] = 0;
-  out[32 + 4] = mMatrix[4];
-  out[32 + 5] = mMatrix[5];
-  out[32 + 6] = mMatrix[6];
-  out[32 + 7] = 0;
-  out[32 + 8] = mMatrix[8];
-  out[32 + 9] = mMatrix[9];
-  out[32 + 10] = mMatrix[10];
-  out[32 + 11] = 0;
-  out[32 + 12] = meshTags[0];
-  out[32 + 13] = meshTags[1];
-  out[32 + 14] = meshTags[2];
-  out[32 + 15] = meshTags[3];
-  return out;
-}

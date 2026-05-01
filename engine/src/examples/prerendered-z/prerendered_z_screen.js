@@ -14,12 +14,10 @@ const POST_SHADER_INSERT_END = `
 // channel 1 = background
 // We filter and keep only pixel from character that are in front of the "front map" and background.
 
-if (tag.r == 2.0f)
+if (tag.r != 2.0f)
 {
-  return outputColor;
-}
-
-outputColor = ch1;`;
+  outputColor = ch1;
+}`;
 // ---------------------------------------------------------------------------------------
 
 class PrerenderedZScreen extends Screen {

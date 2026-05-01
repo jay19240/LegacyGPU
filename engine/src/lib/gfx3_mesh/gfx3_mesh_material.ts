@@ -323,6 +323,7 @@ export class Gfx3Material {
     this.params[Gfx3MatParam.DISPLACE_SECONDARY_TEXTURE_ENABLED] = options.displaceSecondaryTextureEnabled ? 1.0 : 0.0;
     this.params[Gfx3MatParam.DISPLACE_NORMAL_MAP_ENABLED] = options.displaceNormalMapEnabled ? 1.0 : 0.0;
     this.params[Gfx3MatParam.DISPLACE_DISSOLVE_MAP_ENABLED] = options.displaceDissolveMapEnabled ? 1.0 : 0.0;
+    this.params[Gfx3MatParam.DISPLACE_ENV_MAP_ENABLED] = options.displaceEnvMapEnabled ? 1.0 : 0.0;
     // --------------------------------------------------------------------------------------------------------
     this.params[Gfx3MatParam.DISSOLVE_MAP_EXIST] = options.dissolveMap ? 1.0 : 0.0;
     this.params[Gfx3MatParam.DISSOLVE_MAP_SCROLL_ANGLE] = options.dissolveMapScrollAngle ?? 0.0;

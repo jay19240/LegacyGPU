@@ -223,7 +223,7 @@ class TwoCasualScreen extends Screen {
     this.bombHalo = new Gfx2SpriteJSS();
     this.bombHalo.setTexture(gfx2TextureManager.getTexture('./examples/two-casual/halo.png'));
     this.bombHalo.setNormalizedOffset(0.5, 0.5);
-    this.bombHalo.setPosition(this.bomb.getTextureRectWidth() / 2, this.bomb.getTextureRectHeight() / 2);
+    this.bombHalo.setPosition(0, 0);
     this.bombHalo.setVisible(false);
 
     this.shockwave = new Gfx2SpriteJSS();
