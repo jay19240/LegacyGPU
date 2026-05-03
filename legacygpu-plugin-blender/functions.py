@@ -673,7 +673,7 @@ def jwa_export(selected_obj):
   dg.update()
   obj_eval = selected_obj.evaluated_get(dg)
   mesh = obj_eval.to_mesh()
-  mesh.transform(bpy.context.object.matrix_world)
+  mesh.transform(selected_obj.matrix_world)
 
   obj['WaveAmplitude'] = selected_obj.water_properties.wave_amplitude
   obj['WaveScale'] = selected_obj.water_properties.wave_scale
@@ -681,7 +681,6 @@ def jwa_export(selected_obj):
   obj['WaveChoppiness'] = selected_obj.water_properties.wave_choppiness
   obj['WaveStepX'] = selected_obj.water_properties.wave_step_x
   obj['WaveStepZ'] = selected_obj.water_properties.wave_step_z
-  obj['NormalMapEnabled'] = selected_obj.water_properties.normal_map_enabled
   obj['NormalMap'] = bpy.path.basename(selected_obj.water_properties.normal_map)
   obj['NormalMapScrollX'] = selected_obj.water_properties.normal_map_scroll_x
   obj['NormalMapScrollY'] = selected_obj.water_properties.normal_map_scroll_y
@@ -692,7 +691,6 @@ def jwa_export(selected_obj):
   obj['SurfaceColorG'] = selected_obj.water_properties.surface_color[1]
   obj['SurfaceColorB'] = selected_obj.water_properties.surface_color[2]
   obj['SurfaceColorFactor'] = selected_obj.water_properties.surface_color_factor
-  obj['EnvMapEnabled'] = selected_obj.water_properties.optics_env_map_enabled
   obj['EnvMapRight'] = bpy.path.basename(selected_obj.water_properties.optics_env_map_right)
   obj['EnvMapLeft'] = bpy.path.basename(selected_obj.water_properties.optics_env_map_left)
   obj['EnvMapTop'] = bpy.path.basename(selected_obj.water_properties.optics_env_map_top)
@@ -739,20 +737,25 @@ def jwa_export(selected_obj):
 
 
 def jwa_export_json(selected_obj, path, filename):
+  resources_files = []
   file = utils.get_available_filename(path, filename, 'jwa')
   data = jwa_export(selected_obj)
+  utils.copy_texture_file(path, resources_files, selected_obj.water_properties)
 
   with open(file, 'w', encoding='utf-8') as f:
     json.dump(data, f, ensure_ascii=False)
   #endwith
+  return resources_files
 
 
 def jwa_export_binary(selected_obj, path, filename):
-  file = utils.get_available_filename(path, filename, 'bsv')
-  data = jsv_export(selected_obj)
+  resources_files = []
+  file = utils.get_available_filename(path, filename, 'bwa')
+  data = jwa_export(selected_obj)
+  utils.copy_texture_file(path, resources_files, selected_obj.water_properties)
 
   with open(file, "wb") as f:
-    f.write(struct.pack('<fffffffffffffffffffffffffffff?i',
+    f.write(struct.pack('<27f',
       data["NumVertices"],
       data['WaveAmplitude'],
       data['WaveScale'],
@@ -760,7 +763,6 @@ def jwa_export_binary(selected_obj, path, filename):
       data['WaveChoppiness'],
       data['WaveStepX'],
       data['WaveStepZ'],
-      data['NormalMapEnabled'],
       data['NormalMapScrollX'],
       data['NormalMapScrollY'],
       data['NormalMapIntensity'],
@@ -770,7 +772,6 @@ def jwa_export_binary(selected_obj, path, filename):
       data['SurfaceColorG'],
       data['SurfaceColorB'],
       data['SurfaceColorFactor'],
-      data['EnvMapEnabled'],
       data['EnvMapIntensity'],
       data['FresnelPower'],
       data['FresnelBiais'],
@@ -797,11 +798,17 @@ def jwa_export_binary(selected_obj, path, filename):
       f.write(buf)
     #endfor
 
+    for uv in data["TextureCoords"]:
+      buf = struct.pack('<f', uv)
+      f.write(buf)
+    #endfor
+
     for color in data["Colors"]:
       buf = struct.pack('<f', color)
       f.write(buf)
     #endfor
   #endwith
+  return resources_files
 
 
 # ----------------------------------------------------------------------------------
@@ -1287,10 +1294,14 @@ def world_export_json(path, filename):
   obj["CustomParams"].append({ "Name": bpy.context.scene.world_properties.world_s14_name, "Value": bpy.context.scene.world_properties.world_s14_value })
   obj["CustomParams"].append({ "Name": bpy.context.scene.world_properties.world_s15_name, "Value": bpy.context.scene.world_properties.world_s15_value })
 
+  resources_files = []
+  utils.copy_texture_file(path, resources_files, bpy.context.scene.world_properties)
+
   file = utils.get_available_filename(path, filename, 'wrd')
   with open(file, 'w', encoding='utf-8') as f:
     json.dump(obj, f, ensure_ascii=False)
   #endwith
+  return resources_files
 
 
 # ----------------------------------------------------------------------------------
@@ -1339,10 +1350,14 @@ def special_export_sky_json(selected_obj, path, filename):
   obj["Front"] = bpy.path.basename(selected_obj.skybox_properties.front)
   obj["Back"] = bpy.path.basename(selected_obj.skybox_properties.back)
 
+  resources_files = []
+  utils.copy_texture_file(path, resources_files, selected_obj.skybox_properties)
+
   file = utils.get_available_filename(path, filename, 'sky')
   with open(file, 'w', encoding='utf-8') as f:
     json.dump(obj, f, ensure_ascii=False)
   #endwith
+  return resources_files
 
 
 def special_export_prt_json(selected_obj, path, filename):
@@ -1387,10 +1402,14 @@ def special_export_prt_json(selected_obj, path, filename):
   utils.process_tween_number(selected_obj.particles_properties.tweens_opacity, "OpacityTween", obj)
   utils.process_tween_vector(selected_obj.particles_properties.tweens_acceleration, "AccelerationTween", obj)
 
+  resources_files = []
+  utils.copy_texture_file(path, resources_files, selected_obj.particles_properties)
+
   file = utils.get_available_filename(path, filename, 'prt')
   with open(file, 'w', encoding='utf-8') as f:
     json.dump(obj, f, ensure_ascii=False)
   #endwith
+  return resources_files
 
 
 # ----------------------------------------------------------------------------------
@@ -1460,8 +1479,9 @@ def pack(path, context):
   path = os.path.join(path, "")
   path_list = []
 
-  world_export_json(path, "scene")
+  res = world_export_json(path, "scene")
   path_list.append(path + 'scene.wrd')
+  path_list.extend(res)
 
   camera_export_json(path, "scene")
   path_list.append(path + 'scene.cam')
@@ -1476,8 +1496,10 @@ def pack(path, context):
           jam_export_json(obj, path, obj.name)
           path_list.append(path + obj.name + '.jam')
         #endif
-        mat_export_json(obj, path, obj.name)
+        res = mat_export_json(obj, path, obj.name)
         path_list.append(path + obj.name + '.mat')
+        path_list.extend(res)
+        utils.copy_sampler_file(path, path_list, obj, obj.mat_properties, obj.mat_properties.sampler_enabled)
       #endfor
     #endif
 
@@ -1490,8 +1512,10 @@ def pack(path, context):
           jsm_export_json(obj, path, obj.name)
           path_list.append(path + obj.name + '.jsm')
         #endif
-        mat_export_json(obj, path, obj.name)
+        res = mat_export_json(obj, path, obj.name)
         path_list.append(path + obj.name + '.mat')
+        path_list.extend(res)
+        utils.copy_sampler_file(path, path_list, obj, obj.mat_properties, obj.mat_properties.sampler_enabled)
       #endfor
     #endif
 
@@ -1546,11 +1570,13 @@ def pack(path, context):
     if (collection.name == "JWA"):
       for obj in collection.objects:
         if context.scene.world_properties.enable_export_has_binary:
-          jwa_export_binary(obj, path, obj.name)
+          res = jwa_export_binary(obj, path, obj.name)
           path_list.append(path + obj.name + '.bwa')
+          path_list.extend(res)
         else:
-          jwa_export_json(obj, path, obj.name)
+          res = jwa_export_json(obj, path, obj.name)
           path_list.append(path + obj.name + '.jwa')
+          path_list.extend(res)
         #endif
       #endfor
     #endif
@@ -1588,15 +1614,17 @@ def pack(path, context):
 
     if (collection.name == "SKY"):
       for obj in collection.objects:
-        special_export_sky_json(obj, path, obj.name)
+        res = special_export_sky_json(obj, path, obj.name)
         path_list.append(path + obj.name + '.sky')
+        path_list.extend(res)
       #endfor
     #endif
 
     if (collection.name == "PRT"):
       for obj in collection.objects:
-        special_export_prt_json(obj, path, obj.name)
+        res = special_export_prt_json(obj, path, obj.name)
         path_list.append(path + obj.name + '.prt')
+        path_list.extend(res)
       #endfor
     #endif
 
@@ -1606,19 +1634,12 @@ def pack(path, context):
         path_list.append(path + obj.name + '.ent')
       #endfor
     #endif
-
-    for obj in collection.objects:
-      utils.copy_texture_file(path, path_list, obj.mat_properties)
-      utils.copy_texture_file(path, path_list, obj.skybox_properties)
-      utils.copy_texture_file(path, path_list, obj.particles_properties)
-      utils.copy_sampler_file(path, path_list, obj, obj.mat_properties, obj.mat_properties.sampler_enabled)
-    #endfor
   #endfor
-
-  utils.copy_texture_file(path, path_list, context.scene.world_properties)
 
   scene_name = os.path.basename(bpy.data.filepath)
   utils.zip_files(path_list, path + scene_name + '.pak')
+
+  path_list = list(set(path_list))
 
   for file in path_list:
     os.remove(file)

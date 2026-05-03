@@ -23,7 +23,7 @@ export default defineConfig(({ mode }) => {
       minify: true,
       lib: {
         entry: path.resolve(__dirname, '../src/lib/index_3d_with_jolt.ts'),
-        name: 'LegacyGPU',
+        name: 'Legacy',
         fileName: 'index',
         formats: ['es'],
       },

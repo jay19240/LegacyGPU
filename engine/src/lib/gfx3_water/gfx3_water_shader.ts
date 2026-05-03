@@ -1,6 +1,6 @@
 import { Gfx3RendererAbstract } from '../gfx3/gfx3_renderer_abstract';
 
-export const WATER_SHADER_VERTEX_ATTR_COUNT = 11;
+export const WATER_SHADER_VERTEX_ATTR_COUNT = 8;
 export const WATER_MAX_IMPACTS = 8;
 
 export enum Gfx3WaterParam {
@@ -33,12 +33,21 @@ export enum Gfx3WaterParam {
   SUN_DIRECTION_X,
   SUN_DIRECTION_Y,
   SUN_DIRECTION_Z,
-  SUN_SPECULAR_POWER,
   SUN_COLOR_R,
   SUN_COLOR_G,
   SUN_COLOR_B,
   SUN_COLOR_FACTOR,
   // --------------------------------------
+  COUNT
+};
+
+export enum Gfx3WaterImpact {
+  X,
+  Z,
+  STRENGTH,
+  RADIUS,
+  LIFETIME,
+  AGE,
   COUNT
 };
 
@@ -59,7 +68,7 @@ export const WATER_PIPELINE_DESC: any = {
         format: 'float32x2'
       }, {
         shaderLocation: 2, /*colors*/
-        offset: 8 * 4,
+        offset: 5 * 4,
         format: 'float32x3'
       }]
     }]
@@ -104,8 +113,7 @@ struct Params {
 
 const STRUCT_IMPACT = `
 struct Impact {
-  PSR: vec4<f32>,
-  AGE_LIFETIME: vec2<f32>
+  ${Gfx3RendererAbstract.generateWGSLStructFromEnum(Gfx3WaterImpact)}
 }`;
 
 export const WATER_VERTEX_SHADER = (data: any = {}) => /* wgsl */`
@@ -122,7 +130,6 @@ ${STRUCT_PARAMS}
 @group(0) @binding(0) var<uniform> VPC_MATRIX: mat4x4<f32>;
 @group(0) @binding(1) var<uniform> CAMERA_POS: vec3<f32>;
 @group(0) @binding(2) var<uniform> TIME_INFOS: f32;
-
 @group(1) @binding(0) var<uniform> M_MATRIX: mat4x4<f32>;
 @group(1) @binding(1) var<uniform> TAG: vec4<f32>;
 @group(1) @binding(2) var<uniform> PARAMS: Params;
@@ -131,7 +138,7 @@ ${STRUCT_PARAMS}
 @vertex
 fn main(
   @location(0) Position: vec3<f32>,
-  @location(1) Normal: vec3<f32>,
+  @location(1) FragUV: vec2<f32>,
   @location(2) FragColor: vec3<f32>
 ) -> VertexOutput {
   let xz = Position.xz;
@@ -145,7 +152,7 @@ fn main(
   let normalZ = -(hzp - hzm) / (2.0 * PARAMS.WAVE_STEP_Z);
   let normalLocal = normalize(vec3<f32>(normalX, 1.0, normalZ));
 
-  let displaced = vec3<f32>(Position.x, h, Position.z);
+  let displaced = vec3<f32>(Position.x, Position.y + h, Position.z);
   let world = (M_MATRIX * vec4<f32>(displaced, 1.0)).xyz;
   let worldNormal = normalize((M_MATRIX * vec4<f32>(normalLocal, 0.0)).xyz);
 
@@ -153,6 +160,7 @@ fn main(
   output.Position = VPC_MATRIX * vec4<f32>(world, 1.0);
   output.FragWorldPos = world;
   output.FragNormal = worldNormal;
+  output.FragUV = FragUV;
   return output;
 }
 
@@ -224,27 +232,18 @@ fn ImpactBoost(xz: vec2<f32>) -> f32
       break;
     }
 
-    let psr = IMPACTS[i].PSR;
-    let al = IMPACTS[i].AGE_LIFETIME;
-    let age = al.x;
-    let lifetime = al.y;
-    if (age <= 0.0 || age >= lifetime)
-    {
-      continue;
-    }
-
-    let d = xz - psr.xy;
+    let d = xz - vec2(IMPACTS[i].X, IMPACTS[i].Z);
     let dist = length(d);
-    if (dist >= psr.w)
+    if (dist >= IMPACTS[i].RADIUS)
     {
       continue;
     }
 
-    let spatial = 1.0 - smoothstep(psr.w * 0.4, psr.w, dist);
-    let t = age / lifetime;
+    let spatial = 1.0 - smoothstep(IMPACTS[i].RADIUS * 0.4, IMPACTS[i].RADIUS, dist);
+    let t = IMPACTS[i].AGE / IMPACTS[i].LIFETIME;
     let rise = smoothstep(0.0, 0.15, t);
     let decay = 1.0 - smoothstep(0.15, 1.0, t);
-    sum = sum + psr.z * spatial * rise * decay;
+    sum = sum + IMPACTS[i].STRENGTH * spatial * rise * decay;
   }
 
   return sum;
@@ -260,8 +259,10 @@ struct FragOutput {
 
 ${STRUCT_PARAMS}
 
+@group(0) @binding(0) var<uniform> VPC_MATRIX: mat4x4<f32>;
 @group(0) @binding(1) var<uniform> CAMERA_POS: vec3<f32>;
 @group(0) @binding(2) var<uniform> TIME_INFOS: f32;
+@group(1) @binding(0) var<uniform> M_MATRIX: mat4x4<f32>;
 @group(1) @binding(1) var<uniform> TAG: vec4<f32>;
 @group(1) @binding(2) var<uniform> PARAMS: Params;
 
@@ -285,8 +286,8 @@ fn main(
   let fragNormal = CalcFinalNormal(FragNormal, FragUV);
   let reflectAmount = CalcReflectAmount(fragNormal, viewDir);
   let envColor = CalcEnvMap(fragNormal, viewDir, surfaceColor) * PARAMS.OPTICS_ENV_MAP_ENABLED;
-  let light = mix(vec3<f32>(1.0), CalcLight(sunDirection, sunColor, fragNormal, viewDir), PARAMS.SUN_ENABLED);
-  var finalColor = mix(surfaceColor, envColor, reflectAmount) * light;
+  let baseLight = mix(vec3<f32>(1.0), CalcLight(sunDirection, sunColor, fragNormal), PARAMS.SUN_ENABLED);
+  var finalColor = mix(surfaceColor, envColor, reflectAmount) * baseLight;
 
   var output: FragOutput;
   output.Base = vec4<f32>(finalColor, PARAMS.SURFACE_COLOR_FACTOR);
@@ -310,15 +311,11 @@ fn CalcEnvMap(fragNormal: vec3<f32>, viewDir: vec3<f32>, surfaceColor: vec3<f32>
 // *****************************************************************************************************************
 // CALC LIGHT
 // *****************************************************************************************************************
-fn CalcLight(sunDirection: vec3<f32>, sunColor: vec3<f32>, fragNormal: vec3<f32>, viewDir: vec3<f32>) -> vec3<f32>
+fn CalcLight(sunDirection: vec3<f32>, sunColor: vec3<f32>, fragNormal: vec3<f32>) -> vec3<f32>
 {
   let sunDir = normalize(-sunDirection);
   let sunDiffuse = max(dot(fragNormal, sunDir), 0.0);
-  let halfDir = normalize(sunDir + viewDir);
-  let specTerm = pow(max(dot(fragNormal, halfDir), 0.0), max(PARAMS.SUN_SPECULAR_POWER, 1.0));
-  let sunSpec = sunColor * (specTerm * PARAMS.SUN_COLOR_FACTOR);
-  let lighting = vec3<f32>(0.35) + sunColor * (sunDiffuse * PARAMS.SUN_COLOR_FACTOR);
-  return lighting + sunSpec;
+  return vec3<f32>(0.35) + sunColor * (sunDiffuse * PARAMS.SUN_COLOR_FACTOR);
 }
 
 // *****************************************************************************************************************
@@ -336,8 +333,10 @@ fn CalcReflectAmount(fragNormal: vec3<f32>, viewDir: vec3<f32>) -> f32
 fn CalcFinalNormal(fragNormal: vec3<f32>, uv: vec2<f32>) -> vec3<f32>
 {
   let nm = CalcSurfaceNormal(uv, TIME_INFOS);
-  let perturb = vec3<f32>(nm.x, 0.0, nm.y) * PARAMS.NORMAL_MAP_INTENSITY * PARAMS.NORMAL_MAP_ENABLED;
-  return normalize(normalize(fragNormal) + perturb);
+  let intensity = PARAMS.NORMAL_MAP_INTENSITY * PARAMS.NORMAL_MAP_ENABLED;
+  let nmTilted = normalize(vec3<f32>(nm.x * intensity, nm.y * intensity, max(nm.z, 1e-4)));
+  let nmWorld = vec3<f32>(nmTilted.x, nmTilted.z, nmTilted.y);
+  return normalize(normalize(fragNormal) + nmWorld - vec3<f32>(0.0, 1.0, 0.0));
 }
 
 // *****************************************************************************************************************

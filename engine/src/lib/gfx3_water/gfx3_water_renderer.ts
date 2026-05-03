@@ -4,7 +4,7 @@ import { Gfx3RendererAbstract } from '../gfx3/gfx3_renderer_abstract';
 import { Gfx3StaticGroup, Gfx3DynamicGroup } from '../gfx3/gfx3_group';
 import { Gfx3RenderingTexture } from '../gfx3/gfx3_texture';
 import { Gfx3Water } from './gfx3_water';
-import { Gfx3WaterParam, WATER_PIPELINE_DESC, WATER_VERTEX_SHADER, WATER_FRAGMENT_SHADER, WATER_MAX_IMPACTS } from './gfx3_water_shader';
+import { Gfx3WaterParam, WATER_PIPELINE_DESC, WATER_VERTEX_SHADER, WATER_FRAGMENT_SHADER, WATER_MAX_IMPACTS, Gfx3WaterImpact } from './gfx3_water_shader';
 
 /**
  * Singleton water renderer.
@@ -34,7 +34,7 @@ export class Gfx3WaterRenderer extends Gfx3RendererAbstract {
     this.mMatrix = this.grp1.setFloat(0, 'M_MATRIX', 16);
     this.tag = this.grp1.setFloat(1, 'TAG', 4);
     this.params = this.grp1.setFloat(2, 'PARAMS', Gfx3WaterParam.COUNT);
-    this.impacts = this.grp1.setFloat(3, 'IMPACTS', 8 * WATER_MAX_IMPACTS);
+    this.impacts = this.grp1.setFloat(3, 'IMPACTS', Gfx3WaterImpact.COUNT * WATER_MAX_IMPACTS);
 
     this.grp0.allocate();
     this.grp1.allocate();

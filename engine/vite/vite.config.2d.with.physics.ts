@@ -23,7 +23,7 @@ export default defineConfig(({ mode }) => {
       minify: true,
       lib: {
         entry: path.resolve(__dirname, '../src/lib/index_2d_with_box2d.ts'),
-        name: 'LegacyGPU',
+        name: 'Legacy',
         fileName: 'index',
         formats: ['es'],
       },

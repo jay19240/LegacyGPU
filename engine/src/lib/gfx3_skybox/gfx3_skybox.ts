@@ -57,7 +57,7 @@ export class Gfx3Skybox extends Gfx3Drawable {
       bottom: textureDir + json['Bottom'],
       front: textureDir + json['Front'],
       back: textureDir + json['Back']
-    }, json['Name']));
+    }, json['Right'] + json['Left'] + json['Top'] + json['Bottom'] + json['Front'] + json['Back']));
   }
 
   /**

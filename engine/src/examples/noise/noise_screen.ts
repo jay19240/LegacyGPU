@@ -47,10 +47,10 @@ class NoiseScreen extends Screen {
     const view = gfx3Manager.getView(0);
     view.setBgColor(0.09, 0.09, 0.09, 1.0);
 
-    this.camera.target = [0, 0, 0];
-    this.camera.distance = 25;
-    this.camera.theta = 0.4;
-    this.camera.phi = Math.PI * 0.5;
+    this.camera.setTarget([0, 0, 0]);
+    this.camera.setDistance(50);
+    this.camera.setTheta(0.4);
+    this.camera.setPhiOrigin(Math.PI * 0.5);
 
     this.texture = gfx3NoiseManager.createNoiseTexture(TEXTURE_SIZE, TEXTURE_SIZE, this.params);
 
@@ -68,7 +68,7 @@ class NoiseScreen extends Screen {
       setAnimate: (v: boolean) => { this.animate = v; },
       onChange: () => this.regenerate()
     });
-    uiManager.addNode(this.panel, 'position:absolute; top:10px; left:10px');
+    uiManager.addNode(this.panel, 'position:absolute; bottom:0; right:0');
   }
 
   onExit() {

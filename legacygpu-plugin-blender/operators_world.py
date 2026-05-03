@@ -23,6 +23,7 @@ def register():
   bpy.utils.register_class(WARME_OT_create_jsv)
   bpy.utils.register_class(WARME_OT_cast_to_jsv)
   bpy.utils.register_class(WARME_OT_create_jwa)
+  bpy.utils.register_class(WARME_OT_cast_to_jwa)
   bpy.utils.register_class(WARME_OT_create_grf)
   bpy.utils.register_class(WARME_OT_cast_to_grf)
   bpy.utils.register_class(WARME_OT_create_jlm_points)
@@ -58,6 +59,7 @@ def unregister():
   bpy.utils.unregister_class(WARME_OT_create_jsv)
   bpy.utils.unregister_class(WARME_OT_cast_to_jsv)
   bpy.utils.unregister_class(WARME_OT_create_jwa)
+  bpy.utils.unregister_class(WARME_OT_cast_to_jwa)
   bpy.utils.unregister_class(WARME_OT_create_grf)
   bpy.utils.unregister_class(WARME_OT_cast_to_grf)
   bpy.utils.unregister_class(WARME_OT_create_jlm_points)
@@ -316,6 +318,25 @@ class WARME_OT_create_jwa(bpy.types.Operator):
     collection.objects.link(grid)
 
     self.report({'INFO'}, "Creation successful ✔")
+    return {"FINISHED"}
+
+
+class WARME_OT_cast_to_jwa(bpy.types.Operator):
+  """Cast To JWA""" 
+  bl_idname = "object.cast_to_jwa"
+  bl_label = "Water"
+  bl_options = {'REGISTER', 'UNDO_GROUPED'}
+
+  def execute(self, context):
+    collection = utils.get_or_create_collection("JWA")
+
+    for object in bpy.context.selected_objects:
+      object.color = (0.0, 0.0, 1.0, 1)
+      utils.unlink_from_all_collections(object)
+      collection.objects.link(object)
+      self.report({'INFO'}, "Cast successful ✔")
+    #endfor
+
     return {"FINISHED"}
 
 
@@ -745,6 +766,7 @@ class WARME_OT_run_auggie(bpy.types.Operator):
         "- Tu dois toujours priorisé les classes Gfx3PhysicsJNM et Gfx3PhysicsJWM quand cela est possible "
         "- Tu dois utilisés les classes physiques de bases et des calcules mathématique en priorité "
         "Les règles sont les suivantes: "
+        "- Toujours utilisé les getters et setters plutôt que d'accéder aux variables membres même si elles sont publiques "
         "- Fait bien attention aux fonctionnalités présentes dans le moteur pour éviter de les recoder, ne réinvente pas la roue quand c'est pas necessaire "
         "- Tu dois créer un seul fichier minimaliste couvrant uniquement la demande, fonctionnelle, ni plus ni moins. "
         "- Pour les modifications ultérieur, tu ne dois pas créer de fichiers mais réutiliser et modifier le fichier existant. "
@@ -772,6 +794,7 @@ class WARME_OT_run_auggie(bpy.types.Operator):
         "  - jss = Fichier de Sprite Statique; (gfx3SpriteRenderer) "
         "  - sky = Fichier de Skybox; (gfx3SkyboxRenderer) "
         "  - prt = Fichier de Particles; (gfx3ParticlesRenderer) "
+        "  - jwa = Fichier de plan d'eau; (gfx3WaterRenderer) "
         "  - jwm = Fichier Walkmesh (FF7, Metal Gear, ...) "
         "  - jnm = Fichier Hitmesh (UT, Quake, ...) "
         "  - jlm = Fichier de lignes "
@@ -855,9 +878,9 @@ class WARME_OT_kill_server(bpy.types.Operator):
 
       context.scene.auggie_status = "Serveurs arrêtés"
       self.report({'INFO'}, "Tous les processus Node ont été coupés.")
-        
     except Exception as e:
       self.report({'ERROR'}, f"Erreur lors du nettoyage : {str(e)}")
+    #except
 
     return {'FINISHED'}
 

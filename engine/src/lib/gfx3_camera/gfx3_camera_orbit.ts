@@ -146,6 +146,24 @@ export class Gfx3CameraOrbit extends Gfx3Camera {
   }
 
   /**
+   * Set the horizontal angle rotating around target.
+   * 
+   * @param {number} phi - The horizontal angle.
+   */
+  setPhi(phi: number): void {
+    this.phi = phi;
+  }
+
+  /**
+   * Set the vertical angle rotating around target.
+   * 
+   * @param {number} theta - The vertical angle.
+   */
+  setTheta(theta: number): void {
+    this.theta = theta;
+  }
+
+  /**
    * Set the distance between target and camera.
    * 
    * @param {number} distance - The distance.
@@ -279,7 +297,7 @@ export class Gfx3CameraOrbit extends Gfx3Camera {
    * Set the vertical angle (theta) between minPitch and maxPitch.
    * The camera will smoothly transition toward this tilt value.
    */
-  setTheta(theta: number): void {
+  setThetaTarget(theta: number): void {
     this.thetaTarget = UT.CLAMP(theta, this.minPitch, this.maxPitch);
   }
 
@@ -312,19 +330,18 @@ export class Gfx3CameraOrbit extends Gfx3Camera {
   }
 
   #applyTargetRotation(position: vec3, pitch: number, roll: number): void {
-    // Rotate X (Assiette / Pitch)
+    // Rotate X (Pitch)
     const cosP = Math.cos(pitch);
     const sinP = Math.sin(pitch);
     const y1 = position[1] * cosP - position[2] * sinP;
     const z1 = position[1] * sinP + position[2] * cosP;
 
-    // Rotate Z (Roulis / Roll)
+    // Rotate Z (Roll)
     const cosR = Math.cos(roll);
     const sinR = Math.sin(roll);
     const x2 = position[0] * cosR - y1 * sinR;
     const y2 = position[0] * sinR + y1 * cosR;
 
-    // Update position
     position[0] = x2;
     position[1] = y2;
     position[2] = z1;

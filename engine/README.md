@@ -1,7 +1,7 @@
-**LegacyGPU** is a modern game engine inspired by classic techniques that made retro games legendary.  
-Designed for developers and artists who want complete freedom and maximum control, LegacyGPU combines physics, rendering, and proven graphical pipelines to create unique experiences.
+**Legacy** is a modern game engine inspired by classic techniques that made retro games legendary.  
+Designed for developers and artists who want complete freedom and maximum control, Legacy engine combines physics, rendering, and proven graphical pipelines to create unique experiences.
 
-Why LegacyGPU stands out:  
+Why Legacy engine stands out:  
 - Walkmesh and Hitmesh for simple and arcade physics.   
 - Legacy aesthetics techniques.   
 - Total rendering freedom: no forced scene graph, raw draw calls for direct control over every piece of your scene.   
@@ -27,7 +27,7 @@ Or start the dev server on desktop:
 npm run dev:tauri
 ```
 
-You should now have your LegacyGPU project running!   
+You should now have your Legacy engine project running!   
 A homepage let you choose between your game screen and a set of examples.   
 The game screen is located in src/game/main.js.   
 The default scene of the game is located in public/scene.blend, open this file with the portable version

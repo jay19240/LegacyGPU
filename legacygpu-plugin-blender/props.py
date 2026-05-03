@@ -2163,7 +2163,7 @@ class WARME_PG_WaterProperties(bpy.types.PropertyGroup):
     name="Wave Amplitude",
     description="Set the wave amplitude factor",
     subtype='NONE',
-    default=(0.3),
+    default=(0.5),
     update=update_trigger_export
   )
   wave_scale: bpy.props.FloatProperty(
@@ -2201,12 +2201,6 @@ class WARME_PG_WaterProperties(bpy.types.PropertyGroup):
     default=(0.5),
     update=update_trigger_export
   )
-  normal_map_enabled: bpy.props.BoolProperty(
-    name="Normal Map Enabled",
-    description="Enable or not the water normal map",
-    default=False,
-    update=update_trigger_export
-  )
   normal_map: bpy.props.StringProperty(
     name="Normal Map",
     description="Normal Map texture",
@@ -2232,7 +2226,7 @@ class WARME_PG_WaterProperties(bpy.types.PropertyGroup):
     name="Normal Map Intensity",
     description="Set the normal map intensity",
     subtype='NONE',
-    default=(0.5),
+    default=(0.1),
     update=update_trigger_export
   )
   normal_map_scale: bpy.props.FloatProperty(
@@ -2261,12 +2255,6 @@ class WARME_PG_WaterProperties(bpy.types.PropertyGroup):
     description="Set the surface color factor",
     subtype='NONE',
     default=(0.9),
-    update=update_trigger_export
-  )
-  optics_env_map_enabled: bpy.props.BoolProperty(
-    name="Optics Env Map Enabled",
-    description="Enable or not the reflectivity",
-    default=False,
     update=update_trigger_export
   )
   optics_env_map_right: bpy.props.StringProperty(

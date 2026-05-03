@@ -107,6 +107,8 @@ export * from './gfx3_mesh/gfx3_mesh_renderer';
 export * from './gfx3_mesh/gfx3_mesh_shader';
 export * from './gfx3_mesh/gfx3_mesh_shadow_renderer';
 export * from './gfx3_mesh/gfx3_mesh_shadow_shader';
+export * from './gfx3_noise/gfx3_noise_manager';
+export * from './gfx3_noise/gfx3_noise_shader';
 export * from './gfx3_particles/gfx3_particles_renderer';
 export * from './gfx3_particles/gfx3_particles_shader';
 export * from './gfx3_post/gfx3_post_renderer';

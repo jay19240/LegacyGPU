@@ -9,12 +9,7 @@ export interface NoisePanelOptions {
 
 export function CREATE_NOISE_TWEAK_PANEL(opts: NoisePanelOptions): HTMLElement {
   const panel = document.createElement('div');
-  panel.style.cssText = 'background:rgba(0,0,0,0.55); padding:8px 10px; color:#fff; font-family:monospace; font-size:11px; backdrop-filter:blur(4px); width:300px; max-height:90vh; overflow-y:auto; border-radius:4px;';
-
-  const title = document.createElement('div');
-  title.textContent = 'Noise Tweaks';
-  title.style.cssText = 'font-weight:bold; font-size:13px; margin-bottom:6px; padding-bottom:4px; border-bottom:1px solid #555;';
-  panel.appendChild(title);
+  panel.style.cssText = 'background:rgba(0,0,0,0.55); padding:8px 10px; color:#fff; font-family:monospace; font-size:11px; backdrop-filter:blur(4px); width:300px; max-height:170px; overflow-y:auto; border-radius:4px;';
 
   const gAnim = ADD_GROUP(panel, 'Animation');
   ADD_CHECKBOX(gAnim, 'animate', opts.getAnimate(), v => opts.setAnimate(v));

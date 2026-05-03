@@ -2,6 +2,7 @@ import bpy
 import zipfile
 import shutil
 import bmesh
+import struct
 import os
 from pathlib import Path
 # ----------------------------------------------------------------------------------

@@ -58,7 +58,7 @@ def unregister():
 class WARME_OT_export_pack(bpy.types.Operator):
   """Export Pack""" 
   bl_idname = "object.export_pack"
-  bl_label = "Export Assets"
+  bl_label = "Export Scene"
   bl_options = {'REGISTER', 'UNDO_GROUPED'}
 
   def execute(self, context):

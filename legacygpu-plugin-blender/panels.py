@@ -29,10 +29,10 @@ def unregister():
 
 class WARME_PT_options(bpy.types.Panel):
   bl_idname = "WARME_PT_options"
-  bl_label = "LGPU"
+  bl_label = "Legacy"
   bl_space_type = 'VIEW_3D'
   bl_region_type = 'UI'
-  bl_category = "LGPU"
+  bl_category = "Legacy"
   bl_context = "objectmode"
 
   def draw(self, context):
@@ -127,6 +127,7 @@ class WARME_PT_options(bpy.types.Panel):
       layout.operator("object.cast_to_jam")
       layout.operator("object.cast_to_jwm")
       layout.operator("object.cast_to_jnm")
+      layout.operator("object.cast_to_jwa")
       layout.operator("object.cast_to_jsv")
       layout.operator("object.cast_to_grf")
     # END CAST
@@ -210,10 +211,10 @@ class WARME_PT_options(bpy.types.Panel):
 
 class WARME_PT_object(bpy.types.Panel):
   bl_idname = "WARME_PT_object"
-  bl_label = "LGPU Object"
+  bl_label = "Legacy Object"
   bl_space_type = 'VIEW_3D'
   bl_region_type = 'UI'
-  bl_category = "LGPU Object"
+  bl_category = "Legacy Object"
   bl_context = "objectmode"
 
   def draw(self, context):
@@ -451,7 +452,6 @@ class WARME_PT_object(bpy.types.Panel):
       utils.draw_input_row(layout, selected_object.water_properties, "wave_step_x", "Wave Step X")
       utils.draw_input_row(layout, selected_object.water_properties, "wave_step_z", "Wave Step Z")
       layout.separator(type="LINE")
-      utils.draw_input_row(layout, selected_object.water_properties, "normal_map_enabled", "Normal Map Enabled")
       utils.draw_input_row(layout, selected_object.water_properties, "normal_map", "Normal Map Texture")
       utils.draw_input_row(layout, selected_object.water_properties, "normal_map_scroll_x", "Normal Map Scroll X")
       utils.draw_input_row(layout, selected_object.water_properties, "normal_map_scroll_y", "Normal Map Scroll Y")
@@ -462,7 +462,6 @@ class WARME_PT_object(bpy.types.Panel):
       utils.draw_input_row(layout, selected_object.water_properties, "surface_color", "Surface Color")
       utils.draw_input_row(layout, selected_object.water_properties, "surface_color_factor", "Surface Color Factor")
       layout.separator(type="LINE")
-      utils.draw_input_row(layout, selected_object.water_properties, "optics_env_map_enabled", "Env Map Enabled")
       utils.draw_input_row(layout, selected_object.water_properties, "optics_env_map_right", "Env Map Right")
       utils.draw_input_row(layout, selected_object.water_properties, "optics_env_map_left", "Env Map Left")
       utils.draw_input_row(layout, selected_object.water_properties, "optics_env_map_top", "Env Map Top")

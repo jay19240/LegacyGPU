@@ -128,6 +128,9 @@ export class Gfx3MeshRenderer extends Gfx3RendererAbstract {
       const atlas = await gfx3TextureManager.loadTexture(textureDir + json['DecalAtlas']);
       this.setDecalAtlas(atlas);
     }
+    else {
+      this.setDecalAtlas(gfx3Manager.createTextureFromBitmap());
+    }
 
     for (const obj of json['CustomParams']) {
       this.setCustomParamValue(obj['Name'], obj['Value']);

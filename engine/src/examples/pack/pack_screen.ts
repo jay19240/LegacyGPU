@@ -1,16 +1,16 @@
-import { gfx3DebugRenderer } from '@lib/legacygpu';
-import { gfx3MeshRenderer } from '@lib/legacygpu';
-import { gfx3Manager } from '@lib/legacygpu';
-import { gfx3MeshShadowRenderer } from '@lib/legacygpu';
-import { gfx3SpriteRenderer } from '@lib/legacygpu';
-import { gfx3SkyboxRenderer } from '@lib/legacygpu';
-import { gfx3FlareRenderer } from '@lib/legacygpu';
-import { gfx3ParticlesRenderer } from '@lib/legacygpu';
-import { gfx3PostRenderer } from '@lib/legacygpu';
-import { gfx3ShadowVolumeRenderer } from '@lib/legacygpu';
-import { UT } from '@lib/legacygpu';
-import { Screen } from '@lib/legacygpu';
-import { EnginePack3D } from '@lib/legacygpu';
+import { gfx3DebugRenderer } from '@lib/gfx3/gfx3_debug_renderer';
+import { gfx3MeshRenderer } from '@lib/gfx3_mesh/gfx3_mesh_renderer';
+import { gfx3Manager } from '@lib/gfx3/gfx3_manager';
+import { gfx3MeshShadowRenderer } from '@lib/gfx3_mesh/gfx3_mesh_shadow_renderer';
+import { gfx3SpriteRenderer } from '@lib/gfx3_sprite/gfx3_sprite_renderer';
+import { gfx3SkyboxRenderer } from '@lib/gfx3_skybox/gfx3_skybox_renderer';
+import { gfx3FlareRenderer } from '@lib/gfx3_flare/gfx3_flare_renderer';
+import { gfx3ParticlesRenderer } from '@lib/gfx3_particles/gfx3_particles_renderer';
+import { gfx3PostRenderer } from '@lib/gfx3_post/gfx3_post_renderer';
+import { gfx3ShadowVolumeRenderer } from '@lib/gfx3_shadow_volume/gfx3_shadow_volume_renderer';
+import { UT } from '@lib/core/utils';
+import { Screen } from '@lib/screen/screen';
+import { EnginePack3D } from '@lib/engine/engine_pack_3d';
 // ---------------------------------------------------------------------------------------
 
 class PackScreen extends Screen {
@@ -22,7 +22,7 @@ class PackScreen extends Screen {
   }
 
   async onEnter() {
-    this.pack = await EnginePack3D.createFromFile('./examples/pack/Untitled.blend.zip');
+    this.pack = await EnginePack3D.createFromFile('wasd', './examples/pack/Untitled.blend.zip');
   }
 
   update(ts: number) {

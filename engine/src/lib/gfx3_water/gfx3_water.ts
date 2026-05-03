@@ -1,28 +1,28 @@
 import { gfx3Manager } from '../gfx3/gfx3_manager';
+import { gfx3TextureManager } from '../gfx3/gfx3_texture_manager';
 import { gfx3WaterRenderer } from './gfx3_water_renderer';
 import { Gfx3StaticGroup } from '../gfx3/gfx3_group';
 import { Gfx3Drawable } from '../gfx3/gfx3_drawable';
 import { Gfx3Texture } from '../gfx3/gfx3_texture';
-import { Gfx3WaterParam, WATER_SHADER_VERTEX_ATTR_COUNT, WATER_MAX_IMPACTS } from './gfx3_water_shader';
+import { Gfx3WaterParam, Gfx3WaterImpact, WATER_SHADER_VERTEX_ATTR_COUNT, WATER_MAX_IMPACTS } from './gfx3_water_shader';
 
-export interface Gfx3WaterImpact {
+interface WaterImpact {
   x: number;
   z: number;
   strength: number;
   radius: number;
   lifetime: number;
   startTime: number;
-};
+}
 
 /**
  * A water plane drawable.
  */
 export class Gfx3Water extends Gfx3Drawable {
   texturesChanged: boolean;
-  dataChanged: boolean;
-  impacts: Array<Gfx3WaterImpact>;
+  impacts: Array<WaterImpact>;
   impactsBuffer: Float32Array;
-  params: Float32Array;  
+  params: Float32Array;
   grp2: Gfx3StaticGroup;
   envMap: Gfx3Texture;
   normalMap: Gfx3Texture;
@@ -30,45 +30,9 @@ export class Gfx3Water extends Gfx3Drawable {
   constructor() {
     super(WATER_SHADER_VERTEX_ATTR_COUNT);
     this.texturesChanged = false;
-    this.dataChanged = false;
     this.impacts = [];
-    this.impactsBuffer = new Float32Array(8 * WATER_MAX_IMPACTS);
-
+    this.impactsBuffer = new Float32Array(Gfx3WaterImpact.COUNT * WATER_MAX_IMPACTS);
     this.params = new Float32Array(Gfx3WaterParam.COUNT);
-    this.params[Gfx3WaterParam.WAVE_AMPLITUDE] = 0.3;
-    this.params[Gfx3WaterParam.WAVE_SCALE] = 0.18;
-    this.params[Gfx3WaterParam.WAVE_SPEED] = 0.35;
-    this.params[Gfx3WaterParam.WAVE_CHOPPINESS] = 1.0;
-    this.params[Gfx3WaterParam.WAVE_STEP_X] = 0.5;
-    this.params[Gfx3WaterParam.WAVE_STEP_Z] = 0.5;
-    // --------------------------------------------------------------------------------------------------------
-    this.params[Gfx3WaterParam.NORMAL_MAP_ENABLED] = 1.0;
-    this.params[Gfx3WaterParam.NORMAL_MAP_SCROLL_X] = 0.04;
-    this.params[Gfx3WaterParam.NORMAL_MAP_SCROLL_Y] = 0.03;
-    this.params[Gfx3WaterParam.NORMAL_MAP_INTENSITY] = 0.5;
-    this.params[Gfx3WaterParam.NORMAL_MAP_SCALE] = 6.0;
-    // --------------------------------------------------------------------------------------------------------
-    this.params[Gfx3WaterParam.SURFACE_COLOR_ENABLED] = 1.0;
-    this.params[Gfx3WaterParam.SURFACE_COLOR_R] = 0.04;
-    this.params[Gfx3WaterParam.SURFACE_COLOR_G] = 0.18;
-    this.params[Gfx3WaterParam.SURFACE_COLOR_B] = 0.28;
-    this.params[Gfx3WaterParam.SURFACE_COLOR_FACTOR] = 0.92;
-    // --------------------------------------------------------------------------------------------------------
-    this.params[Gfx3WaterParam.OPTICS_ENV_MAP_ENABLED] = 1.0;
-    this.params[Gfx3WaterParam.OPTICS_ENV_INTENSITY] = 1.0;
-    this.params[Gfx3WaterParam.OPTICS_FRESNEL_POWER] = 4.0;
-    this.params[Gfx3WaterParam.OPTICS_FRESNEL_BIAS] = 0.4;    
-    // --------------------------------------------------------------------------------------------------------
-    this.params[Gfx3WaterParam.SUN_ENABLED] = 1.0;
-    this.params[Gfx3WaterParam.SUN_DIRECTION_X] = -0.4;
-    this.params[Gfx3WaterParam.SUN_DIRECTION_Y] = -1.0;
-    this.params[Gfx3WaterParam.SUN_DIRECTION_Z] = -0.3;
-    this.params[Gfx3WaterParam.SUN_SPECULAR_POWER] = 1.0;
-    this.params[Gfx3WaterParam.SUN_COLOR_R] = 1.0;
-    this.params[Gfx3WaterParam.SUN_COLOR_G] = 0.95;
-    this.params[Gfx3WaterParam.SUN_COLOR_B] = 0.85;
-    this.params[Gfx3WaterParam.SUN_COLOR_FACTOR] = 1.0;
-    
 
     this.grp2 = gfx3Manager.createStaticGroup('WATER_PIPELINE', 2);
     this.envMap = this.grp2.setTexture(0, 'ENV_MAP_TEXTURE', gfx3Manager.createCubeMapFromBitmap(), { dimension: 'cube' });
@@ -83,13 +47,61 @@ export class Gfx3Water extends Gfx3Drawable {
    * 
    * @param {string} path - The file path.
    */
-  async loadFromFile(path: string): Promise<void> {
+  async loadFromFile(path: string, textureDir: string = ''): Promise<void> {
     const response = await fetch(path);
     const json = await response.json();
 
     if (!json.hasOwnProperty('Ident') || json['Ident'] != 'JWA') {
       throw new Error('Gfx3Water::loadFromFile(): File not valid !');
     }
+
+    let envMap = undefined;
+    if (json['EnvMapRight'] && json['EnvMapLeft'] && json['EnvMapTop'] && json['EnvMapBottom'] && json['EnvMapFront'] && json['EnvMapBack']) {
+      envMap = await gfx3TextureManager.loadCubemapTexture({
+        right: textureDir + json['EnvMapRight'],
+        left: textureDir + json['EnvMapLeft'],
+        top: textureDir + json['EnvMapTop'],
+        bottom: textureDir + json['EnvMapBottom'],
+        front: textureDir + json['EnvMapFront'],
+        back: textureDir + json['EnvMapBack']
+      }, json['EnvMapRight'] + json['EnvMapLeft'] + json['EnvMapTop'] + json['EnvMapBottom'] + json['EnvMapFront'] + json['EnvMapBack']);
+    }
+
+    this.params[Gfx3WaterParam.WAVE_AMPLITUDE] = json['WaveAmplitude'];
+    this.params[Gfx3WaterParam.WAVE_SCALE] = json['WaveScale'];
+    this.params[Gfx3WaterParam.WAVE_SPEED] = json['WaveSpeed'];
+    this.params[Gfx3WaterParam.WAVE_CHOPPINESS] = json['WaveChoppiness'];
+    this.params[Gfx3WaterParam.WAVE_STEP_X] = json['WaveStepX'];
+    this.params[Gfx3WaterParam.WAVE_STEP_Z] = json['WaveStepZ'];
+    this.params[Gfx3WaterParam.NORMAL_MAP_ENABLED] = json['NormalMap'] ? 1.0 : 0.0;
+    this.params[Gfx3WaterParam.NORMAL_MAP_SCROLL_X] = json['NormalMapScrollX'];
+    this.params[Gfx3WaterParam.NORMAL_MAP_SCROLL_Y] = json['NormalMapScrollY'];
+    this.params[Gfx3WaterParam.NORMAL_MAP_INTENSITY] = json['NormalMapIntensity'];
+    this.params[Gfx3WaterParam.NORMAL_MAP_SCALE] = json['NormalMapScale'];
+    this.params[Gfx3WaterParam.SURFACE_COLOR_ENABLED] = json['SurfaceColorEnabled'];
+    this.params[Gfx3WaterParam.SURFACE_COLOR_R] = json['SurfaceColorR'];
+    this.params[Gfx3WaterParam.SURFACE_COLOR_G] = json['SurfaceColorG'];
+    this.params[Gfx3WaterParam.SURFACE_COLOR_B] = json['SurfaceColorB'];
+    this.params[Gfx3WaterParam.SURFACE_COLOR_FACTOR] = json['SurfaceColorFactor'];
+    this.params[Gfx3WaterParam.OPTICS_ENV_MAP_ENABLED] = envMap ? 1.0 : 0.0;
+    this.params[Gfx3WaterParam.OPTICS_ENV_INTENSITY] = json['EnvMapIntensity'];
+    this.params[Gfx3WaterParam.OPTICS_FRESNEL_POWER] = json['FresnelPower'];
+    this.params[Gfx3WaterParam.OPTICS_FRESNEL_BIAS] = json['FresnelBiais'];
+    this.params[Gfx3WaterParam.SUN_ENABLED] = json['SunEnabled'];
+    this.params[Gfx3WaterParam.SUN_DIRECTION_X] = json['SunDirectionX'];
+    this.params[Gfx3WaterParam.SUN_DIRECTION_Y] = json['SunDirectionY'];
+    this.params[Gfx3WaterParam.SUN_DIRECTION_Z] = json['SunDirectionZ'];
+    this.params[Gfx3WaterParam.SUN_COLOR_R] = json['SunColorR'];
+    this.params[Gfx3WaterParam.SUN_COLOR_G] = json['SunColorG'];
+    this.params[Gfx3WaterParam.SUN_COLOR_B] = json['SunColorB'];
+    this.params[Gfx3WaterParam.SUN_COLOR_FACTOR] = json['SunColorFactor'];
+
+    this.normalMap = json['NormalMap'] ?
+    await gfx3TextureManager.loadTexture(textureDir + json['NormalMap'], { addressModeU: 'repeat', addressModeV: 'repeat' }) :
+    gfx3Manager.createTextureFromBitmap();
+
+    this.envMap = envMap ? envMap : gfx3Manager.createCubeMapFromBitmap();
+    this.texturesChanged = true;
 
     this.beginVertices(json['NumVertices']);
 
@@ -111,36 +123,100 @@ export class Gfx3Water extends Gfx3Drawable {
 
   /**
    * Load asynchronously water data from a binary file (bwa).
-   * 
+   *
    * @param {string} path - The file path.
    */
-  async loadFromBinaryFile(path: string): Promise<void> {
+  async loadFromBinaryFile(path: string, textureDir: string = ''): Promise<void> {
     const response = await fetch(path);
     const buffer = await response.arrayBuffer();
-    const data = new Float32Array(buffer);
-    const dataInt = new Int32Array(buffer);
+    const view = new DataView(buffer);
     let offset = 0;
 
-    const numVertices = dataInt[0];
-    offset += 1;
+    const numVertices = view.getFloat32(offset, true);
+    offset += 4;
 
-    const vertices = [];
-    for (let i = 0; i < numVertices; i++) {
-      vertices.push(data[offset + (i * 3) + 0], data[offset + (i * 3) + 1], data[offset + (i * 3) + 2]);
+    this.params[Gfx3WaterParam.WAVE_AMPLITUDE] = view.getFloat32(offset, true); offset += 4;
+    this.params[Gfx3WaterParam.WAVE_SCALE] = view.getFloat32(offset, true); offset += 4;
+    this.params[Gfx3WaterParam.WAVE_SPEED] = view.getFloat32(offset, true); offset += 4;
+    this.params[Gfx3WaterParam.WAVE_CHOPPINESS] = view.getFloat32(offset, true); offset += 4;
+    this.params[Gfx3WaterParam.WAVE_STEP_X] = view.getFloat32(offset, true); offset += 4;
+    this.params[Gfx3WaterParam.WAVE_STEP_Z] = view.getFloat32(offset, true); offset += 4;
+    this.params[Gfx3WaterParam.NORMAL_MAP_SCROLL_X] = view.getFloat32(offset, true); offset += 4;
+    this.params[Gfx3WaterParam.NORMAL_MAP_SCROLL_Y] = view.getFloat32(offset, true); offset += 4;
+    this.params[Gfx3WaterParam.NORMAL_MAP_INTENSITY] = view.getFloat32(offset, true); offset += 4;
+    this.params[Gfx3WaterParam.NORMAL_MAP_SCALE] = view.getFloat32(offset, true); offset += 4;
+    this.params[Gfx3WaterParam.SURFACE_COLOR_ENABLED] = view.getFloat32(offset, true); offset += 4;
+    this.params[Gfx3WaterParam.SURFACE_COLOR_R] = view.getFloat32(offset, true); offset += 4;
+    this.params[Gfx3WaterParam.SURFACE_COLOR_G] = view.getFloat32(offset, true); offset += 4;
+    this.params[Gfx3WaterParam.SURFACE_COLOR_B] = view.getFloat32(offset, true); offset += 4;
+    this.params[Gfx3WaterParam.SURFACE_COLOR_FACTOR] = view.getFloat32(offset, true); offset += 4;
+    this.params[Gfx3WaterParam.OPTICS_ENV_INTENSITY] = view.getFloat32(offset, true); offset += 4;
+    this.params[Gfx3WaterParam.OPTICS_FRESNEL_POWER] = view.getFloat32(offset, true); offset += 4;
+    this.params[Gfx3WaterParam.OPTICS_FRESNEL_BIAS] = view.getFloat32(offset, true); offset += 4;
+    this.params[Gfx3WaterParam.SUN_ENABLED] = view.getFloat32(offset, true); offset += 4;
+    this.params[Gfx3WaterParam.SUN_DIRECTION_X] = view.getFloat32(offset, true); offset += 4;
+    this.params[Gfx3WaterParam.SUN_DIRECTION_Y] = view.getFloat32(offset, true); offset += 4;
+    this.params[Gfx3WaterParam.SUN_DIRECTION_Z] = view.getFloat32(offset, true); offset += 4;
+    this.params[Gfx3WaterParam.SUN_COLOR_R] = view.getFloat32(offset, true); offset += 4;
+    this.params[Gfx3WaterParam.SUN_COLOR_G] = view.getFloat32(offset, true); offset += 4;
+    this.params[Gfx3WaterParam.SUN_COLOR_B] = view.getFloat32(offset, true); offset += 4;
+    this.params[Gfx3WaterParam.SUN_COLOR_FACTOR] = view.getFloat32(offset, true); offset += 4;
+
+    const decoder = new TextDecoder('utf-8');
+    const readString = (): string => {
+      const len = view.getInt32(offset, true);
+      offset += 4;
+      const str = decoder.decode(new Uint8Array(buffer, offset, len));
+      offset += len;
+      return str;
+    };
+
+    const normalMap = readString();
+    const envMapRight = readString();
+    const envMapLeft = readString();
+    const envMapTop = readString();
+    const envMapBottom = readString();
+    const envMapFront = readString();
+    const envMapBack = readString();
+
+    let envMapTexture = undefined;
+    if (envMapRight && envMapLeft && envMapTop && envMapBottom && envMapFront && envMapBack) {
+      envMapTexture = await gfx3TextureManager.loadCubemapTexture({
+        right: textureDir + envMapRight,
+        left: textureDir + envMapLeft,
+        top: textureDir + envMapTop,
+        bottom: textureDir + envMapBottom,
+        front: textureDir + envMapFront,
+        back: textureDir + envMapBack
+      }, envMapRight + envMapLeft + envMapTop + envMapBottom + envMapFront + envMapBack);
     }
 
-    offset += numVertices * 3;
+    this.normalMap = normalMap ?
+    await gfx3TextureManager.loadTexture(textureDir + normalMap, { addressModeU: 'repeat', addressModeV: 'repeat' }) :
+    gfx3Manager.createTextureFromBitmap();
+    
+    this.envMap = envMapTexture ? envMapTexture : gfx3Manager.createCubeMapFromBitmap();
+    this.texturesChanged = true;
 
-    const texcoords = [];
-    for (let i = 0; i < numVertices; i++) {
-      texcoords.push(data[offset + (i * 2) + 0], data[offset + (i * 2) + 1]);
+    this.params[Gfx3WaterParam.NORMAL_MAP_ENABLED] = normalMap ? 1.0 : 0.0;
+    this.params[Gfx3WaterParam.OPTICS_ENV_MAP_ENABLED] = envMapTexture ? 1.0 : 0.0;
+
+    const vertices: Array<number> = [];
+    for (let i = 0; i < numVertices * 3; i++) {
+      vertices.push(view.getFloat32(offset, true));
+      offset += 4;
     }
 
-    offset += numVertices * 2;
+    const texcoords: Array<number> = [];
+    for (let i = 0; i < numVertices * 2; i++) {
+      texcoords.push(view.getFloat32(offset, true));
+      offset += 4;
+    }
 
-    const colors = [];
-    for (let i = 0; i < numVertices; i++) {
-      colors.push(data[offset + (i * 3) + 0], data[offset + (i * 3) + 1], data[offset + (i * 3) + 2]);
+    const colors: Array<number> = [];
+    for (let i = 0; i < numVertices * 3; i++) {
+      colors.push(view.getFloat32(offset, true));
+      offset += 4;
     }
 
     this.beginVertices(numVertices);
@@ -152,9 +228,6 @@ export class Gfx3Water extends Gfx3Drawable {
         vertices[i * 3 + 2],
         texcoords[i * 2 + 0],
         texcoords[i * 2 + 1],
-        0,
-        1,
-        0,
         colors[i * 3 + 0],
         colors[i * 3 + 1],
         colors[i * 3 + 2]
@@ -182,10 +255,34 @@ export class Gfx3Water extends Gfx3Drawable {
   /**
    * The update function.
    */
-  update(_ts: number): void {
+  update(ts: number): void {
     const time = performance.now() / 1000;
-    this.impacts = this.impacts.filter(i => time - i.startTime < i.lifetime);
-    this.#fillImpactsBuffer(time);
+    this.impacts = this.impacts.filter(im => time - im.startTime < im.lifetime);
+
+    let count = 0;
+
+    for (let i = 0; i < this.impacts.length && count < WATER_MAX_IMPACTS; i++) {
+      const im = this.impacts[i];
+      const age = time - im.startTime;
+      if (age <= 0 || age >= im.lifetime) {
+        continue;
+      }
+
+      const base = count * Gfx3WaterImpact.COUNT;
+      this.impactsBuffer[base + Gfx3WaterImpact.X] = im.x;
+      this.impactsBuffer[base + Gfx3WaterImpact.Z] = im.z;
+      this.impactsBuffer[base + Gfx3WaterImpact.STRENGTH] = im.strength;
+      this.impactsBuffer[base + Gfx3WaterImpact.RADIUS] = im.radius;
+      this.impactsBuffer[base + Gfx3WaterImpact.LIFETIME] = im.lifetime;
+      this.impactsBuffer[base + Gfx3WaterImpact.AGE] = age;
+      count++;
+    }
+
+    this.params[Gfx3WaterParam.WAVE_IMPACT_COUNT] = count;
+ 
+    for (let i = count * Gfx3WaterImpact.COUNT; i < this.impactsBuffer.length; i++) {
+      this.impactsBuffer[i] = 0;
+    }
   }
 
   /**
@@ -196,7 +293,6 @@ export class Gfx3Water extends Gfx3Drawable {
    */
   setParam(key: number, value: number): void {
     this.params[key] = value;
-    this.dataChanged = true;
   }
 
   /**
@@ -222,7 +318,14 @@ export class Gfx3Water extends Gfx3Drawable {
       this.impacts.shift();
     }
 
-    this.impacts.push({ x, z, strength, radius, lifetime, startTime: performance.now() / 1000 });
+    this.impacts.push({
+      x: x,
+      z: z,
+      strength: strength,
+      radius: radius,
+      lifetime: lifetime,
+      startTime: performance.now() / 1000
+    });
   }
 
   /**
@@ -230,6 +333,7 @@ export class Gfx3Water extends Gfx3Drawable {
    */
   setEnvMap(texture: Gfx3Texture): void {
     this.envMap = texture;
+    this.params[Gfx3WaterParam.OPTICS_ENV_MAP_ENABLED] = 1;
     this.texturesChanged = true;
   }
 
@@ -238,11 +342,12 @@ export class Gfx3Water extends Gfx3Drawable {
    */
   setNormalMap(texture: Gfx3Texture): void {
     this.normalMap = texture;
+    this.params[Gfx3WaterParam.NORMAL_MAP_ENABLED] = 1;
     this.texturesChanged = true;
   }
 
   /**
-   * Returns the bindgroup(1).
+   * Returns the bindgroup(2).
    */
   getGroup02(): Gfx3StaticGroup {
     if (this.texturesChanged) {
@@ -255,34 +360,5 @@ export class Gfx3Water extends Gfx3Drawable {
     }
 
     return this.grp2;
-  }
-
-  #fillImpactsBuffer(time: number): void {
-    let count = 0;
-
-    for (let i = 0; i < this.impacts.length && count < WATER_MAX_IMPACTS; i++) {
-      const im = this.impacts[i];
-      const age = time - im.startTime;
-      if (age <= 0 || age >= im.lifetime) {
-        continue;
-      }
-
-      const base = count * 8;
-      this.impactsBuffer[base + 0] = im.x;
-      this.impactsBuffer[base + 1] = im.z;
-      this.impactsBuffer[base + 2] = im.strength;
-      this.impactsBuffer[base + 3] = im.radius;
-      this.impactsBuffer[base + 4] = age;
-      this.impactsBuffer[base + 5] = im.lifetime;
-      this.impactsBuffer[base + 6] = 0;
-      this.impactsBuffer[base + 7] = 0;
-      count++;
-    }
-
-    this.params[Gfx3WaterParam.WAVE_IMPACT_COUNT] = count;
- 
-    for (let i = count * 8; i < this.impactsBuffer.length; i++) {
-      this.impactsBuffer[i] = 0;
-    }
   }
 }

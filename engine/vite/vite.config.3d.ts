@@ -23,7 +23,7 @@ export default defineConfig(({ mode }) => {
       minify: false,
       lib: {
         entry: path.resolve(__dirname, '../src/lib/index_3d.ts'),
-        name: 'LegacyGPU',
+        name: 'Legacy',
         fileName: 'index',
         formats: ['es'],
       },

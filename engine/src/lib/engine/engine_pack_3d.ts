@@ -25,6 +25,7 @@ import { Gfx3SpriteJAS } from '../gfx3_sprite/gfx3_sprite_jas';
 import { Gfx3SpriteJSS } from '../gfx3_sprite/gfx3_sprite_jss';
 import { Gfx3Skybox } from '../gfx3_skybox/gfx3_skybox';
 import { Gfx3Particles } from '../gfx3_particles/gfx3_particles';
+import { Gfx3Water } from '../gfx3_water/gfx3_water';
 import { Sound } from '../sound/sound_manager';
 import { Motion } from '../motion/motion';
 import { ScriptMachine } from '../script/script_machine';
@@ -51,6 +52,7 @@ class EnginePack3D {
   jss: EnginePackItemList<Gfx3SpriteJSS>;
   sky: EnginePackItemList<Gfx3Skybox>;
   prt: EnginePackItemList<Gfx3Particles>;
+  jwa: EnginePackItemList<Gfx3Water>;
   jwm: EnginePackItemList<Gfx3PhysicsJWM>;
   jnm: EnginePackItemList<Gfx3PhysicsJNM>;
   jlm: EnginePackItemList<Motion>;
@@ -81,6 +83,7 @@ class EnginePack3D {
     this.jss = new EnginePackItemList<Gfx3SpriteJSS>;
     this.sky = new EnginePackItemList<Gfx3Skybox>;
     this.prt = new EnginePackItemList<Gfx3Particles>;
+    this.jwa = new EnginePackItemList<Gfx3Water>;
     this.jwm = new EnginePackItemList<Gfx3PhysicsJWM>;
     this.jnm = new EnginePackItemList<Gfx3PhysicsJNM>;
     this.jlm = new EnginePackItemList<Motion>;
@@ -256,6 +259,18 @@ class EnginePack3D {
         const prt = await Gfx3Particles.createFromFile(url);
         pack.prt.push({ name: infos.name, ext: 'prt', object: prt, blobUrl: url });
       }
+      else if (file != null && infos.ext == 'jwa') {
+        const url = URL.createObjectURL(await file.async('blob'));
+        const jwa = new Gfx3Water();
+        await jwa.loadFromFile(url);
+        pack.jwa.push({ name: infos.name, ext: 'jwa', object: jwa, blobUrl: url });
+      }
+      else if (file != null && infos.ext == 'bwa') {
+        const url = URL.createObjectURL(await file.async('blob'));
+        const jwa = new Gfx3Water();
+        await jwa.loadFromBinaryFile(url);
+        pack.jwa.push({ name: infos.name, ext: 'bwa', object: jwa, blobUrl: url });
+      }
       else if (file != null && infos.ext == 'jwm') {
         const url = URL.createObjectURL(await file.async('blob'));
         const jwm = new Gfx3PhysicsJWM();
@@ -344,8 +359,8 @@ class EnginePack3D {
       item.object.setMaterial(material);
     }
 
-    pack.updateItems.push(...pack.jsc, ...pack.jam, ...pack.jsm, ...pack.obj, ...pack.jas, ...pack.jss, ...pack.jwm, ...pack.jnm, ...pack.jlm, ...pack.jsv, ...pack.prt);
-    pack.drawItems.push(...pack.jam, ...pack.jsm, ...pack.obj, ...pack.dcl, ...pack.jas, ...pack.jss, ...pack.sky, ...pack.jwm, ...pack.jnm, ...pack.jlm, ...pack.jsv, ...pack.jlt, ...pack.prt);
+    pack.updateItems.push(...pack.jsc, ...pack.jam, ...pack.jsm, ...pack.obj, ...pack.jas, ...pack.jss, ...pack.jwm, ...pack.jnm, ...pack.jlm, ...pack.jsv, ...pack.prt, ...pack.jwa);
+    pack.drawItems.push(...pack.jam, ...pack.jsm, ...pack.obj, ...pack.dcl, ...pack.jas, ...pack.jss, ...pack.sky, ...pack.jwm, ...pack.jnm, ...pack.jlm, ...pack.jsv, ...pack.jlt, ...pack.prt, ...pack.jwa);
     return pack;
   }
 

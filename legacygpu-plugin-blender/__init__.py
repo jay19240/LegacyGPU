@@ -1,10 +1,10 @@
 bl_info = {
-  "name": "LGPU Exporter",
+  "name": "Legacy Exporter",
   "author": "panzer-banana",
   "version": (1, 0, 0),
   "blender": (4, 2, 0),
-  "location": "View3D > Properties > LGPU Export",
-  "description": "Export to a custom LGPU format",
+  "location": "View3D > Properties > Legacy Export",
+  "description": "Export to a custom Legacy format",
   "category": "Import-Export"
 }
 

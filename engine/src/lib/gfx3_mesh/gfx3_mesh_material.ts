@@ -472,7 +472,7 @@ export class Gfx3Material {
         bottom: textureDir + json['EnvMapBottom'],
         front: textureDir + json['EnvMapFront'],
         back: textureDir + json['EnvMapBack']
-      }, json['EnvMapName']);
+      }, json['EnvMapRight'] + json['EnvMapLeft'] + json['EnvMapTop'] + json['EnvMapBottom'] + json['EnvMapFront'] + json['EnvMapBack']);
     }
 
     return new Gfx3Material({  
